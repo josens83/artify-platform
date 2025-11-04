@@ -751,6 +751,22 @@
                 <div>★</div>
                 <div class="tool-label">별</div>
             </div>
+            <div class="tool-item" onclick="setTool('diamond')" data-tool="diamond" role="button" aria-label="다이아몬드 도구" tabindex="0">
+                <div>◆</div>
+                <div class="tool-label">다이아몬드</div>
+            </div>
+            <div class="tool-item" onclick="setTool('hexagon')" data-tool="hexagon" role="button" aria-label="육각형 도구" tabindex="0">
+                <div>⬢</div>
+                <div class="tool-label">육각형</div>
+            </div>
+            <div class="tool-item" onclick="setTool('speech-bubble')" data-tool="speech-bubble" role="button" aria-label="말풍선 도구" tabindex="0">
+                <div>💬</div>
+                <div class="tool-label">말풍선</div>
+            </div>
+            <div class="tool-item" onclick="setTool('cloud')" data-tool="cloud" role="button" aria-label="구름 도구" tabindex="0">
+                <div>☁️</div>
+                <div class="tool-label">구름</div>
+            </div>
             <div class="tool-item" onclick="setTool('line')" data-tool="line" role="button" aria-label="선 도구" tabindex="0">
                 <div>─</div>
                 <div class="tool-label">선</div>
@@ -1403,6 +1419,22 @@
                         this.drawStar(context);
                         break;
 
+                    case 'diamond':
+                        this.drawDiamond(context);
+                        break;
+
+                    case 'hexagon':
+                        this.drawHexagon(context);
+                        break;
+
+                    case 'speech-bubble':
+                        this.drawSpeechBubble(context);
+                        break;
+
+                    case 'cloud':
+                        this.drawCloud(context);
+                        break;
+
                     case 'line':
                         context.strokeStyle = this.stroke;
                         context.lineWidth = this.strokeWidth;
@@ -1548,6 +1580,125 @@
                 );
                 context.closePath();
                 context.fill();
+            }
+
+            drawDiamond(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+                context.beginPath();
+
+                // Diamond is rotated square
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                context.moveTo(cx, this.y); // Top
+                context.lineTo(this.x + this.width, cy); // Right
+                context.lineTo(cx, this.y + this.height); // Bottom
+                context.lineTo(this.x, cy); // Left
+
+                context.closePath();
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            drawHexagon(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+                context.beginPath();
+
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+                const angleStep = (Math.PI * 2) / 6;
+                const radius = Math.min(this.width, this.height) / 2;
+
+                for (let i = 0; i < 6; i++) {
+                    const angle = angleStep * i - Math.PI / 2;
+                    const px = cx + radius * Math.cos(angle);
+                    const py = cy + radius * Math.sin(angle);
+                    if (i === 0) {
+                        context.moveTo(px, py);
+                    } else {
+                        context.lineTo(px, py);
+                    }
+                }
+
+                context.closePath();
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            drawSpeechBubble(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+
+                const bubbleHeight = this.height * 0.75;
+                const tailHeight = this.height * 0.25;
+                const radius = 10;
+
+                context.beginPath();
+
+                // Main bubble (rounded rectangle)
+                context.moveTo(this.x + radius, this.y);
+                context.lineTo(this.x + this.width - radius, this.y);
+                context.arcTo(this.x + this.width, this.y, this.x + this.width, this.y + radius, radius);
+                context.lineTo(this.x + this.width, this.y + bubbleHeight - radius);
+                context.arcTo(this.x + this.width, this.y + bubbleHeight, this.x + this.width - radius, this.y + bubbleHeight, radius);
+
+                // Tail (pointing down-left)
+                const tailStartX = this.x + this.width * 0.2;
+                context.lineTo(tailStartX + 20, this.y + bubbleHeight);
+                context.lineTo(tailStartX, this.y + this.height);
+                context.lineTo(tailStartX, this.y + bubbleHeight);
+
+                context.lineTo(this.x + radius, this.y + bubbleHeight);
+                context.arcTo(this.x, this.y + bubbleHeight, this.x, this.y + bubbleHeight - radius, radius);
+                context.lineTo(this.x, this.y + radius);
+                context.arcTo(this.x, this.y, this.x + radius, this.y, radius);
+
+                context.closePath();
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            drawCloud(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                context.beginPath();
+
+                // Cloud is made of overlapping circles
+                const r1 = this.width * 0.2;
+                const r2 = this.width * 0.25;
+                const r3 = this.width * 0.2;
+                const r4 = this.width * 0.15;
+                const r5 = this.width * 0.15;
+
+                // Bottom large circles
+                context.arc(this.x + this.width * 0.25, cy + this.height * 0.1, r1, 0, Math.PI * 2);
+                context.arc(cx, cy, r2, 0, Math.PI * 2);
+                context.arc(this.x + this.width * 0.75, cy + this.height * 0.1, r3, 0, Math.PI * 2);
+
+                // Top smaller circles
+                context.arc(this.x + this.width * 0.4, cy - this.height * 0.15, r4, 0, Math.PI * 2);
+                context.arc(this.x + this.width * 0.6, cy - this.height * 0.15, r5, 0, Math.PI * 2);
+
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
             }
 
             contains(x, y) {
@@ -2161,7 +2312,7 @@
                 document.getElementById('strokeValue').textContent = selectedElement.strokeWidth + 'px';
 
                 // Show gradient section for shapes
-                if (['rect', 'circle', 'triangle', 'star'].includes(selectedElement.type)) {
+                if (['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon'].includes(selectedElement.type)) {
                     gradientSection.style.display = 'block';
                     if (selectedElement.gradient) {
                         document.getElementById('gradientEnabled').checked = selectedElement.gradient.enabled;
@@ -2391,6 +2542,10 @@
                     case 'circle': icon = '○'; break;
                     case 'triangle': icon = '△'; break;
                     case 'star': icon = '★'; break;
+                    case 'diamond': icon = '◆'; break;
+                    case 'hexagon': icon = '⬢'; break;
+                    case 'speech-bubble': icon = '💬'; break;
+                    case 'cloud': icon = '☁️'; break;
                     case 'line': icon = '─'; break;
                     case 'arrow': icon = '→'; break;
                     case 'text': icon = 'T'; break;
