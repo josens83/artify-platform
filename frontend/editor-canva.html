@@ -1025,6 +1025,16 @@
                     <div class="color-swatch" style="background: #96ceb4" onclick="setColor('#96ceb4')"></div>
                 </div>
 
+                <!-- Brand Kit (P14) -->
+                <div class="panel-title" style="margin-top: 15px;">브랜드 킷</div>
+                <div class="btn-group">
+                    <button class="btn-icon" onclick="saveBrandColor()" style="flex: 1;">💾 현재 색상 저장</button>
+                    <button class="btn-icon" onclick="showBrandColors()" style="flex: 1;">🎨 브랜드 색상</button>
+                </div>
+                <div id="brandColorGrid" class="color-grid" style="display: none; margin-top: 10px;">
+                    <!-- Brand colors will be populated here -->
+                </div>
+
                 <div class="panel-group" style="margin-top: 15px;">
                     <label class="panel-label">테두리 색상</label>
                     <input type="color" class="panel-input" id="propStroke" value="#000000" onchange="updateElementProp('stroke', this.value)">
@@ -3845,6 +3855,83 @@
                 console.error('Style transfer error:', error);
                 alert('스타일 변환 중 오류가 발생했습니다. AI 서비스가 연동되어 있는지 확인해주세요.');
             }
+        }
+
+        // P14: Brand Kit Functions
+        function saveBrandColor() {
+            if (!selectedElement) {
+                alert('요소를 선택해주세요.');
+                return;
+            }
+
+            const color = selectedElement.fill;
+            let brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+
+            if (brandColors.includes(color)) {
+                alert('이미 저장된 색상입니다.');
+                return;
+            }
+
+            if (brandColors.length >= 12) {
+                alert('최대 12개의 브랜드 색상을 저장할 수 있습니다.');
+                return;
+            }
+
+            brandColors.push(color);
+            localStorage.setItem('brandColors', JSON.stringify(brandColors));
+            alert('브랜드 색상이 저장되었습니다!');
+
+            // Refresh brand colors display
+            if (document.getElementById('brandColorGrid').style.display !== 'none') {
+                showBrandColors();
+            }
+        }
+
+        function showBrandColors() {
+            const brandColorGrid = document.getElementById('brandColorGrid');
+            const brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+
+            if (brandColors.length === 0) {
+                alert('저장된 브랜드 색상이 없습니다. 현재 색상을 저장해보세요!');
+                return;
+            }
+
+            // Toggle visibility
+            if (brandColorGrid.style.display === 'none') {
+                brandColorGrid.style.display = 'grid';
+
+                // Populate brand colors
+                brandColorGrid.innerHTML = '';
+                brandColors.forEach((color, index) => {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'color-swatch';
+                    swatch.style.background = color;
+                    swatch.style.position = 'relative';
+                    swatch.onclick = () => setColor(color);
+
+                    // Add remove button
+                    swatch.ondblclick = (e) => {
+                        e.stopPropagation();
+                        removeBrandColor(index);
+                    };
+                    swatch.title = `클릭: 색상 적용 | 더블클릭: 삭제`;
+
+                    brandColorGrid.appendChild(swatch);
+                });
+            } else {
+                brandColorGrid.style.display = 'none';
+            }
+        }
+
+        function removeBrandColor(index) {
+            const confirmed = confirm('이 브랜드 색상을 삭제하시겠습니까?');
+            if (!confirmed) return;
+
+            let brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+            brandColors.splice(index, 1);
+            localStorage.setItem('brandColors', JSON.stringify(brandColors));
+            showBrandColors();
+            showBrandColors(); // Toggle twice to refresh
         }
 
         // Close modals when clicking outside
