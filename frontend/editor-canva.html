@@ -1090,6 +1090,44 @@
                 </div>
             </div>
 
+            <!-- Animation (P12) -->
+            <div class="panel-section" id="animationProps" style="display:none;">
+                <div class="panel-title">애니메이션</div>
+
+                <div class="panel-group">
+                    <label class="panel-label">애니메이션 유형</label>
+                    <select class="panel-input" id="animationType" onchange="updateAnimation('type', this.value)">
+                        <option value="none">없음</option>
+                        <option value="fadeIn">Fade In</option>
+                        <option value="fadeOut">Fade Out</option>
+                        <option value="slideLeft">Slide Left</option>
+                        <option value="slideRight">Slide Right</option>
+                        <option value="slideUp">Slide Up</option>
+                        <option value="slideDown">Slide Down</option>
+                        <option value="bounce">Bounce</option>
+                        <option value="pulse">Pulse</option>
+                    </select>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">지속시간 (초)</label>
+                    <div class="slider-group">
+                        <input type="range" min="0.1" max="5" step="0.1" value="1" id="animationDuration" oninput="updateAnimation('duration', this.value)">
+                        <span class="slider-value" id="durationValue">1.0s</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">지연 (초)</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="3" step="0.1" value="0" id="animationDelay" oninput="updateAnimation('delay', this.value)">
+                        <span class="slider-value" id="delayValue">0.0s</span>
+                    </div>
+                </div>
+
+                <button class="btn-icon" onclick="previewAnimation()" style="width: 100%;">▶️ 미리보기</button>
+            </div>
+
             <div id="saveMessage"></div>
         </div>
     </div>
@@ -1336,6 +1374,13 @@
                     color1: '#667eea',
                     color2: '#764ba2',
                     angle: 0
+                };
+
+                // Animation (P12)
+                this.animation = {
+                    type: 'none',
+                    duration: 1,
+                    delay: 0
                 };
 
                 // Text specific
@@ -2402,10 +2447,22 @@
                     textProps.style.display = 'none';
                     imageProps.style.display = 'none';
                 }
+
+                // Show animation section (P12)
+                const animationProps = document.getElementById('animationProps');
+                animationProps.style.display = 'block';
+                if (selectedElement.animation) {
+                    document.getElementById('animationType').value = selectedElement.animation.type;
+                    document.getElementById('animationDuration').value = selectedElement.animation.duration;
+                    document.getElementById('durationValue').textContent = selectedElement.animation.duration.toFixed(1) + 's';
+                    document.getElementById('animationDelay').value = selectedElement.animation.delay;
+                    document.getElementById('delayValue').textContent = selectedElement.animation.delay.toFixed(1) + 's';
+                }
             } else {
                 elementProps.style.display = 'none';
                 textProps.style.display = 'none';
                 imageProps.style.display = 'none';
+                document.getElementById('animationProps').style.display = 'none';
             }
         }
 
@@ -3546,6 +3603,87 @@
             shareLink.select();
             document.execCommand('copy');
             alert('링크가 복사되었습니다!');
+        }
+
+        // P12: Animation Functions
+        function updateAnimation(prop, value) {
+            if (!selectedElement || !selectedElement.animation) return;
+
+            selectedElement.animation[prop] = prop === 'type' ? value : parseFloat(value);
+
+            if (prop === 'duration') {
+                document.getElementById('durationValue').textContent = parseFloat(value).toFixed(1) + 's';
+            } else if (prop === 'delay') {
+                document.getElementById('delayValue').textContent = parseFloat(value).toFixed(1) + 's';
+            }
+        }
+
+        function previewAnimation() {
+            if (!selectedElement || !selectedElement.animation || selectedElement.animation.type === 'none') {
+                alert('애니메이션 유형을 선택해주세요.');
+                return;
+            }
+
+            // Simple preview using canvas state changes
+            const originalX = selectedElement.x;
+            const originalY = selectedElement.y;
+            const originalOpacity = selectedElement.opacity;
+
+            const animType = selectedElement.animation.type;
+            const duration = selectedElement.animation.duration * 1000;
+            const delay = selectedElement.animation.delay * 1000;
+
+            setTimeout(() => {
+                const startTime = Date.now();
+                const animateFrame = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    switch (animType) {
+                        case 'fadeIn':
+                            selectedElement.opacity = progress * originalOpacity;
+                            break;
+                        case 'fadeOut':
+                            selectedElement.opacity = (1 - progress) * originalOpacity;
+                            break;
+                        case 'slideLeft':
+                            selectedElement.x = originalX + (1 - progress) * 100;
+                            break;
+                        case 'slideRight':
+                            selectedElement.x = originalX - (1 - progress) * 100;
+                            break;
+                        case 'slideUp':
+                            selectedElement.y = originalY + (1 - progress) * 100;
+                            break;
+                        case 'slideDown':
+                            selectedElement.y = originalY - (1 - progress) * 100;
+                            break;
+                        case 'bounce':
+                            const bounce = Math.abs(Math.sin(progress * Math.PI * 3)) * (1 - progress);
+                            selectedElement.y = originalY - bounce * 50;
+                            break;
+                        case 'pulse':
+                            const scale = 1 + Math.sin(progress * Math.PI * 4) * 0.1;
+                            // Simple pulse effect (would need more complex scaling)
+                            break;
+                    }
+
+                    isDirty = true;
+                    render();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateFrame);
+                    } else {
+                        // Reset to original state
+                        selectedElement.x = originalX;
+                        selectedElement.y = originalY;
+                        selectedElement.opacity = originalOpacity;
+                        isDirty = true;
+                        render();
+                    }
+                };
+                animateFrame();
+            }, delay);
         }
 
         // Close modals when clicking outside
