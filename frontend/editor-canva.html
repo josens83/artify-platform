@@ -436,69 +436,69 @@
                 <div class="project-name" id="projectName">새 프로젝트</div>
             </div>
             <div class="header-center">
-                <button class="header-btn" onclick="undo()" id="undoBtn" disabled>
+                <button class="header-btn" onclick="undo()" id="undoBtn" disabled aria-label="실행 취소" title="실행 취소 (Ctrl+Z)">
                     ↶ 실행 취소
                 </button>
-                <button class="header-btn" onclick="redo()" id="redoBtn" disabled>
+                <button class="header-btn" onclick="redo()" id="redoBtn" disabled aria-label="다시 실행" title="다시 실행 (Ctrl+Y)">
                     ↷ 다시 실행
                 </button>
             </div>
             <div class="header-right">
-                <button class="header-btn" onclick="location.href='index.html'">← 목록</button>
-                <button class="header-btn primary" onclick="saveProject()">💾 저장</button>
-                <button class="header-btn" onclick="handleLogout()">로그아웃</button>
+                <button class="header-btn" onclick="location.href='index.html'" aria-label="프로젝트 목록으로 돌아가기">← 목록</button>
+                <button class="header-btn primary" onclick="saveProject()" aria-label="프로젝트 저장">💾 저장</button>
+                <button class="header-btn" onclick="handleLogout()" aria-label="로그아웃">로그아웃</button>
             </div>
         </div>
 
         <!-- Left Sidebar - Tools -->
-        <div class="left-sidebar">
-            <div class="tool-item active" onclick="setTool('select')" data-tool="select">
+        <div class="left-sidebar" role="toolbar" aria-label="도구 모음">
+            <div class="tool-item active" onclick="setTool('select')" data-tool="select" role="button" aria-label="선택 도구" tabindex="0">
                 <div>⬜</div>
                 <div class="tool-label">선택</div>
             </div>
-            <div class="tool-item" onclick="setTool('text')" data-tool="text">
+            <div class="tool-item" onclick="setTool('text')" data-tool="text" role="button" aria-label="텍스트 도구" tabindex="0">
                 <div>T</div>
                 <div class="tool-label">텍스트</div>
             </div>
-            <div class="tool-item" onclick="setTool('rect')" data-tool="rect">
+            <div class="tool-item" onclick="setTool('rect')" data-tool="rect" role="button" aria-label="사각형 도구" tabindex="0">
                 <div>▢</div>
                 <div class="tool-label">사각형</div>
             </div>
-            <div class="tool-item" onclick="setTool('circle')" data-tool="circle">
+            <div class="tool-item" onclick="setTool('circle')" data-tool="circle" role="button" aria-label="원 도구" tabindex="0">
                 <div>○</div>
                 <div class="tool-label">원</div>
             </div>
-            <div class="tool-item" onclick="setTool('triangle')" data-tool="triangle">
+            <div class="tool-item" onclick="setTool('triangle')" data-tool="triangle" role="button" aria-label="삼각형 도구" tabindex="0">
                 <div>△</div>
                 <div class="tool-label">삼각형</div>
             </div>
-            <div class="tool-item" onclick="setTool('star')" data-tool="star">
+            <div class="tool-item" onclick="setTool('star')" data-tool="star" role="button" aria-label="별 도구" tabindex="0">
                 <div>★</div>
                 <div class="tool-label">별</div>
             </div>
-            <div class="tool-item" onclick="setTool('line')" data-tool="line">
+            <div class="tool-item" onclick="setTool('line')" data-tool="line" role="button" aria-label="선 도구" tabindex="0">
                 <div>─</div>
                 <div class="tool-label">선</div>
             </div>
-            <div class="tool-item" onclick="setTool('arrow')" data-tool="arrow">
+            <div class="tool-item" onclick="setTool('arrow')" data-tool="arrow" role="button" aria-label="화살표 도구" tabindex="0">
                 <div>→</div>
                 <div class="tool-label">화살표</div>
             </div>
-            <div class="tool-item" onclick="setTool('pencil')" data-tool="pencil">
+            <div class="tool-item" onclick="setTool('pencil')" data-tool="pencil" role="button" aria-label="펜 도구" tabindex="0">
                 <div>✏️</div>
                 <div class="tool-label">펜</div>
             </div>
-            <div class="tool-item" onclick="document.getElementById('imageUpload').click()">
+            <div class="tool-item" onclick="document.getElementById('imageUpload').click()" role="button" aria-label="이미지 업로드" tabindex="0">
                 <div>🖼️</div>
                 <div class="tool-label">이미지</div>
             </div>
-            <input type="file" id="imageUpload" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+            <input type="file" id="imageUpload" accept="image/*" style="display:none" onchange="handleImageUpload(event)" aria-label="이미지 파일 선택">
         </div>
 
         <!-- Canvas Area -->
         <div class="canvas-container">
             <div class="canvas-wrapper">
-                <canvas id="mainCanvas" width="1200" height="800"></canvas>
+                <canvas id="mainCanvas" width="1200" height="800" role="img" aria-label="디자인 캔버스"></canvas>
             </div>
         </div>
 
@@ -610,6 +610,83 @@
                         <button class="btn-icon" onclick="updateElementProp('textAlign', 'right')">➡️</button>
                     </div>
                 </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">
+                        <input type="checkbox" id="textShadowEnabled" onchange="toggleTextShadow(this.checked)">
+                        텍스트 그림자
+                    </label>
+                </div>
+
+                <div id="textShadowControls" style="display:none;">
+                    <div class="panel-group">
+                        <label class="panel-label">X 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-20" max="20" value="2" id="shadowOffsetX" oninput="updateTextShadow('offsetX', this.value)">
+                            <span class="slider-value" id="shadowXValue">2px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">Y 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-20" max="20" value="2" id="shadowOffsetY" oninput="updateTextShadow('offsetY', this.value)">
+                            <span class="slider-value" id="shadowYValue">2px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">블러 반경</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="20" value="4" id="shadowBlur" oninput="updateTextShadow('blur', this.value)">
+                            <span class="slider-value" id="shadowBlurValue">4px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">그림자 색상</label>
+                        <input type="color" class="panel-input" id="shadowColor" value="#000000" onchange="updateTextShadow('color', this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Filter Properties -->
+            <div class="panel-section" id="imageProps" style="display:none;">
+                <div class="panel-title">이미지 필터</div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Grayscale</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="0" id="filterGrayscale" oninput="updateImageFilter('grayscale', this.value)">
+                        <span class="slider-value" id="grayscaleValue">0%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Sepia</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="0" id="filterSepia" oninput="updateImageFilter('sepia', this.value)">
+                        <span class="slider-value" id="sepiaValue">0%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Blur</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="10" value="0" id="filterBlur" oninput="updateImageFilter('blur', this.value)">
+                        <span class="slider-value" id="blurValue">0px</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Brightness</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterBrightness" oninput="updateImageFilter('brightness', this.value)">
+                        <span class="slider-value" id="brightnessValue">100%</span>
+                    </div>
+                </div>
+
+                <button class="btn-icon" onclick="resetImageFilters()" style="width: 100%;">필터 초기화</button>
             </div>
 
             <!-- Color Properties -->
@@ -646,6 +723,33 @@
                     <div class="slider-group">
                         <input type="range" min="0" max="20" value="2" id="propStrokeWidth" oninput="updateElementProp('strokeWidth', this.value)">
                         <span class="slider-value" id="strokeValue">2px</span>
+                    </div>
+                </div>
+
+                <div class="panel-group" id="gradientSection" style="display:none;">
+                    <label class="panel-label">
+                        <input type="checkbox" id="gradientEnabled" onchange="toggleGradient(this.checked)">
+                        그라데이션 채우기
+                    </label>
+                </div>
+
+                <div id="gradientControls" style="display:none;">
+                    <div class="panel-group">
+                        <label class="panel-label">시작 색상</label>
+                        <input type="color" class="panel-input" id="gradientColor1" value="#667eea" onchange="updateGradient('color1', this.value)">
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">끝 색상</label>
+                        <input type="color" class="panel-input" id="gradientColor2" value="#764ba2" onchange="updateGradient('color2', this.value)">
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">각도</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="360" value="0" id="gradientAngle" oninput="updateGradient('angle', this.value)">
+                            <span class="slider-value" id="angleValue">0°</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -690,6 +794,7 @@
         let canvas, ctx;
         let elements = [];
         let selectedElement = null;
+        let selectedElements = [];
         let currentTool = 'select';
         let isDrawing = false;
         let isDragging = false;
@@ -701,6 +806,13 @@
         let currentProjectId = null;
         let gridEnabled = true;
         let snapEnabled = true;
+        let nextGroupId = 1;
+        let imageCache = new Map();
+        let clipboard = null;
+        let autoSaveInterval = null;
+        let lastSaveTime = null;
+        let isDirty = true;
+        let renderScheduled = false;
 
         // Element class
         class Element {
@@ -718,6 +830,14 @@
                 this.opacity = 1;
                 this.visible = true;
                 this.locked = false;
+                this.groupId = null;
+                this.gradient = {
+                    enabled: false,
+                    type: 'linear',
+                    color1: '#667eea',
+                    color2: '#764ba2',
+                    angle: 0
+                };
 
                 // Text specific
                 if (type === 'text') {
@@ -728,11 +848,24 @@
                     this.bold = false;
                     this.italic = false;
                     this.underline = false;
+                    this.textShadow = {
+                        enabled: false,
+                        offsetX: 2,
+                        offsetY: 2,
+                        blur: 4,
+                        color: '#000000'
+                    };
                 }
 
                 // Image specific
                 if (type === 'image') {
                     this.imageData = null;
+                    this.filters = {
+                        grayscale: 0,
+                        sepia: 0,
+                        blur: 0,
+                        brightness: 100
+                    };
                 }
 
                 // Drawing path specific
@@ -752,7 +885,20 @@
 
                 switch (this.type) {
                     case 'rect':
-                        context.fillStyle = this.fill;
+                        // Apply gradient or solid fill
+                        if (this.gradient && this.gradient.enabled) {
+                            const angle = this.gradient.angle * Math.PI / 180;
+                            const x0 = this.x + this.width / 2 - Math.cos(angle) * this.width / 2;
+                            const y0 = this.y + this.height / 2 - Math.sin(angle) * this.height / 2;
+                            const x1 = this.x + this.width / 2 + Math.cos(angle) * this.width / 2;
+                            const y1 = this.y + this.height / 2 + Math.sin(angle) * this.height / 2;
+                            const gradient = context.createLinearGradient(x0, y0, x1, y1);
+                            gradient.addColorStop(0, this.gradient.color1);
+                            gradient.addColorStop(1, this.gradient.color2);
+                            context.fillStyle = gradient;
+                        } else {
+                            context.fillStyle = this.fill;
+                        }
                         context.strokeStyle = this.stroke;
                         context.lineWidth = this.strokeWidth;
                         context.fillRect(this.x, this.y, this.width, this.height);
@@ -762,7 +908,24 @@
                         break;
 
                     case 'circle':
-                        context.fillStyle = this.fill;
+                        // Apply gradient or solid fill
+                        if (this.gradient && this.gradient.enabled) {
+                            const angle = this.gradient.angle * Math.PI / 180;
+                            const radiusX = this.width / 2;
+                            const radiusY = this.height / 2;
+                            const cx = this.x + radiusX;
+                            const cy = this.y + radiusY;
+                            const x0 = cx - Math.cos(angle) * radiusX;
+                            const y0 = cy - Math.sin(angle) * radiusY;
+                            const x1 = cx + Math.cos(angle) * radiusX;
+                            const y1 = cy + Math.sin(angle) * radiusY;
+                            const gradient = context.createLinearGradient(x0, y0, x1, y1);
+                            gradient.addColorStop(0, this.gradient.color1);
+                            gradient.addColorStop(1, this.gradient.color2);
+                            context.fillStyle = gradient;
+                        } else {
+                            context.fillStyle = this.fill;
+                        }
                         context.strokeStyle = this.stroke;
                         context.lineWidth = this.strokeWidth;
                         context.beginPath();
@@ -816,11 +979,25 @@
                         context.textAlign = this.textAlign;
                         context.textBaseline = 'top';
 
+                        // Apply text shadow if enabled
+                        if (this.textShadow && this.textShadow.enabled) {
+                            context.shadowOffsetX = this.textShadow.offsetX;
+                            context.shadowOffsetY = this.textShadow.offsetY;
+                            context.shadowBlur = this.textShadow.blur;
+                            context.shadowColor = this.textShadow.color;
+                        }
+
                         let textX = this.x;
                         if (this.textAlign === 'center') textX += this.width / 2;
                         else if (this.textAlign === 'right') textX += this.width;
 
                         context.fillText(this.text, textX, this.y);
+
+                        // Reset shadow
+                        context.shadowOffsetX = 0;
+                        context.shadowOffsetY = 0;
+                        context.shadowBlur = 0;
+                        context.shadowColor = 'transparent';
 
                         if (this.underline) {
                             const metrics = context.measureText(this.text);
@@ -835,7 +1012,17 @@
 
                     case 'image':
                         if (this.imageData) {
+                            // Apply filters
+                            if (this.filters) {
+                                const filterParts = [];
+                                if (this.filters.grayscale > 0) filterParts.push(`grayscale(${this.filters.grayscale}%)`);
+                                if (this.filters.sepia > 0) filterParts.push(`sepia(${this.filters.sepia}%)`);
+                                if (this.filters.blur > 0) filterParts.push(`blur(${this.filters.blur}px)`);
+                                if (this.filters.brightness !== 100) filterParts.push(`brightness(${this.filters.brightness}%)`);
+                                context.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
+                            }
                             context.drawImage(this.imageData, this.x, this.y, this.width, this.height);
+                            context.filter = 'none';
                         }
                         break;
 
@@ -974,11 +1161,14 @@
 
             if (currentProjectId) {
                 loadProject(currentProjectId);
+                // Enable auto-save every 5 minutes
+                autoSaveInterval = setInterval(autoSave, 5 * 60 * 1000);
             } else {
                 render();
             }
 
             setupEventListeners();
+            setupOnlineStatusListener();
         };
 
         function checkAuth() {
@@ -1007,6 +1197,71 @@
             document.addEventListener('keydown', handleKeyDown);
         }
 
+        function setupOnlineStatusListener() {
+            window.addEventListener('online', () => {
+                console.log('온라인 상태로 변경되었습니다.');
+                if (currentProjectId && elements.length > 0) {
+                    autoSave();
+                }
+            });
+
+            window.addEventListener('offline', () => {
+                console.log('오프라인 상태입니다. 변경사항이 저장되지 않을 수 있습니다.');
+            });
+        }
+
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok || response.status === 404) {
+                        return response;
+                    }
+                    if (i === maxRetries - 1) throw new Error('Max retries reached');
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                }
+            }
+        }
+
+        async function autoSave() {
+            if (!currentProjectId || elements.length === 0) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const canvasData = canvas.toDataURL('image/jpeg', 0.8);
+
+                const projectData = {
+                    image: canvasData,
+                    elements: elements.map(el => ({
+                        ...el,
+                        imageData: el.imageData ? el.imageData.src : null
+                    })),
+                    prompt: document.getElementById('aiPrompt').value,
+                    lastModified: new Date().toISOString()
+                };
+
+                const response = await fetchWithRetry(`${API_URL}/projects/${currentProjectId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        data: JSON.stringify(projectData)
+                    })
+                });
+
+                if (response.ok) {
+                    lastSaveTime = new Date();
+                    console.log('자동 저장 완료:', lastSaveTime.toLocaleTimeString());
+                }
+            } catch (error) {
+                console.error('자동 저장 실패:', error);
+            }
+        }
+
         function handleMouseDown(e) {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -1026,7 +1281,27 @@
                 // Check for element selection
                 for (let i = elements.length - 1; i >= 0; i--) {
                     if (elements[i].contains(x, y) && !elements[i].locked) {
-                        selectedElement = elements[i];
+                        const clickedElement = elements[i];
+
+                        // If element is part of a group, select all group members
+                        if (clickedElement.groupId) {
+                            selectedElements = elements.filter(el => el.groupId === clickedElement.groupId);
+                            selectedElement = clickedElement;
+                        } else if (e.ctrlKey || e.metaKey) {
+                            // Ctrl+Click for multi-select
+                            if (selectedElements.includes(clickedElement)) {
+                                selectedElements = selectedElements.filter(el => el !== clickedElement);
+                                selectedElement = selectedElements[0] || null;
+                            } else {
+                                selectedElements.push(clickedElement);
+                                selectedElement = clickedElement;
+                            }
+                        } else {
+                            // Single select
+                            selectedElement = clickedElement;
+                            selectedElements = [clickedElement];
+                        }
+
                         isDragging = true;
                         dragStart = {x: x - selectedElement.x, y: y - selectedElement.y};
                         updatePropertiesPanel();
@@ -1038,6 +1313,7 @@
 
                 // Deselect
                 selectedElement = null;
+                selectedElements = [];
                 updatePropertiesPanel();
                 updateLayersList();
                 render();
@@ -1062,8 +1338,25 @@
             const y = e.clientY - rect.top;
 
             if (isDragging && selectedElement && !selectedElement.locked) {
-                selectedElement.x = snapEnabled ? Math.round((x - dragStart.x) / 10) * 10 : x - dragStart.x;
-                selectedElement.y = snapEnabled ? Math.round((y - dragStart.y) / 10) * 10 : y - dragStart.y;
+                const newX = snapEnabled ? Math.round((x - dragStart.x) / 10) * 10 : x - dragStart.x;
+                const newY = snapEnabled ? Math.round((y - dragStart.y) / 10) * 10 : y - dragStart.y;
+                const deltaX = newX - selectedElement.x;
+                const deltaY = newY - selectedElement.y;
+
+                // Move selected element
+                selectedElement.x = newX;
+                selectedElement.y = newY;
+
+                // Move other selected elements
+                if (selectedElements.length > 1) {
+                    selectedElements.forEach(el => {
+                        if (el !== selectedElement && !el.locked) {
+                            el.x += deltaX;
+                            el.y += deltaY;
+                        }
+                    });
+                }
+
                 updatePropertiesPanel();
                 render();
             } else if (isResizing && selectedElement) {
@@ -1186,6 +1479,27 @@
             } else if (e.ctrlKey && e.key === 'y') {
                 e.preventDefault();
                 redo();
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'G') {
+                e.preventDefault();
+                ungroupElements();
+            } else if (e.ctrlKey && e.key === 'g') {
+                e.preventDefault();
+                groupElements();
+            } else if (e.ctrlKey && e.key === 'a') {
+                e.preventDefault();
+                selectAll();
+            } else if (e.ctrlKey && e.key === 'c') {
+                e.preventDefault();
+                copySelected();
+            } else if (e.ctrlKey && e.key === 'v') {
+                e.preventDefault();
+                pasteClipboard();
+            } else if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                duplicateSelected();
+            } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                moveSelectedByArrow(e.key, e.ctrlKey);
             }
         }
 
@@ -1204,6 +1518,19 @@
         }
 
         function render() {
+            if (!isDirty && !renderScheduled) return;
+
+            if (!renderScheduled) {
+                renderScheduled = true;
+                requestAnimationFrame(() => {
+                    renderScheduled = false;
+                    isDirty = false;
+                    actualRender();
+                });
+            }
+        }
+
+        function actualRender() {
             // Clear canvas
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1232,33 +1559,50 @@
             }
 
             // Draw selection
-            if (selectedElement && currentTool === 'select') {
-                ctx.strokeStyle = '#667eea';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.strokeRect(selectedElement.x - 2, selectedElement.y - 2,
-                              selectedElement.width + 4, selectedElement.height + 4);
-                ctx.setLineDash([]);
+            if (currentTool === 'select') {
+                // Draw all selected elements
+                if (selectedElements.length > 1) {
+                    ctx.strokeStyle = '#667eea';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    selectedElements.forEach(el => {
+                        ctx.strokeRect(el.x - 2, el.y - 2, el.width + 4, el.height + 4);
+                    });
+                    ctx.setLineDash([]);
+                } else if (selectedElement) {
+                    ctx.strokeStyle = '#667eea';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(selectedElement.x - 2, selectedElement.y - 2,
+                                  selectedElement.width + 4, selectedElement.height + 4);
+                    ctx.setLineDash([]);
 
-                // Draw resize handles
-                if (selectedElement.type !== 'pencil') {
-                    ctx.fillStyle = '#667eea';
-                    const handles = [
-                        {x: selectedElement.x, y: selectedElement.y},
-                        {x: selectedElement.x + selectedElement.width, y: selectedElement.y},
-                        {x: selectedElement.x, y: selectedElement.y + selectedElement.height},
-                        {x: selectedElement.x + selectedElement.width, y: selectedElement.y + selectedElement.height},
-                    ];
-                    for (let handle of handles) {
-                        ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
+                    // Draw resize handles
+                    if (selectedElement.type !== 'pencil') {
+                        ctx.fillStyle = '#667eea';
+                        const handles = [
+                            {x: selectedElement.x, y: selectedElement.y},
+                            {x: selectedElement.x + selectedElement.width, y: selectedElement.y},
+                            {x: selectedElement.x, y: selectedElement.y + selectedElement.height},
+                            {x: selectedElement.x + selectedElement.width, y: selectedElement.y + selectedElement.height},
+                        ];
+                        for (let handle of handles) {
+                            ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
+                        }
                     }
                 }
             }
         }
 
+        function markDirty() {
+            isDirty = true;
+        }
+
         function updatePropertiesPanel() {
             const elementProps = document.getElementById('elementProps');
             const textProps = document.getElementById('textProps');
+            const imageProps = document.getElementById('imageProps');
+            const gradientSection = document.getElementById('gradientSection');
 
             if (selectedElement) {
                 elementProps.style.display = 'block';
@@ -1275,18 +1619,64 @@
                 document.getElementById('propStrokeWidth').value = selectedElement.strokeWidth;
                 document.getElementById('strokeValue').textContent = selectedElement.strokeWidth + 'px';
 
+                // Show gradient section for shapes
+                if (['rect', 'circle', 'triangle', 'star'].includes(selectedElement.type)) {
+                    gradientSection.style.display = 'block';
+                    if (selectedElement.gradient) {
+                        document.getElementById('gradientEnabled').checked = selectedElement.gradient.enabled;
+                        document.getElementById('gradientControls').style.display = selectedElement.gradient.enabled ? 'block' : 'none';
+                        document.getElementById('gradientColor1').value = selectedElement.gradient.color1;
+                        document.getElementById('gradientColor2').value = selectedElement.gradient.color2;
+                        document.getElementById('gradientAngle').value = selectedElement.gradient.angle;
+                        document.getElementById('angleValue').textContent = selectedElement.gradient.angle + '°';
+                    }
+                } else {
+                    gradientSection.style.display = 'none';
+                }
+
                 if (selectedElement.type === 'text') {
                     textProps.style.display = 'block';
+                    imageProps.style.display = 'none';
                     document.getElementById('propText').value = selectedElement.text;
                     document.getElementById('propFont').value = selectedElement.fontFamily;
                     document.getElementById('propFontSize').value = selectedElement.fontSize;
                     document.getElementById('fontSizeValue').textContent = selectedElement.fontSize + 'px';
+
+                    // Update text shadow controls
+                    if (selectedElement.textShadow) {
+                        document.getElementById('textShadowEnabled').checked = selectedElement.textShadow.enabled;
+                        document.getElementById('textShadowControls').style.display = selectedElement.textShadow.enabled ? 'block' : 'none';
+                        document.getElementById('shadowOffsetX').value = selectedElement.textShadow.offsetX;
+                        document.getElementById('shadowXValue').textContent = selectedElement.textShadow.offsetX + 'px';
+                        document.getElementById('shadowOffsetY').value = selectedElement.textShadow.offsetY;
+                        document.getElementById('shadowYValue').textContent = selectedElement.textShadow.offsetY + 'px';
+                        document.getElementById('shadowBlur').value = selectedElement.textShadow.blur;
+                        document.getElementById('shadowBlurValue').textContent = selectedElement.textShadow.blur + 'px';
+                        document.getElementById('shadowColor').value = selectedElement.textShadow.color;
+                    }
+                } else if (selectedElement.type === 'image') {
+                    textProps.style.display = 'none';
+                    imageProps.style.display = 'block';
+
+                    // Update image filter controls
+                    if (selectedElement.filters) {
+                        document.getElementById('filterGrayscale').value = selectedElement.filters.grayscale;
+                        document.getElementById('grayscaleValue').textContent = selectedElement.filters.grayscale + '%';
+                        document.getElementById('filterSepia').value = selectedElement.filters.sepia;
+                        document.getElementById('sepiaValue').textContent = selectedElement.filters.sepia + '%';
+                        document.getElementById('filterBlur').value = selectedElement.filters.blur;
+                        document.getElementById('blurValue').textContent = selectedElement.filters.blur + 'px';
+                        document.getElementById('filterBrightness').value = selectedElement.filters.brightness;
+                        document.getElementById('brightnessValue').textContent = selectedElement.filters.brightness + '%';
+                    }
                 } else {
                     textProps.style.display = 'none';
+                    imageProps.style.display = 'none';
                 }
             } else {
                 elementProps.style.display = 'none';
                 textProps.style.display = 'none';
+                imageProps.style.display = 'none';
             }
         }
 
@@ -1327,12 +1717,111 @@
             render();
         }
 
+        function toggleTextShadow(enabled) {
+            if (!selectedElement || selectedElement.type !== 'text') return;
+
+            if (!selectedElement.textShadow) {
+                selectedElement.textShadow = {
+                    enabled: false,
+                    offsetX: 2,
+                    offsetY: 2,
+                    blur: 4,
+                    color: '#000000'
+                };
+            }
+
+            selectedElement.textShadow.enabled = enabled;
+            document.getElementById('textShadowControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateTextShadow(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'text' || !selectedElement.textShadow) return;
+
+            switch (prop) {
+                case 'offsetX':
+                    selectedElement.textShadow.offsetX = parseFloat(value);
+                    document.getElementById('shadowXValue').textContent = value + 'px';
+                    break;
+                case 'offsetY':
+                    selectedElement.textShadow.offsetY = parseFloat(value);
+                    document.getElementById('shadowYValue').textContent = value + 'px';
+                    break;
+                case 'blur':
+                    selectedElement.textShadow.blur = parseFloat(value);
+                    document.getElementById('shadowBlurValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.textShadow.color = value;
+                    break;
+            }
+
+            render();
+        }
+
         function setColor(color) {
             document.getElementById('propFill').value = color;
             if (selectedElement) {
                 selectedElement.fill = color;
                 render();
             }
+        }
+
+        function updateImageFilter(filterType, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.filters) return;
+
+            selectedElement.filters[filterType] = parseFloat(value);
+
+            switch (filterType) {
+                case 'grayscale':
+                    document.getElementById('grayscaleValue').textContent = value + '%';
+                    break;
+                case 'sepia':
+                    document.getElementById('sepiaValue').textContent = value + '%';
+                    break;
+                case 'blur':
+                    document.getElementById('blurValue').textContent = value + 'px';
+                    break;
+                case 'brightness':
+                    document.getElementById('brightnessValue').textContent = value + '%';
+                    break;
+            }
+
+            render();
+        }
+
+        function resetImageFilters() {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            selectedElement.filters = {
+                grayscale: 0,
+                sepia: 0,
+                blur: 0,
+                brightness: 100
+            };
+
+            updatePropertiesPanel();
+            render();
+        }
+
+        function toggleGradient(enabled) {
+            if (!selectedElement || !selectedElement.gradient) return;
+
+            selectedElement.gradient.enabled = enabled;
+            document.getElementById('gradientControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateGradient(prop, value) {
+            if (!selectedElement || !selectedElement.gradient) return;
+
+            selectedElement.gradient[prop] = prop === 'angle' ? parseFloat(value) : value;
+
+            if (prop === 'angle') {
+                document.getElementById('angleValue').textContent = value + '°';
+            }
+
+            render();
         }
 
         function updateLayersList() {
@@ -1420,6 +1909,119 @@
             }
         }
 
+        function groupElements() {
+            if (selectedElements.length < 2) {
+                alert('그룹화하려면 2개 이상의 요소를 선택하세요.');
+                return;
+            }
+
+            const groupId = nextGroupId++;
+            selectedElements.forEach(el => {
+                el.groupId = groupId;
+            });
+
+            saveHistory();
+            alert(`${selectedElements.length}개의 요소가 그룹화되었습니다.`);
+        }
+
+        function ungroupElements() {
+            if (!selectedElement || !selectedElement.groupId) {
+                alert('그룹화된 요소를 선택하세요.');
+                return;
+            }
+
+            const groupId = selectedElement.groupId;
+            elements.forEach(el => {
+                if (el.groupId === groupId) {
+                    el.groupId = null;
+                }
+            });
+
+            saveHistory();
+            alert('그룹이 해제되었습니다.');
+        }
+
+        function selectAll() {
+            selectedElements = elements.filter(el => el.visible && !el.locked);
+            if (selectedElements.length > 0) {
+                selectedElement = selectedElements[0];
+                updatePropertiesPanel();
+                updateLayersList();
+                render();
+            }
+        }
+
+        function copySelected() {
+            if (!selectedElement) return;
+
+            clipboard = JSON.parse(JSON.stringify({
+                ...selectedElement,
+                imageData: null,
+                imageDataId: selectedElement.type === 'image' ? selectedElement.id : null
+            }));
+        }
+
+        function pasteClipboard() {
+            if (!clipboard) return;
+
+            const el = new Element(clipboard.type, clipboard.x + 20, clipboard.y + 20, clipboard.width, clipboard.height);
+            Object.assign(el, clipboard);
+            el.id = Date.now() + Math.random();
+
+            // Restore image data from cache
+            if (clipboard.type === 'image' && clipboard.imageDataId) {
+                const cachedImage = imageCache.get(clipboard.imageDataId);
+                if (cachedImage) {
+                    el.imageData = cachedImage;
+                    imageCache.set(el.id, cachedImage);
+                }
+            }
+
+            elements.push(el);
+            selectedElement = el;
+            selectedElements = [el];
+            saveHistory();
+            updatePropertiesPanel();
+            updateLayersList();
+            render();
+        }
+
+        function duplicateSelected() {
+            if (!selectedElement) return;
+
+            copySelected();
+            pasteClipboard();
+        }
+
+        function moveSelectedByArrow(key, ctrlKey) {
+            if (!selectedElement) return;
+
+            const step = ctrlKey ? 10 : 1;
+            const elementsToMove = selectedElements.length > 1 ? selectedElements : [selectedElement];
+
+            elementsToMove.forEach(el => {
+                if (el.locked) return;
+
+                switch (key) {
+                    case 'ArrowUp':
+                        el.y -= step;
+                        break;
+                    case 'ArrowDown':
+                        el.y += step;
+                        break;
+                    case 'ArrowLeft':
+                        el.x -= step;
+                        break;
+                    case 'ArrowRight':
+                        el.x += step;
+                        break;
+                }
+            });
+
+            updatePropertiesPanel();
+            render();
+        }
+
         function alignElements(alignment) {
             if (!selectedElement) return;
 
@@ -1450,21 +2052,37 @@
 
         function saveHistory() {
             history = history.slice(0, historyIndex + 1);
-            history.push(JSON.stringify(elements));
+
+            // Serialize elements without image data
+            const serialized = elements.map(el => {
+                const copy = {...el};
+                if (el.type === 'image' && el.imageData) {
+                    // Cache the image and store only the ID
+                    const imageId = el.id;
+                    imageCache.set(imageId, el.imageData);
+                    copy.imageDataId = imageId;
+                    delete copy.imageData;
+                }
+                return copy;
+            });
+
+            history.push(JSON.stringify(serialized));
             historyIndex++;
 
             document.getElementById('undoBtn').disabled = historyIndex <= 0;
             document.getElementById('redoBtn').disabled = true;
+
+            // Limit history to 50 entries to prevent memory issues
+            if (history.length > 50) {
+                history.shift();
+                historyIndex--;
+            }
         }
 
         function undo() {
             if (historyIndex > 0) {
                 historyIndex--;
-                elements = JSON.parse(history[historyIndex]);
-                selectedElement = null;
-                updatePropertiesPanel();
-                updateLayersList();
-                render();
+                restoreFromHistory();
 
                 document.getElementById('undoBtn').disabled = historyIndex <= 0;
                 document.getElementById('redoBtn').disabled = false;
@@ -1474,15 +2092,32 @@
         function redo() {
             if (historyIndex < history.length - 1) {
                 historyIndex++;
-                elements = JSON.parse(history[historyIndex]);
-                selectedElement = null;
-                updatePropertiesPanel();
-                updateLayersList();
-                render();
+                restoreFromHistory();
 
                 document.getElementById('undoBtn').disabled = false;
                 document.getElementById('redoBtn').disabled = historyIndex >= history.length - 1;
             }
+        }
+
+        function restoreFromHistory() {
+            const serialized = JSON.parse(history[historyIndex]);
+            elements = serialized.map(data => {
+                const el = new Element(data.type, data.x, data.y, data.width, data.height);
+                Object.assign(el, data);
+
+                // Restore image data from cache
+                if (data.type === 'image' && data.imageDataId) {
+                    el.imageData = imageCache.get(data.imageDataId) || null;
+                }
+
+                return el;
+            });
+
+            selectedElement = null;
+            selectedElements = [];
+            updatePropertiesPanel();
+            updateLayersList();
+            render();
         }
 
         async function handleImageUpload(event) {
@@ -1523,7 +2158,7 @@
 
             try {
                 const size = document.getElementById('aiSize').value;
-                const response = await fetch(`${PYTHON_API_URL}/generate-image`, {
+                const response = await fetchWithRetry(`${PYTHON_API_URL}/generate-image`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt, size, quality: 'standard' })
@@ -1563,6 +2198,9 @@
                 return;
             }
 
+            const saveMessage = document.getElementById('saveMessage');
+            saveMessage.innerHTML = '<div class="message loading">저장 중...</div>';
+
             try {
                 const token = localStorage.getItem('token');
 
@@ -1579,7 +2217,7 @@
                     lastModified: new Date().toISOString()
                 };
 
-                const response = await fetch(`${API_URL}/projects/${currentProjectId}`, {
+                const response = await fetchWithRetry(`${API_URL}/projects/${currentProjectId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1591,15 +2229,15 @@
                 });
 
                 if (response.ok) {
-                    const saveMessage = document.getElementById('saveMessage');
+                    lastSaveTime = new Date();
                     saveMessage.innerHTML = '<div class="message success">프로젝트가 저장되었습니다!</div>';
                     setTimeout(() => saveMessage.innerHTML = '', 3000);
                 } else {
                     throw new Error('저장 실패');
                 }
             } catch (error) {
-                const saveMessage = document.getElementById('saveMessage');
-                saveMessage.innerHTML = '<div class="message error">저장 중 오류가 발생했습니다.</div>';
+                saveMessage.innerHTML = '<div class="message error">저장 중 오류가 발생했습니다. 재시도합니다...</div>';
+                console.error('Save error:', error);
             }
         }
 
