@@ -1355,6 +1355,55 @@
         let cropDragStart = null;
         let cropResizeHandle = null;
 
+        // P15: Plugin System
+        const plugins = [];
+        const pluginAPI = {
+            registerPlugin: function(plugin) {
+                if (!plugin.name || !plugin.init) {
+                    console.error('Invalid plugin: must have name and init function');
+                    return false;
+                }
+                plugins.push(plugin);
+                console.log(`Plugin registered: ${plugin.name}`);
+                return true;
+            },
+            getContext: function() {
+                return {
+                    canvas,
+                    ctx,
+                    elements,
+                    selectedElement,
+                    addElement: function(element) {
+                        elements.push(element);
+                        saveHistory();
+                        updateLayersList();
+                        render();
+                    },
+                    updateElement: function(element, props) {
+                        Object.assign(element, props);
+                        saveHistory();
+                        render();
+                    },
+                    deleteElement: function(element) {
+                        const index = elements.indexOf(element);
+                        if (index > -1) {
+                            elements.splice(index, 1);
+                            saveHistory();
+                            updateLayersList();
+                            render();
+                        }
+                    },
+                    render,
+                    showMessage: function(msg) {
+                        alert(msg);
+                    }
+                };
+            }
+        };
+
+        // Make plugin API available globally
+        window.ArtifyPluginAPI = pluginAPI;
+
         // Template presets
         const templates = {
             'instagram-post': { width: 1080, height: 1080 },
@@ -1864,6 +1913,9 @@
 
             setupEventListeners();
             setupOnlineStatusListener();
+
+            // P15: Initialize plugins
+            initializePlugins();
         };
 
         function checkAuth() {
@@ -3933,6 +3985,79 @@
             showBrandColors();
             showBrandColors(); // Toggle twice to refresh
         }
+
+        // P15: Plugin System Functions
+        function initializePlugins() {
+            console.log('Initializing Artify Plugin System...');
+
+            // Initialize all registered plugins
+            plugins.forEach(plugin => {
+                try {
+                    plugin.init(pluginAPI.getContext());
+                    console.log(`Plugin "${plugin.name}" initialized successfully`);
+                } catch (error) {
+                    console.error(`Failed to initialize plugin "${plugin.name}":`, error);
+                }
+            });
+
+            console.log(`${plugins.length} plugin(s) loaded`);
+
+            // Example: Register a demo plugin
+            registerDemoPlugin();
+        }
+
+        function registerDemoPlugin() {
+            // Example plugin that adds a rainbow effect
+            const rainbowPlugin = {
+                name: 'Rainbow Effect Plugin',
+                version: '1.0.0',
+                description: 'Adds rainbow color effect to selected elements',
+                init: function(context) {
+                    // Plugin initialization
+                    console.log('Rainbow plugin loaded!');
+
+                    // Add custom function to window for external access
+                    window.applyRainbowEffect = function() {
+                        if (!context.selectedElement) {
+                            context.showMessage('요소를 선택해주세요.');
+                            return;
+                        }
+
+                        const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+                        let colorIndex = 0;
+
+                        const interval = setInterval(() => {
+                            if (context.selectedElement) {
+                                context.updateElement(context.selectedElement, {
+                                    fill: colors[colorIndex % colors.length]
+                                });
+                                colorIndex++;
+
+                                if (colorIndex >= colors.length * 3) {
+                                    clearInterval(interval);
+                                }
+                            } else {
+                                clearInterval(interval);
+                            }
+                        }, 200);
+                    };
+                }
+            };
+
+            pluginAPI.registerPlugin(rainbowPlugin);
+        }
+
+        // Example of how external plugins can register
+        // External developers can use:
+        // <script>
+        //   window.ArtifyPluginAPI.registerPlugin({
+        //     name: 'My Custom Plugin',
+        //     version: '1.0.0',
+        //     init: function(context) {
+        //       // Custom plugin code
+        //     }
+        //   });
+        // </script>
 
         // Close modals when clicking outside
         document.addEventListener('click', function(e) {
