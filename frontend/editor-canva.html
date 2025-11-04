@@ -590,6 +590,58 @@
         .inline-text-editor:focus {
             border-color: #5568d3;
         }
+
+        /* Template Modal */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .template-card {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .template-card:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+        }
+
+        .template-card.active {
+            border-color: #667eea;
+            background: #e8eaff;
+        }
+
+        .template-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .template-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .template-size {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .custom-size-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -610,6 +662,7 @@
             </div>
             <div class="header-right">
                 <button class="header-btn" onclick="location.href='index.html'" aria-label="프로젝트 목록으로 돌아가기">← 목록</button>
+                <button class="header-btn" onclick="showTemplateModal()" aria-label="캔버스 크기 변경">📐 캔버스 크기</button>
                 <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
                 <button class="header-btn primary" onclick="saveProject()" aria-label="프로젝트 저장">💾 저장</button>
                 <button class="header-btn" onclick="handleLogout()" aria-label="로그아웃">로그아웃</button>
@@ -1011,6 +1064,84 @@
         </div>
     </div>
 
+    <!-- Template Modal -->
+    <div class="modal-overlay" id="templateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">캔버스 크기 선택</h2>
+                <button class="modal-close" onclick="closeTemplateModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div class="template-grid">
+                    <div class="template-card" onclick="selectTemplate('instagram-post')">
+                        <div class="template-icon">📷</div>
+                        <div class="template-name">Instagram 포스트</div>
+                        <div class="template-size">1080 × 1080</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('instagram-story')">
+                        <div class="template-icon">📱</div>
+                        <div class="template-name">Instagram 스토리</div>
+                        <div class="template-size">1080 × 1920</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('facebook-post')">
+                        <div class="template-icon">👥</div>
+                        <div class="template-name">Facebook 포스트</div>
+                        <div class="template-size">1200 × 630</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('twitter-post')">
+                        <div class="template-icon">🐦</div>
+                        <div class="template-name">Twitter 포스트</div>
+                        <div class="template-size">1024 × 512</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('linkedin-post')">
+                        <div class="template-icon">💼</div>
+                        <div class="template-name">LinkedIn 포스트</div>
+                        <div class="template-size">1200 × 627</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('youtube-thumbnail')">
+                        <div class="template-icon">▶️</div>
+                        <div class="template-name">YouTube 썸네일</div>
+                        <div class="template-size">1280 × 720</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('presentation')">
+                        <div class="template-icon">📊</div>
+                        <div class="template-name">프레젠테이션</div>
+                        <div class="template-size">1920 × 1080</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('a4-portrait')">
+                        <div class="template-icon">📄</div>
+                        <div class="template-name">A4 세로</div>
+                        <div class="template-size">2480 × 3508</div>
+                    </div>
+                </div>
+
+                <div class="panel-group" style="margin-top: 20px;">
+                    <label class="panel-label">커스텀 크기</label>
+                    <div class="custom-size-inputs">
+                        <div>
+                            <input type="number" class="panel-input" id="customWidth" placeholder="너비" value="1200">
+                        </div>
+                        <div>
+                            <input type="number" class="panel-input" id="customHeight" placeholder="높이" value="800">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="export-btn-primary" onclick="applyTemplate()">
+                    적용
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script>
         // Global State
@@ -1041,6 +1172,19 @@
         let exportQuality = 0.9;
         let isEditingText = false;
         let editingElement = null;
+        let selectedTemplate = null;
+
+        // Template presets
+        const templates = {
+            'instagram-post': { width: 1080, height: 1080 },
+            'instagram-story': { width: 1080, height: 1920 },
+            'facebook-post': { width: 1200, height: 630 },
+            'twitter-post': { width: 1024, height: 512 },
+            'linkedin-post': { width: 1200, height: 627 },
+            'youtube-thumbnail': { width: 1280, height: 720 },
+            'presentation': { width: 1920, height: 1080 },
+            'a4-portrait': { width: 2480, height: 3508 }
+        };
 
         // Element class
         class Element {
@@ -2854,11 +2998,86 @@
 
         // Close modal when clicking outside
         document.addEventListener('click', function(e) {
-            const modal = document.getElementById('exportModal');
-            if (e.target === modal) {
+            const exportModal = document.getElementById('exportModal');
+            const templateModal = document.getElementById('templateModal');
+
+            if (e.target === exportModal) {
                 closeExportModal();
             }
+            if (e.target === templateModal) {
+                closeTemplateModal();
+            }
         });
+
+        // Template Functions
+        function showTemplateModal() {
+            document.getElementById('templateModal').classList.add('active');
+
+            // Set current canvas size in custom inputs
+            document.getElementById('customWidth').value = canvas.width;
+            document.getElementById('customHeight').value = canvas.height;
+        }
+
+        function closeTemplateModal() {
+            document.getElementById('templateModal').classList.remove('active');
+
+            // Clear active state from all cards
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            selectedTemplate = null;
+        }
+
+        function selectTemplate(templateId) {
+            selectedTemplate = templateId;
+
+            // Update active state
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.target.closest('.template-card').classList.add('active');
+
+            // Update custom inputs with template size
+            const template = templates[templateId];
+            if (template) {
+                document.getElementById('customWidth').value = template.width;
+                document.getElementById('customHeight').value = template.height;
+            }
+        }
+
+        function applyTemplate() {
+            const newWidth = parseInt(document.getElementById('customWidth').value);
+            const newHeight = parseInt(document.getElementById('customHeight').value);
+
+            if (!newWidth || !newHeight || newWidth < 100 || newHeight < 100) {
+                alert('캔버스 크기는 최소 100x100 이상이어야 합니다.');
+                return;
+            }
+
+            if (newWidth > 5000 || newHeight > 5000) {
+                alert('캔버스 크기는 최대 5000x5000까지 가능합니다.');
+                return;
+            }
+
+            // Confirm if there are elements on the canvas
+            if (elements.length > 0) {
+                const confirmed = confirm('캔버스 크기를 변경하면 일부 요소가 보이지 않을 수 있습니다. 계속하시겠습니까?');
+                if (!confirmed) return;
+            }
+
+            // Resize canvas
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Re-render
+            isDirty = true;
+            render();
+
+            closeTemplateModal();
+
+            // Show success message
+            alert(`캔버스 크기가 ${newWidth}x${newHeight}으로 변경되었습니다.`);
+        }
     </script>
 </body>
 </html>
