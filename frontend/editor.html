@@ -3,317 +3,1919 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artify - Editor</title>
+    <title>Artify - Canva Style Editor</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-        .editor-container {
-            display: flex;
-            height: calc(100vh - 80px);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Main Layout */
+        .canva-layout {
+            display: grid;
+            grid-template-areas:
+                "header header header"
+                "sidebar canvas properties";
+            grid-template-columns: 80px 1fr 320px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            background: #f0f0f0;
+        }
+
+        /* Header */
+        .canva-header {
+            grid-area: header;
             background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .sidebar {
-            width: 320px;
-            background: #f8f9fa;
-            padding: 20px;
-            border-right: 1px solid #ddd;
-            overflow-y: auto;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
-        .canvas-area {
-            flex: 1;
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .project-name {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .header-center {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .header-btn.primary {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .header-btn.primary:hover {
+            background: #5568d3;
+        }
+
+        /* Left Sidebar - Tool Palette */
+        .left-sidebar {
+            grid-area: sidebar;
+            background: white;
+            border-right: 1px solid #e0e0e0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
-            background: #e9ecef;
-            overflow: auto;
+            padding: 20px 0;
+            gap: 10px;
         }
 
-        .toolbar {
-            background: white;
-            padding: 15px;
+        .tool-item {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
             border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 24px;
+            position: relative;
+        }
+
+        .tool-item:hover {
+            background: #f5f5f5;
+        }
+
+        .tool-item.active {
+            background: #e8eaff;
+            color: #667eea;
+        }
+
+        .tool-label {
+            font-size: 10px;
+            margin-top: 4px;
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            grid-area: canvas;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            overflow: auto;
+            background: #e5e5e5;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        #mainCanvas {
+            background: white;
+            cursor: crosshair;
+        }
+
+        /* Right Properties Panel */
+        .properties-panel {
+            grid-area: properties;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .panel-section {
+            margin-bottom: 30px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .panel-group {
+            margin-bottom: 15px;
+        }
+
+        .panel-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .panel-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .panel-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .color-swatch {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        .color-swatch.active {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #667eea;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-group input[type="range"] {
+            flex: 1;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: right;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Layers Panel */
+        .layers-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+
+        .layer-item {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+        }
+
+        .layer-item:hover {
+            background: #f5f5f5;
+        }
+
+        .layer-item.active {
+            background: #e8eaff;
+            border-left: 3px solid #667eea;
+        }
+
+        .layer-icon {
+            margin-right: 8px;
+        }
+
+        .layer-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .layer-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .layer-btn:hover {
+            background: #e0e0e0;
+        }
+
+        /* AI Panel */
+        .ai-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .ai-panel textarea {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 10px;
+        }
+
+        .ai-panel select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .ai-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ai-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .ai-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Button Groups */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-icon:active {
+            background: #e8eaff;
+        }
+
+        /* Font Selector */
+        .font-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .font-option {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .font-option:hover {
+            background: #f5f5f5;
+        }
+
+        .font-option.active {
+            background: #e8eaff;
+            border-color: #667eea;
+        }
+
+        /* Messages */
+        .message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .message.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        /* Image Upload */
+        .upload-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-area input {
+            display: none;
+        }
+
+        /* Export Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 450px;
+            max-width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .export-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .export-format-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .export-format-btn {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .export-format-btn:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .export-format-btn.active {
+            border-color: #667eea;
+            background: #e8eaff;
+            color: #667eea;
+        }
+
+        .export-resolution-group {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
         }
 
-        .tool-btn {
-            padding: 10px 15px;
-            border: 2px solid #ddd;
+        .export-resolution-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
             background: white;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
             font-size: 14px;
         }
 
-        .tool-btn:hover {
+        .export-resolution-btn:hover {
             border-color: #667eea;
-            background: #f0f0ff;
+            background: #f8f9ff;
         }
 
-        .tool-btn.active {
+        .export-resolution-btn.active {
             border-color: #667eea;
-            background: #667eea;
-            color: white;
-        }
-
-        canvas {
-            border: 2px solid #667eea;
-            background: white;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            cursor: crosshair;
-        }
-
-        .control-group {
-            margin-bottom: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .control-group input,
-        .control-group textarea,
-        .control-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .control-group textarea {
-            resize: vertical;
-            min-height: 80px;
-            font-family: inherit;
-        }
-
-        .color-picker {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .color-picker input[type="color"] {
-            width: 60px;
-            height: 40px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: bold;
+            background: #e8eaff;
             color: #667eea;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
         }
 
-        .btn-primary, .btn-save, .btn-clear {
+        .export-quality-slider {
             width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: all 0.3s;
         }
 
-        .btn-primary {
+        .export-btn-primary {
+            width: 100%;
+            padding: 15px;
             background: #667eea;
             color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .btn-primary:hover {
+        .export-btn-primary:hover {
             background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-primary:disabled {
-            background: #ccc;
+        .export-btn-primary:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .btn-save {
-            background: #28a745;
-            color: white;
+        /* Inline Text Editor */
+        .inline-text-editor {
+            position: absolute;
+            display: none;
+            background: transparent;
+            border: 2px solid #667eea;
+            outline: none;
+            padding: 4px;
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+            resize: none;
+            overflow: hidden;
+            z-index: 100;
+            min-width: 50px;
+            min-height: 30px;
         }
 
-        .btn-save:hover {
-            background: #218838;
+        .inline-text-editor:focus {
+            border-color: #5568d3;
         }
 
-        .btn-clear {
-            background: #dc3545;
-            color: white;
+        /* Template Modal */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 15px;
         }
 
-        .btn-clear:hover {
-            background: #c82333;
-        }
-
-        .loading, .success, .error {
-            padding: 15px;
-            border-radius: 5px;
-            margin: 10px 0;
+        .template-card {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
             text-align: center;
         }
 
-        .loading {
-            background: #e3f2fd;
-            color: #1976d2;
+        .template-card:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
         }
 
-        .success {
-            background: #e8f5e9;
-            color: #2e7d32;
+        .template-card.active {
+            border-color: #667eea;
+            background: #e8eaff;
         }
 
-        .error {
-            background: #ffebee;
-            color: #c62828;
+        .template-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
         }
 
-        .project-info {
+        .template-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .template-size {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .custom-size-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* Crop Mode */
+        .crop-overlay {
+            position: absolute;
+            border: 2px dashed #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            cursor: move;
+            display: none;
+            z-index: 50;
+        }
+
+        .crop-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #667eea;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .crop-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .crop-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .crop-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .crop-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+
+        .crop-actions {
+            position: absolute;
+            bottom: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
             background: white;
-            padding: 15px;
+            padding: 8px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
-        .project-info h3 {
-            margin: 0 0 10px 0;
-            color: #667eea;
+        .crop-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .crop-actions .apply {
+            background: #667eea;
+            color: white;
+        }
+
+        .crop-actions .cancel {
+            background: #e0e0e0;
+            color: #333;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="logo">
-                <h1>Artify Editor</h1>
+    <div class="canva-layout">
+        <!-- Header -->
+        <div class="canva-header">
+            <div class="header-left">
+                <div class="logo">Artify</div>
+                <div class="project-name" id="projectName">새 프로젝트</div>
             </div>
-            <nav>
-                <a href="index.html" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">프로젝트 목록</a>
-                <button onclick="handleLogout()" class="btn-logout">로그아웃</button>
-            </nav>
+            <div class="header-center">
+                <button class="header-btn" onclick="undo()" id="undoBtn" disabled aria-label="실행 취소" title="실행 취소 (Ctrl+Z)">
+                    ↶ 실행 취소
+                </button>
+                <button class="header-btn" onclick="redo()" id="redoBtn" disabled aria-label="다시 실행" title="다시 실행 (Ctrl+Y)">
+                    ↷ 다시 실행
+                </button>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" onclick="location.href='index.html'" aria-label="프로젝트 목록으로 돌아가기">← 목록</button>
+                <button class="header-btn" onclick="showCollaborateModal()" aria-label="협업">👥 협업</button>
+                <button class="header-btn" onclick="showTemplateModal()" aria-label="캔버스 크기 변경">📐 캔버스 크기</button>
+                <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
+                <button class="header-btn primary" onclick="saveProject()" aria-label="프로젝트 저장">💾 저장</button>
+                <button class="header-btn" onclick="handleLogout()" aria-label="로그아웃">로그아웃</button>
+            </div>
         </div>
-    </header>
 
-    <div class="editor-container">
-        <div class="sidebar">
-            <div class="project-info">
-                <h3 id="projectName">프로젝트</h3>
-                <p id="projectDate"></p>
+        <!-- Left Sidebar - Tools -->
+        <div class="left-sidebar" role="toolbar" aria-label="도구 모음">
+            <div class="tool-item active" onclick="setTool('select')" data-tool="select" role="button" aria-label="선택 도구" tabindex="0">
+                <div>⬜</div>
+                <div class="tool-label">선택</div>
             </div>
-
-            <!-- AI 이미지 생성 -->
-            <div class="section-title">🤖 AI 이미지 생성</div>
-            <div class="control-group">
-                <label>프롬프트</label>
-                <textarea id="promptInput" placeholder="예: 석양이 지는 바다 위의 요트"></textarea>
+            <div class="tool-item" onclick="setTool('text')" data-tool="text" role="button" aria-label="텍스트 도구" tabindex="0">
+                <div>T</div>
+                <div class="tool-label">텍스트</div>
             </div>
+            <div class="tool-item" onclick="setTool('rect')" data-tool="rect" role="button" aria-label="사각형 도구" tabindex="0">
+                <div>▢</div>
+                <div class="tool-label">사각형</div>
+            </div>
+            <div class="tool-item" onclick="setTool('circle')" data-tool="circle" role="button" aria-label="원 도구" tabindex="0">
+                <div>○</div>
+                <div class="tool-label">원</div>
+            </div>
+            <div class="tool-item" onclick="setTool('triangle')" data-tool="triangle" role="button" aria-label="삼각형 도구" tabindex="0">
+                <div>△</div>
+                <div class="tool-label">삼각형</div>
+            </div>
+            <div class="tool-item" onclick="setTool('star')" data-tool="star" role="button" aria-label="별 도구" tabindex="0">
+                <div>★</div>
+                <div class="tool-label">별</div>
+            </div>
+            <div class="tool-item" onclick="setTool('diamond')" data-tool="diamond" role="button" aria-label="다이아몬드 도구" tabindex="0">
+                <div>◆</div>
+                <div class="tool-label">다이아몬드</div>
+            </div>
+            <div class="tool-item" onclick="setTool('hexagon')" data-tool="hexagon" role="button" aria-label="육각형 도구" tabindex="0">
+                <div>⬢</div>
+                <div class="tool-label">육각형</div>
+            </div>
+            <div class="tool-item" onclick="setTool('speech-bubble')" data-tool="speech-bubble" role="button" aria-label="말풍선 도구" tabindex="0">
+                <div>💬</div>
+                <div class="tool-label">말풍선</div>
+            </div>
+            <div class="tool-item" onclick="setTool('cloud')" data-tool="cloud" role="button" aria-label="구름 도구" tabindex="0">
+                <div>☁️</div>
+                <div class="tool-label">구름</div>
+            </div>
+            <div class="tool-item" onclick="setTool('line')" data-tool="line" role="button" aria-label="선 도구" tabindex="0">
+                <div>─</div>
+                <div class="tool-label">선</div>
+            </div>
+            <div class="tool-item" onclick="setTool('arrow')" data-tool="arrow" role="button" aria-label="화살표 도구" tabindex="0">
+                <div>→</div>
+                <div class="tool-label">화살표</div>
+            </div>
+            <div class="tool-item" onclick="setTool('pencil')" data-tool="pencil" role="button" aria-label="펜 도구" tabindex="0">
+                <div>✏️</div>
+                <div class="tool-label">펜</div>
+            </div>
+            <div class="tool-item" onclick="document.getElementById('imageUpload').click()" role="button" aria-label="이미지 업로드" tabindex="0">
+                <div>🖼️</div>
+                <div class="tool-label">이미지</div>
+            </div>
+            <input type="file" id="imageUpload" accept="image/*" style="display:none" onchange="handleImageUpload(event)" aria-label="이미지 파일 선택">
+        </div>
 
-            <div class="control-group">
-                <label>이미지 크기</label>
-                <select id="sizeSelect">
+        <!-- Canvas Area -->
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <canvas id="mainCanvas" width="1200" height="800" role="img" aria-label="디자인 캔버스"></canvas>
+                <textarea id="inlineTextEditor" class="inline-text-editor"></textarea>
+                <div id="cropOverlay" class="crop-overlay">
+                    <div class="crop-handle nw"></div>
+                    <div class="crop-handle ne"></div>
+                    <div class="crop-handle sw"></div>
+                    <div class="crop-handle se"></div>
+                    <div class="crop-actions">
+                        <button class="apply" onclick="applyCrop()">✓ 적용</button>
+                        <button class="cancel" onclick="cancelCrop()">✕ 취소</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Properties Panel -->
+        <div class="properties-panel">
+            <!-- AI Generation -->
+            <div class="ai-panel">
+                <div class="panel-title" style="color: white; margin-bottom: 10px;">🤖 AI 이미지 생성</div>
+                <textarea id="aiPrompt" placeholder="원하는 이미지를 설명하세요..."></textarea>
+                <select id="aiSize">
                     <option value="1024x1024">정사각형 (1024x1024)</option>
                     <option value="1792x1024">가로형 (1792x1024)</option>
                     <option value="1024x1792">세로형 (1024x1792)</option>
                 </select>
+                <button class="ai-btn" onclick="generateAIImage()" id="aiBtn">이미지 생성</button>
+                <div id="aiMessage"></div>
             </div>
 
-            <button id="generateBtn" class="btn-primary" onclick="generateImage()">이미지 생성</button>
-            
-            <div id="loadingMessage" class="loading" style="display: none;">
-                AI가 이미지를 생성 중입니다...
-            </div>
+            <!-- Element Properties -->
+            <div class="panel-section" id="elementProps" style="display:none;">
+                <div class="panel-title">요소 속성</div>
 
-            <!-- 도구 설정 -->
-            <div class="section-title" style="margin-top: 30px;">🎨 그리기 도구</div>
-            
-            <div class="control-group">
-                <label>색상</label>
-                <div class="color-picker">
-                    <input type="color" id="colorPicker" value="#000000">
-                    <span id="colorValue">#000000</span>
+                <div class="panel-group">
+                    <label class="panel-label">위치 X</label>
+                    <input type="number" class="panel-input" id="propX" oninput="updateElementProp('x', this.value)">
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">위치 Y</label>
+                    <input type="number" class="panel-input" id="propY" oninput="updateElementProp('y', this.value)">
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">너비</label>
+                    <input type="number" class="panel-input" id="propWidth" oninput="updateElementProp('width', this.value)">
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">높이</label>
+                    <input type="number" class="panel-input" id="propHeight" oninput="updateElementProp('height', this.value)">
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">회전 (도)</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="360" value="0" id="propRotation" oninput="updateElementProp('rotation', this.value)">
+                        <span class="slider-value" id="rotationValue">0°</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">불투명도</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="100" id="propOpacity" oninput="updateElementProp('opacity', this.value)">
+                        <span class="slider-value" id="opacityValue">100%</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="control-group">
-                <label>선 굵기</label>
-                <input type="range" id="lineWidth" min="1" max="50" value="5" oninput="document.getElementById('lineWidthValue').textContent = this.value">
-                <span id="lineWidthValue">5</span>px
+            <!-- Text Properties -->
+            <div class="panel-section" id="textProps" style="display:none;">
+                <div class="panel-title">텍스트 속성</div>
+
+                <div class="panel-group">
+                    <label class="panel-label">내용</label>
+                    <input type="text" class="panel-input" id="propText" oninput="updateElementProp('text', this.value)">
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">폰트</label>
+                    <select class="panel-input" id="propFont" onchange="updateElementProp('fontFamily', this.value)">
+                        <option value="Arial">Arial</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Comic Sans MS">Comic Sans MS</option>
+                    </select>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">크기</label>
+                    <div class="slider-group">
+                        <input type="range" min="8" max="120" value="24" id="propFontSize" oninput="updateElementProp('fontSize', this.value)">
+                        <span class="slider-value" id="fontSizeValue">24px</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">스타일</label>
+                    <div class="btn-group">
+                        <button class="btn-icon" onclick="toggleTextStyle('bold')" id="btnBold">
+                            <strong>B</strong>
+                        </button>
+                        <button class="btn-icon" onclick="toggleTextStyle('italic')" id="btnItalic">
+                            <em>I</em>
+                        </button>
+                        <button class="btn-icon" onclick="toggleTextStyle('underline')" id="btnUnderline">
+                            <u>U</u>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">정렬</label>
+                    <div class="btn-group">
+                        <button class="btn-icon" onclick="updateElementProp('textAlign', 'left')">⬅️</button>
+                        <button class="btn-icon" onclick="updateElementProp('textAlign', 'center')">↔️</button>
+                        <button class="btn-icon" onclick="updateElementProp('textAlign', 'right')">➡️</button>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">
+                        <input type="checkbox" id="textShadowEnabled" onchange="toggleTextShadow(this.checked)">
+                        텍스트 그림자
+                    </label>
+                </div>
+
+                <div id="textShadowControls" style="display:none;">
+                    <div class="panel-group">
+                        <label class="panel-label">X 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-20" max="20" value="2" id="shadowOffsetX" oninput="updateTextShadow('offsetX', this.value)">
+                            <span class="slider-value" id="shadowXValue">2px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">Y 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-20" max="20" value="2" id="shadowOffsetY" oninput="updateTextShadow('offsetY', this.value)">
+                            <span class="slider-value" id="shadowYValue">2px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">블러 반경</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="20" value="4" id="shadowBlur" oninput="updateTextShadow('blur', this.value)">
+                            <span class="slider-value" id="shadowBlurValue">4px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">그림자 색상</label>
+                        <input type="color" class="panel-input" id="shadowColor" value="#000000" onchange="updateTextShadow('color', this.value)">
+                    </div>
+                </div>
             </div>
 
-            <div class="control-group">
-                <label>텍스트 크기</label>
-                <input type="range" id="fontSize" min="12" max="100" value="30" oninput="document.getElementById('fontSizeValue').textContent = this.value">
-                <span id="fontSizeValue">30</span>px
+            <!-- Image Filter Properties -->
+            <div class="panel-section" id="imageProps" style="display:none;">
+                <div class="panel-title">이미지 필터</div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Grayscale</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="0" id="filterGrayscale" oninput="updateImageFilter('grayscale', this.value)">
+                        <span class="slider-value" id="grayscaleValue">0%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Sepia</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="0" id="filterSepia" oninput="updateImageFilter('sepia', this.value)">
+                        <span class="slider-value" id="sepiaValue">0%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Blur</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="10" value="0" id="filterBlur" oninput="updateImageFilter('blur', this.value)">
+                        <span class="slider-value" id="blurValue">0px</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Brightness</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterBrightness" oninput="updateImageFilter('brightness', this.value)">
+                        <span class="slider-value" id="brightnessValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="btn-group" style="margin-top: 10px;">
+                    <button class="btn-icon" onclick="resetImageFilters()" style="flex: 1;">필터 초기화</button>
+                    <button class="btn-icon" onclick="startCropMode()" style="flex: 1;" id="cropBtn">✂️ 크롭</button>
+                </div>
+
+                <!-- AI Features (P13) -->
+                <div class="panel-title" style="margin-top: 15px;">AI 기능</div>
+                <button class="btn-icon" onclick="removeBackground()" style="width: 100%; margin-bottom: 8px;">🎨 배경 제거</button>
+                <button class="btn-icon" onclick="upscaleImage()" style="width: 100%; margin-bottom: 8px;">⬆️ 고해상도 변환</button>
+                <button class="btn-icon" onclick="showStyleTransferModal()" style="width: 100%;">🖼️ 스타일 변환</button>
             </div>
 
-            <div class="control-group">
-                <label>텍스트 입력</label>
-                <input type="text" id="textInput" placeholder="캔버스를 클릭하여 추가">
+            <!-- Color Properties -->
+            <div class="panel-section">
+                <div class="panel-title">색상</div>
+
+                <div class="panel-group">
+                    <label class="panel-label">채우기</label>
+                    <input type="color" class="panel-input" id="propFill" value="#667eea" onchange="updateElementProp('fill', this.value)">
+                </div>
+
+                <div class="color-grid">
+                    <div class="color-swatch" style="background: #667eea" onclick="setColor('#667eea')"></div>
+                    <div class="color-swatch" style="background: #764ba2" onclick="setColor('#764ba2')"></div>
+                    <div class="color-swatch" style="background: #f093fb" onclick="setColor('#f093fb')"></div>
+                    <div class="color-swatch" style="background: #4facfe" onclick="setColor('#4facfe')"></div>
+                    <div class="color-swatch" style="background: #43e97b" onclick="setColor('#43e97b')"></div>
+                    <div class="color-swatch" style="background: #fa709a" onclick="setColor('#fa709a')"></div>
+                    <div class="color-swatch" style="background: #fee140" onclick="setColor('#fee140')"></div>
+                    <div class="color-swatch" style="background: #30cfd0" onclick="setColor('#30cfd0')"></div>
+                    <div class="color-swatch" style="background: #ff6b6b" onclick="setColor('#ff6b6b')"></div>
+                    <div class="color-swatch" style="background: #4ecdc4" onclick="setColor('#4ecdc4')"></div>
+                    <div class="color-swatch" style="background: #45b7d1" onclick="setColor('#45b7d1')"></div>
+                    <div class="color-swatch" style="background: #96ceb4" onclick="setColor('#96ceb4')"></div>
+                </div>
+
+                <!-- Brand Kit (P14) -->
+                <div class="panel-title" style="margin-top: 15px;">브랜드 킷</div>
+                <div class="btn-group">
+                    <button class="btn-icon" onclick="saveBrandColor()" style="flex: 1;">💾 현재 색상 저장</button>
+                    <button class="btn-icon" onclick="showBrandColors()" style="flex: 1;">🎨 브랜드 색상</button>
+                </div>
+                <div id="brandColorGrid" class="color-grid" style="display: none; margin-top: 10px;">
+                    <!-- Brand colors will be populated here -->
+                </div>
+
+                <div class="panel-group" style="margin-top: 15px;">
+                    <label class="panel-label">테두리 색상</label>
+                    <input type="color" class="panel-input" id="propStroke" value="#000000" onchange="updateElementProp('stroke', this.value)">
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">테두리 두께</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="20" value="2" id="propStrokeWidth" oninput="updateElementProp('strokeWidth', this.value)">
+                        <span class="slider-value" id="strokeValue">2px</span>
+                    </div>
+                </div>
+
+                <div class="panel-group" id="gradientSection" style="display:none;">
+                    <label class="panel-label">
+                        <input type="checkbox" id="gradientEnabled" onchange="toggleGradient(this.checked)">
+                        그라데이션 채우기
+                    </label>
+                </div>
+
+                <div id="gradientControls" style="display:none;">
+                    <div class="panel-group">
+                        <label class="panel-label">시작 색상</label>
+                        <input type="color" class="panel-input" id="gradientColor1" value="#667eea" onchange="updateGradient('color1', this.value)">
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">끝 색상</label>
+                        <input type="color" class="panel-input" id="gradientColor2" value="#764ba2" onchange="updateGradient('color2', this.value)">
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">각도</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="360" value="0" id="gradientAngle" oninput="updateGradient('angle', this.value)">
+                            <span class="slider-value" id="angleValue">0°</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- 저장/삭제 -->
-            <button onclick="saveProject()" class="btn-save">💾 프로젝트 저장</button>
-            <button onclick="clearCanvas()" class="btn-clear">🗑️ 캔버스 초기화</button>
+            <!-- Layers -->
+            <div class="panel-section">
+                <div class="panel-title">레이어</div>
+                <div class="layers-list" id="layersList">
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        요소를 추가하세요
+                    </div>
+                </div>
+                <div class="btn-group" style="margin-top: 10px;">
+                    <button class="btn-icon" onclick="moveLayer('up')" style="flex:1">↑ 위로</button>
+                    <button class="btn-icon" onclick="moveLayer('down')" style="flex:1">↓ 아래로</button>
+                    <button class="btn-icon" onclick="deleteSelected()" style="flex:1">🗑️ 삭제</button>
+                </div>
+            </div>
 
-            <div id="successMessage" class="success" style="display: none;"></div>
-            <div id="errorMessage" class="error" style="display: none;"></div>
+            <!-- Alignment Tools -->
+            <div class="panel-section">
+                <div class="panel-title">정렬</div>
+                <div class="btn-group">
+                    <button class="btn-icon" onclick="alignElements('left')" title="왼쪽 정렬">⬅️</button>
+                    <button class="btn-icon" onclick="alignElements('center')" title="중앙 정렬">↔️</button>
+                    <button class="btn-icon" onclick="alignElements('right')" title="오른쪽 정렬">➡️</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="alignElements('top')" title="위쪽 정렬">⬆️</button>
+                    <button class="btn-icon" onclick="alignElements('middle')" title="중간 정렬">↕️</button>
+                    <button class="btn-icon" onclick="alignElements('bottom')" title="아래쪽 정렬">⬇️</button>
+                </div>
+            </div>
+
+            <!-- Animation (P12) -->
+            <div class="panel-section" id="animationProps" style="display:none;">
+                <div class="panel-title">애니메이션</div>
+
+                <div class="panel-group">
+                    <label class="panel-label">애니메이션 유형</label>
+                    <select class="panel-input" id="animationType" onchange="updateAnimation('type', this.value)">
+                        <option value="none">없음</option>
+                        <option value="fadeIn">Fade In</option>
+                        <option value="fadeOut">Fade Out</option>
+                        <option value="slideLeft">Slide Left</option>
+                        <option value="slideRight">Slide Right</option>
+                        <option value="slideUp">Slide Up</option>
+                        <option value="slideDown">Slide Down</option>
+                        <option value="bounce">Bounce</option>
+                        <option value="pulse">Pulse</option>
+                    </select>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">지속시간 (초)</label>
+                    <div class="slider-group">
+                        <input type="range" min="0.1" max="5" step="0.1" value="1" id="animationDuration" oninput="updateAnimation('duration', this.value)">
+                        <span class="slider-value" id="durationValue">1.0s</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">지연 (초)</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="3" step="0.1" value="0" id="animationDelay" oninput="updateAnimation('delay', this.value)">
+                        <span class="slider-value" id="delayValue">0.0s</span>
+                    </div>
+                </div>
+
+                <button class="btn-icon" onclick="previewAnimation()" style="width: 100%;">▶️ 미리보기</button>
+            </div>
+
+            <div id="saveMessage"></div>
         </div>
+    </div>
 
-        <div class="canvas-area">
-            <div class="toolbar">
-                <button class="tool-btn active" onclick="setTool('brush')" id="tool-brush">🖌️ 브러시</button>
-                <button class="tool-btn" onclick="setTool('rect')" id="tool-rect">⬜ 사각형</button>
-                <button class="tool-btn" onclick="setTool('circle')" id="tool-circle">⭕ 원</button>
-                <button class="tool-btn" onclick="setTool('line')" id="tool-line">📏 선</button>
-                <button class="tool-btn" onclick="setTool('text')" id="tool-text">📝 텍스트</button>
-                <button class="tool-btn" onclick="setTool('eraser')" id="tool-eraser">🧹 지우개</button>
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">프로젝트 내보내기</h2>
+                <button class="modal-close" onclick="closeExportModal()">×</button>
             </div>
-            <canvas id="mainCanvas" width="1024" height="768"></canvas>
+
+            <div class="export-options">
+                <div class="panel-group">
+                    <label class="panel-label">파일 이름</label>
+                    <input type="text" class="panel-input" id="exportFileName" value="artify-design">
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">포맷 선택</label>
+                    <div class="export-format-group">
+                        <button class="export-format-btn active" onclick="selectExportFormat('png')" id="formatPng">
+                            PNG
+                        </button>
+                        <button class="export-format-btn" onclick="selectExportFormat('jpg')" id="formatJpg">
+                            JPG
+                        </button>
+                        <button class="export-format-btn" onclick="selectExportFormat('svg')" id="formatSvg">
+                            SVG
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-group" id="resolutionGroup">
+                    <label class="panel-label">해상도</label>
+                    <div class="export-resolution-group">
+                        <button class="export-resolution-btn active" onclick="selectExportResolution(1)" id="res1x">
+                            1x<br><small>표준</small>
+                        </button>
+                        <button class="export-resolution-btn" onclick="selectExportResolution(2)" id="res2x">
+                            2x<br><small>레티나</small>
+                        </button>
+                        <button class="export-resolution-btn" onclick="selectExportResolution(3)" id="res3x">
+                            3x<br><small>고해상도</small>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-group" id="qualityGroup" style="display:none;">
+                    <label class="panel-label">품질 <span id="qualityValue">90%</span></label>
+                    <input type="range" min="10" max="100" value="90" class="export-quality-slider" id="exportQuality" oninput="updateQualityLabel(this.value)">
+                </div>
+
+                <button class="export-btn-primary" onclick="executeExport()">
+                    다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Modal -->
+    <div class="modal-overlay" id="templateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">캔버스 크기 선택</h2>
+                <button class="modal-close" onclick="closeTemplateModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div class="template-grid">
+                    <div class="template-card" onclick="selectTemplate('instagram-post')">
+                        <div class="template-icon">📷</div>
+                        <div class="template-name">Instagram 포스트</div>
+                        <div class="template-size">1080 × 1080</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('instagram-story')">
+                        <div class="template-icon">📱</div>
+                        <div class="template-name">Instagram 스토리</div>
+                        <div class="template-size">1080 × 1920</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('facebook-post')">
+                        <div class="template-icon">👥</div>
+                        <div class="template-name">Facebook 포스트</div>
+                        <div class="template-size">1200 × 630</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('twitter-post')">
+                        <div class="template-icon">🐦</div>
+                        <div class="template-name">Twitter 포스트</div>
+                        <div class="template-size">1024 × 512</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('linkedin-post')">
+                        <div class="template-icon">💼</div>
+                        <div class="template-name">LinkedIn 포스트</div>
+                        <div class="template-size">1200 × 627</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('youtube-thumbnail')">
+                        <div class="template-icon">▶️</div>
+                        <div class="template-name">YouTube 썸네일</div>
+                        <div class="template-size">1280 × 720</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('presentation')">
+                        <div class="template-icon">📊</div>
+                        <div class="template-name">프레젠테이션</div>
+                        <div class="template-size">1920 × 1080</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('a4-portrait')">
+                        <div class="template-icon">📄</div>
+                        <div class="template-name">A4 세로</div>
+                        <div class="template-size">2480 × 3508</div>
+                    </div>
+                </div>
+
+                <div class="panel-group" style="margin-top: 20px;">
+                    <label class="panel-label">커스텀 크기</label>
+                    <div class="custom-size-inputs">
+                        <div>
+                            <input type="number" class="panel-input" id="customWidth" placeholder="너비" value="1200">
+                        </div>
+                        <div>
+                            <input type="number" class="panel-input" id="customHeight" placeholder="높이" value="800">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="export-btn-primary" onclick="applyTemplate()">
+                    적용
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collaborate Modal (P11) -->
+    <div class="modal-overlay" id="collaborateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">프로젝트 협업</h2>
+                <button class="modal-close" onclick="closeCollaborateModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div class="panel-group">
+                    <label class="panel-label">공유 링크</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="panel-input" id="shareLink" readonly value="링크 생성 중...">
+                        <button class="btn-icon" onclick="copyShareLink()" style="width: auto; padding: 8px 16px;">복사</button>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">협업자 권한</label>
+                    <select class="panel-input" id="sharePermission">
+                        <option value="view">보기만 가능</option>
+                        <option value="edit">편집 가능</option>
+                    </select>
+                </div>
+
+                <button class="export-btn-primary" onclick="generateShareLink()">
+                    공유 링크 생성
+                </button>
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 생성된 링크를 협업자에게 전달하여 함께 편집할 수 있습니다.
+                </div>
+            </div>
         </div>
     </div>
 
     <script src="config.js"></script>
     <script>
+        // Global State
         let canvas, ctx;
+        let elements = [];
+        let selectedElement = null;
+        let selectedElements = [];
+        let currentTool = 'select';
         let isDrawing = false;
-        let currentTool = 'brush';
-        let startX, startY;
+        let isDragging = false;
+        let isResizing = false;
+        let dragStart = {x: 0, y: 0};
+        let resizeHandle = null;
+        let history = [];
+        let historyIndex = -1;
         let currentProjectId = null;
+        let gridEnabled = true;
+        let snapEnabled = true;
+        let nextGroupId = 1;
+        let imageCache = new Map();
+        let clipboard = null;
+        let autoSaveInterval = null;
+        let lastSaveTime = null;
+        let isDirty = true;
+        let renderScheduled = false;
+        let exportFormat = 'png';
+        let exportResolution = 1;
+        let exportQuality = 0.9;
+        let isEditingText = false;
+        let editingElement = null;
+        let selectedTemplate = null;
+        let isCropMode = false;
+        let cropElement = null;
+        let cropRect = { x: 0, y: 0, width: 0, height: 0 };
+        let cropDragStart = null;
+        let cropResizeHandle = null;
 
-        window.onload = function() {
-            if (!checkAuth()) return;
-            
-            canvas = document.getElementById('mainCanvas');
-            ctx = canvas.getContext('2d');
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            currentProjectId = urlParams.get('id');
-            
-            if (currentProjectId) {
-                loadProject(currentProjectId);
+        // P15: Plugin System
+        const plugins = [];
+        const pluginAPI = {
+            registerPlugin: function(plugin) {
+                if (!plugin.name || !plugin.init) {
+                    console.error('Invalid plugin: must have name and init function');
+                    return false;
+                }
+                plugins.push(plugin);
+                console.log(`Plugin registered: ${plugin.name}`);
+                return true;
+            },
+            getContext: function() {
+                return {
+                    canvas,
+                    ctx,
+                    elements,
+                    selectedElement,
+                    addElement: function(element) {
+                        elements.push(element);
+                        saveHistory();
+                        updateLayersList();
+                        render();
+                    },
+                    updateElement: function(element, props) {
+                        Object.assign(element, props);
+                        saveHistory();
+                        render();
+                    },
+                    deleteElement: function(element) {
+                        const index = elements.indexOf(element);
+                        if (index > -1) {
+                            elements.splice(index, 1);
+                            saveHistory();
+                            updateLayersList();
+                            render();
+                        }
+                    },
+                    render,
+                    showMessage: function(msg) {
+                        alert(msg);
+                    }
+                };
+            }
+        };
+
+        // Make plugin API available globally
+        window.ArtifyPluginAPI = pluginAPI;
+
+        // Template presets
+        const templates = {
+            'instagram-post': { width: 1080, height: 1080 },
+            'instagram-story': { width: 1080, height: 1920 },
+            'facebook-post': { width: 1200, height: 630 },
+            'twitter-post': { width: 1024, height: 512 },
+            'linkedin-post': { width: 1200, height: 627 },
+            'youtube-thumbnail': { width: 1280, height: 720 },
+            'presentation': { width: 1920, height: 1080 },
+            'a4-portrait': { width: 2480, height: 3508 }
+        };
+
+        // Element class
+        class Element {
+            constructor(type, x, y, width, height) {
+                this.id = Date.now() + Math.random();
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.rotation = 0;
+                this.fill = '#667eea';
+                this.stroke = '#000000';
+                this.strokeWidth = 2;
+                this.opacity = 1;
+                this.visible = true;
+                this.locked = false;
+                this.groupId = null;
+                this.gradient = {
+                    enabled: false,
+                    type: 'linear',
+                    color1: '#667eea',
+                    color2: '#764ba2',
+                    angle: 0
+                };
+
+                // Animation (P12)
+                this.animation = {
+                    type: 'none',
+                    duration: 1,
+                    delay: 0
+                };
+
+                // Text specific
+                if (type === 'text') {
+                    this.text = '텍스트 입력';
+                    this.fontSize = 24;
+                    this.fontFamily = 'Arial';
+                    this.textAlign = 'left';
+                    this.bold = false;
+                    this.italic = false;
+                    this.underline = false;
+                    this.textShadow = {
+                        enabled: false,
+                        offsetX: 2,
+                        offsetY: 2,
+                        blur: 4,
+                        color: '#000000'
+                    };
+                }
+
+                // Image specific
+                if (type === 'image') {
+                    this.imageData = null;
+                    this.filters = {
+                        grayscale: 0,
+                        sepia: 0,
+                        blur: 0,
+                        brightness: 100
+                    };
+                }
+
+                // Drawing path specific
+                if (type === 'pencil') {
+                    this.points = [];
+                }
             }
 
-            initCanvas();
+            draw(context) {
+                if (!this.visible) return;
+
+                context.save();
+                context.globalAlpha = this.opacity;
+                context.translate(this.x + this.width / 2, this.y + this.height / 2);
+                context.rotate(this.rotation * Math.PI / 180);
+                context.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
+
+                switch (this.type) {
+                    case 'rect':
+                        // Apply gradient or solid fill
+                        if (this.gradient && this.gradient.enabled) {
+                            const angle = this.gradient.angle * Math.PI / 180;
+                            const x0 = this.x + this.width / 2 - Math.cos(angle) * this.width / 2;
+                            const y0 = this.y + this.height / 2 - Math.sin(angle) * this.height / 2;
+                            const x1 = this.x + this.width / 2 + Math.cos(angle) * this.width / 2;
+                            const y1 = this.y + this.height / 2 + Math.sin(angle) * this.height / 2;
+                            const gradient = context.createLinearGradient(x0, y0, x1, y1);
+                            gradient.addColorStop(0, this.gradient.color1);
+                            gradient.addColorStop(1, this.gradient.color2);
+                            context.fillStyle = gradient;
+                        } else {
+                            context.fillStyle = this.fill;
+                        }
+                        context.strokeStyle = this.stroke;
+                        context.lineWidth = this.strokeWidth;
+                        context.fillRect(this.x, this.y, this.width, this.height);
+                        if (this.strokeWidth > 0) {
+                            context.strokeRect(this.x, this.y, this.width, this.height);
+                        }
+                        break;
+
+                    case 'circle':
+                        // Apply gradient or solid fill
+                        if (this.gradient && this.gradient.enabled) {
+                            const angle = this.gradient.angle * Math.PI / 180;
+                            const radiusX = this.width / 2;
+                            const radiusY = this.height / 2;
+                            const cx = this.x + radiusX;
+                            const cy = this.y + radiusY;
+                            const x0 = cx - Math.cos(angle) * radiusX;
+                            const y0 = cy - Math.sin(angle) * radiusY;
+                            const x1 = cx + Math.cos(angle) * radiusX;
+                            const y1 = cy + Math.sin(angle) * radiusY;
+                            const gradient = context.createLinearGradient(x0, y0, x1, y1);
+                            gradient.addColorStop(0, this.gradient.color1);
+                            gradient.addColorStop(1, this.gradient.color2);
+                            context.fillStyle = gradient;
+                        } else {
+                            context.fillStyle = this.fill;
+                        }
+                        context.strokeStyle = this.stroke;
+                        context.lineWidth = this.strokeWidth;
+                        context.beginPath();
+                        const radiusX = this.width / 2;
+                        const radiusY = this.height / 2;
+                        context.ellipse(this.x + radiusX, this.y + radiusY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                        context.fill();
+                        if (this.strokeWidth > 0) {
+                            context.stroke();
+                        }
+                        break;
+
+                    case 'triangle':
+                        context.fillStyle = this.fill;
+                        context.strokeStyle = this.stroke;
+                        context.lineWidth = this.strokeWidth;
+                        context.beginPath();
+                        context.moveTo(this.x + this.width / 2, this.y);
+                        context.lineTo(this.x + this.width, this.y + this.height);
+                        context.lineTo(this.x, this.y + this.height);
+                        context.closePath();
+                        context.fill();
+                        if (this.strokeWidth > 0) {
+                            context.stroke();
+                        }
+                        break;
+
+                    case 'star':
+                        this.drawStar(context);
+                        break;
+
+                    case 'diamond':
+                        this.drawDiamond(context);
+                        break;
+
+                    case 'hexagon':
+                        this.drawHexagon(context);
+                        break;
+
+                    case 'speech-bubble':
+                        this.drawSpeechBubble(context);
+                        break;
+
+                    case 'cloud':
+                        this.drawCloud(context);
+                        break;
+
+                    case 'line':
+                        context.strokeStyle = this.stroke;
+                        context.lineWidth = this.strokeWidth;
+                        context.beginPath();
+                        context.moveTo(this.x, this.y);
+                        context.lineTo(this.x + this.width, this.y + this.height);
+                        context.stroke();
+                        break;
+
+                    case 'arrow':
+                        this.drawArrow(context);
+                        break;
+
+                    case 'text':
+                        context.fillStyle = this.fill;
+                        let fontStyle = '';
+                        if (this.italic) fontStyle += 'italic ';
+                        if (this.bold) fontStyle += 'bold ';
+                        context.font = `${fontStyle}${this.fontSize}px ${this.fontFamily}`;
+                        context.textAlign = this.textAlign;
+                        context.textBaseline = 'top';
+
+                        // Apply text shadow if enabled
+                        if (this.textShadow && this.textShadow.enabled) {
+                            context.shadowOffsetX = this.textShadow.offsetX;
+                            context.shadowOffsetY = this.textShadow.offsetY;
+                            context.shadowBlur = this.textShadow.blur;
+                            context.shadowColor = this.textShadow.color;
+                        }
+
+                        let textX = this.x;
+                        if (this.textAlign === 'center') textX += this.width / 2;
+                        else if (this.textAlign === 'right') textX += this.width;
+
+                        context.fillText(this.text, textX, this.y);
+
+                        // Reset shadow
+                        context.shadowOffsetX = 0;
+                        context.shadowOffsetY = 0;
+                        context.shadowBlur = 0;
+                        context.shadowColor = 'transparent';
+
+                        if (this.underline) {
+                            const metrics = context.measureText(this.text);
+                            context.beginPath();
+                            context.moveTo(textX, this.y + this.fontSize + 2);
+                            context.lineTo(textX + metrics.width, this.y + this.fontSize + 2);
+                            context.strokeStyle = this.fill;
+                            context.lineWidth = 1;
+                            context.stroke();
+                        }
+                        break;
+
+                    case 'image':
+                        if (this.imageData) {
+                            // Apply filters
+                            if (this.filters) {
+                                const filterParts = [];
+                                if (this.filters.grayscale > 0) filterParts.push(`grayscale(${this.filters.grayscale}%)`);
+                                if (this.filters.sepia > 0) filterParts.push(`sepia(${this.filters.sepia}%)`);
+                                if (this.filters.blur > 0) filterParts.push(`blur(${this.filters.blur}px)`);
+                                if (this.filters.brightness !== 100) filterParts.push(`brightness(${this.filters.brightness}%)`);
+                                context.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
+                            }
+                            context.drawImage(this.imageData, this.x, this.y, this.width, this.height);
+                            context.filter = 'none';
+                        }
+                        break;
+
+                    case 'pencil':
+                        if (this.points.length > 0) {
+                            context.strokeStyle = this.stroke;
+                            context.lineWidth = this.strokeWidth;
+                            context.lineCap = 'round';
+                            context.lineJoin = 'round';
+                            context.beginPath();
+                            context.moveTo(this.points[0].x, this.points[0].y);
+                            for (let i = 1; i < this.points.length; i++) {
+                                context.lineTo(this.points[i].x, this.points[i].y);
+                            }
+                            context.stroke();
+                        }
+                        break;
+                }
+
+                context.restore();
+            }
+
+            drawStar(context) {
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+                const outerRadius = Math.min(this.width, this.height) / 2;
+                const innerRadius = outerRadius / 2;
+                const points = 5;
+
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+                context.beginPath();
+
+                for (let i = 0; i < points * 2; i++) {
+                    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                    const angle = (i * Math.PI) / points - Math.PI / 2;
+                    const x = cx + radius * Math.cos(angle);
+                    const y = cy + radius * Math.sin(angle);
+                    if (i === 0) context.moveTo(x, y);
+                    else context.lineTo(x, y);
+                }
+
+                context.closePath();
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            drawArrow(context) {
+                const headLength = 20;
+                const dx = this.width;
+                const dy = this.height;
+                const angle = Math.atan2(dy, dx);
+
+                context.strokeStyle = this.stroke;
+                context.fillStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+
+                // Line
+                context.beginPath();
+                context.moveTo(this.x, this.y);
+                context.lineTo(this.x + dx, this.y + dy);
+                context.stroke();
+
+                // Arrowhead
+                context.beginPath();
+                context.moveTo(this.x + dx, this.y + dy);
+                context.lineTo(
+                    this.x + dx - headLength * Math.cos(angle - Math.PI / 6),
+                    this.y + dy - headLength * Math.sin(angle - Math.PI / 6)
+                );
+                context.lineTo(
+                    this.x + dx - headLength * Math.cos(angle + Math.PI / 6),
+                    this.y + dy - headLength * Math.sin(angle + Math.PI / 6)
+                );
+                context.closePath();
+                context.fill();
+            }
+
+            drawDiamond(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+                context.beginPath();
+
+                // Diamond is rotated square
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                context.moveTo(cx, this.y); // Top
+                context.lineTo(this.x + this.width, cy); // Right
+                context.lineTo(cx, this.y + this.height); // Bottom
+                context.lineTo(this.x, cy); // Left
+
+                context.closePath();
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            drawHexagon(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+                context.beginPath();
+
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+                const angleStep = (Math.PI * 2) / 6;
+                const radius = Math.min(this.width, this.height) / 2;
+
+                for (let i = 0; i < 6; i++) {
+                    const angle = angleStep * i - Math.PI / 2;
+                    const px = cx + radius * Math.cos(angle);
+                    const py = cy + radius * Math.sin(angle);
+                    if (i === 0) {
+                        context.moveTo(px, py);
+                    } else {
+                        context.lineTo(px, py);
+                    }
+                }
+
+                context.closePath();
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            drawSpeechBubble(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+
+                const bubbleHeight = this.height * 0.75;
+                const tailHeight = this.height * 0.25;
+                const radius = 10;
+
+                context.beginPath();
+
+                // Main bubble (rounded rectangle)
+                context.moveTo(this.x + radius, this.y);
+                context.lineTo(this.x + this.width - radius, this.y);
+                context.arcTo(this.x + this.width, this.y, this.x + this.width, this.y + radius, radius);
+                context.lineTo(this.x + this.width, this.y + bubbleHeight - radius);
+                context.arcTo(this.x + this.width, this.y + bubbleHeight, this.x + this.width - radius, this.y + bubbleHeight, radius);
+
+                // Tail (pointing down-left)
+                const tailStartX = this.x + this.width * 0.2;
+                context.lineTo(tailStartX + 20, this.y + bubbleHeight);
+                context.lineTo(tailStartX, this.y + this.height);
+                context.lineTo(tailStartX, this.y + bubbleHeight);
+
+                context.lineTo(this.x + radius, this.y + bubbleHeight);
+                context.arcTo(this.x, this.y + bubbleHeight, this.x, this.y + bubbleHeight - radius, radius);
+                context.lineTo(this.x, this.y + radius);
+                context.arcTo(this.x, this.y, this.x + radius, this.y, radius);
+
+                context.closePath();
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            drawCloud(context) {
+                context.fillStyle = this.fill;
+                context.strokeStyle = this.stroke;
+                context.lineWidth = this.strokeWidth;
+
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                context.beginPath();
+
+                // Cloud is made of overlapping circles
+                const r1 = this.width * 0.2;
+                const r2 = this.width * 0.25;
+                const r3 = this.width * 0.2;
+                const r4 = this.width * 0.15;
+                const r5 = this.width * 0.15;
+
+                // Bottom large circles
+                context.arc(this.x + this.width * 0.25, cy + this.height * 0.1, r1, 0, Math.PI * 2);
+                context.arc(cx, cy, r2, 0, Math.PI * 2);
+                context.arc(this.x + this.width * 0.75, cy + this.height * 0.1, r3, 0, Math.PI * 2);
+
+                // Top smaller circles
+                context.arc(this.x + this.width * 0.4, cy - this.height * 0.15, r4, 0, Math.PI * 2);
+                context.arc(this.x + this.width * 0.6, cy - this.height * 0.15, r5, 0, Math.PI * 2);
+
+                context.fill();
+                if (this.strokeWidth > 0) {
+                    context.stroke();
+                }
+            }
+
+            contains(x, y) {
+                if (this.type === 'pencil') {
+                    // Check if point is near any line segment
+                    for (let i = 0; i < this.points.length - 1; i++) {
+                        const dist = this.distanceToSegment(x, y, this.points[i], this.points[i + 1]);
+                        if (dist < this.strokeWidth + 5) return true;
+                    }
+                    return false;
+                }
+
+                return x >= this.x && x <= this.x + this.width &&
+                       y >= this.y && y <= this.y + this.height;
+            }
+
+            distanceToSegment(px, py, p1, p2) {
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len === 0) return Math.sqrt((px - p1.x) ** 2 + (py - p1.y) ** 2);
+
+                const t = Math.max(0, Math.min(1, ((px - p1.x) * dx + (py - p1.y) * dy) / (len * len)));
+                const projX = p1.x + t * dx;
+                const projY = p1.y + t * dy;
+                return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+            }
+
+            getResizeHandle(x, y) {
+                if (this.type === 'pencil') return null;
+
+                const handles = [
+                    {name: 'nw', x: this.x, y: this.y},
+                    {name: 'ne', x: this.x + this.width, y: this.y},
+                    {name: 'sw', x: this.x, y: this.y + this.height},
+                    {name: 'se', x: this.x + this.width, y: this.y + this.height},
+                ];
+
+                for (let handle of handles) {
+                    if (Math.abs(x - handle.x) < 8 && Math.abs(y - handle.y) < 8) {
+                        return handle.name;
+                    }
+                }
+                return null;
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            if (!checkAuth()) return;
+
+            canvas = document.getElementById('mainCanvas');
+            ctx = canvas.getContext('2d');
+
+            const urlParams = new URLSearchParams(window.location.search);
+            currentProjectId = urlParams.get('id');
+
+            if (currentProjectId) {
+                loadProject(currentProjectId);
+                // Enable auto-save every 5 minutes
+                autoSaveInterval = setInterval(autoSave, 5 * 60 * 1000);
+            } else {
+                render();
+            }
+
             setupEventListeners();
+            setupOnlineStatusListener();
+
+            // P15: Initialize plugins
+            initializePlugins();
         };
 
         function checkAuth() {
@@ -333,209 +1935,61 @@
             }
         }
 
-        function initCanvas() {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#999';
-            ctx.font = '24px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('🎨 도구를 선택하고 그림을 그려보세요!', canvas.width/2, canvas.height/2);
+        function setupEventListeners() {
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('dblclick', handleDoubleClick);
+
+            document.addEventListener('keydown', handleKeyDown);
         }
 
-        function setupEventListeners() {
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseout', stopDrawing);
-            canvas.addEventListener('click', handleCanvasClick);
+        function setupOnlineStatusListener() {
+            window.addEventListener('online', () => {
+                console.log('온라인 상태로 변경되었습니다.');
+                if (currentProjectId && elements.length > 0) {
+                    autoSave();
+                }
+            });
 
-            document.getElementById('colorPicker').addEventListener('change', (e) => {
-                document.getElementById('colorValue').textContent = e.target.value;
+            window.addEventListener('offline', () => {
+                console.log('오프라인 상태입니다. 변경사항이 저장되지 않을 수 있습니다.');
             });
         }
 
-        function setTool(tool) {
-            currentTool = tool;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('tool-' + tool).classList.add('active');
-            
-            if (tool === 'text') {
-                canvas.style.cursor = 'text';
-            } else if (tool === 'eraser') {
-                canvas.style.cursor = 'not-allowed';
-            } else {
-                canvas.style.cursor = 'crosshair';
-            }
-        }
-
-        function startDrawing(e) {
-            if (currentTool === 'text') return;
-            
-            isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            startX = e.clientX - rect.left;
-            startY = e.clientY - rect.top;
-
-            if (currentTool === 'brush' || currentTool === 'eraser') {
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-            }
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const currentX = e.clientX - rect.left;
-            const currentY = e.clientY - rect.top;
-
-            if (currentTool === 'brush') {
-                ctx.strokeStyle = document.getElementById('colorPicker').value;
-                ctx.lineWidth = document.getElementById('lineWidth').value;
-                ctx.lineCap = 'round';
-                ctx.lineTo(currentX, currentY);
-                ctx.stroke();
-            } else if (currentTool === 'eraser') {
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = document.getElementById('lineWidth').value * 2;
-                ctx.lineCap = 'round';
-                ctx.lineTo(currentX, currentY);
-                ctx.stroke();
-            }
-        }
-
-        function stopDrawing(e) {
-            if (!isDrawing) return;
-            isDrawing = false;
-
-            const rect = canvas.getBoundingClientRect();
-            const endX = e.clientX - rect.left;
-            const endY = e.clientY - rect.top;
-
-            const color = document.getElementById('colorPicker').value;
-            const lineWidth = document.getElementById('lineWidth').value;
-
-            if (currentTool === 'rect') {
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.strokeRect(startX, startY, endX - startX, endY - startY);
-            } else if (currentTool === 'circle') {
-                const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.beginPath();
-                ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
-                ctx.stroke();
-            } else if (currentTool === 'line') {
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                ctx.stroke();
-            }
-        }
-
-        function handleCanvasClick(e) {
-            if (currentTool !== 'text') return;
-
-            const text = document.getElementById('textInput').value;
-            if (!text) {
-                alert('텍스트를 입력해주세요.');
-                return;
-            }
-
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            ctx.fillStyle = document.getElementById('colorPicker').value;
-            ctx.font = document.getElementById('fontSize').value + 'px Arial';
-            ctx.fillText(text, x, y);
-        }
-
-        function clearCanvas() {
-            if (confirm('캔버스를 초기화하시겠습니까?')) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-        }
-
-        async function generateImage() {
-            const prompt = document.getElementById('promptInput').value.trim();
-            if (!prompt) {
-                alert('프롬프트를 입력해주세요.');
-                return;
-            }
-
-            const generateBtn = document.getElementById('generateBtn');
-            const loadingMessage = document.getElementById('loadingMessage');
-            
-            generateBtn.disabled = true;
-            generateBtn.textContent = '생성 중...';
-            loadingMessage.style.display = 'block';
-
-            try {
-                const size = document.getElementById('sizeSelect').value;
-                const response = await fetch(`${PYTHON_API_URL}/generate-image`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, size, quality: 'standard' })
-                });
-
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    const img = new Image();
-                    img.onload = function() {
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        showMessage('success', '이미지가 생성되었습니다!');
-                    };
-                    img.src = data.imageData;
-                } else {
-                    throw new Error('이미지 생성 실패');
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok || response.status === 404) {
+                        return response;
+                    }
+                    if (i === maxRetries - 1) throw new Error('Max retries reached');
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
                 }
-            } catch (error) {
-                showMessage('error', '이미지 생성 중 오류가 발생했습니다.');
-            } finally {
-                generateBtn.disabled = false;
-                generateBtn.textContent = '이미지 생성';
-                loadingMessage.style.display = 'none';
             }
         }
 
-        async function saveProject() {
-            if (!currentProjectId) {
-                alert('프로젝트 ID가 없습니다.');
-                return;
-            }
+        async function autoSave() {
+            if (!currentProjectId || elements.length === 0) return;
 
             try {
                 const token = localStorage.getItem('token');
-                
-                // Canvas를 Base64로 변환 (압축)
-                const canvasData = canvas.toDataURL('image/jpeg', 0.7);
-                
-                // 데이터 크기 확인 (1MB 이하로 제한)
-                if (canvasData.length > 1000000) {
-                    // 너무 크면 더 압축
-                    const smallCanvas = document.createElement('canvas');
-                    smallCanvas.width = 512;
-                    smallCanvas.height = 384;
-                    const smallCtx = smallCanvas.getContext('2d');
-                    smallCtx.drawImage(canvas, 0, 0, 512, 384);
-                    var finalData = smallCanvas.toDataURL('image/jpeg', 0.5);
-                } else {
-                    var finalData = canvasData;
-                }
+                const canvasData = canvas.toDataURL('image/jpeg', 0.8);
 
                 const projectData = {
-                    image: finalData,
-                    prompt: document.getElementById('promptInput').value,
+                    image: canvasData,
+                    elements: elements.map(el => ({
+                        ...el,
+                        imageData: el.imageData ? el.imageData.src : null
+                    })),
+                    prompt: document.getElementById('aiPrompt').value,
                     lastModified: new Date().toISOString()
                 };
 
-                const response = await fetch(`${API_URL}/projects/${currentProjectId}`, {
+                const response = await fetchWithRetry(`${API_URL}/projects/${currentProjectId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -547,12 +2001,1101 @@
                 });
 
                 if (response.ok) {
-                    showMessage('success', '프로젝트가 저장되었습니다!');
+                    lastSaveTime = new Date();
+                    console.log('자동 저장 완료:', lastSaveTime.toLocaleTimeString());
+                }
+            } catch (error) {
+                console.error('자동 저장 실패:', error);
+            }
+        }
+
+        function handleMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (currentTool === 'select') {
+                // Check for resize handle
+                if (selectedElement) {
+                    resizeHandle = selectedElement.getResizeHandle(x, y);
+                    if (resizeHandle) {
+                        isResizing = true;
+                        dragStart = {x, y};
+                        return;
+                    }
+                }
+
+                // Check for element selection
+                for (let i = elements.length - 1; i >= 0; i--) {
+                    if (elements[i].contains(x, y) && !elements[i].locked) {
+                        const clickedElement = elements[i];
+
+                        // If element is part of a group, select all group members
+                        if (clickedElement.groupId) {
+                            selectedElements = elements.filter(el => el.groupId === clickedElement.groupId);
+                            selectedElement = clickedElement;
+                        } else if (e.ctrlKey || e.metaKey) {
+                            // Ctrl+Click for multi-select
+                            if (selectedElements.includes(clickedElement)) {
+                                selectedElements = selectedElements.filter(el => el !== clickedElement);
+                                selectedElement = selectedElements[0] || null;
+                            } else {
+                                selectedElements.push(clickedElement);
+                                selectedElement = clickedElement;
+                            }
+                        } else {
+                            // Single select
+                            selectedElement = clickedElement;
+                            selectedElements = [clickedElement];
+                        }
+
+                        isDragging = true;
+                        dragStart = {x: x - selectedElement.x, y: y - selectedElement.y};
+                        updatePropertiesPanel();
+                        updateLayersList();
+                        render();
+                        return;
+                    }
+                }
+
+                // Deselect
+                selectedElement = null;
+                selectedElements = [];
+                updatePropertiesPanel();
+                updateLayersList();
+                render();
+            } else if (currentTool === 'pencil') {
+                isDrawing = true;
+                const pencil = new Element('pencil', x, y, 0, 0);
+                pencil.points.push({x, y});
+                pencil.stroke = document.getElementById('propStroke').value;
+                pencil.strokeWidth = parseInt(document.getElementById('propStrokeWidth').value);
+                elements.push(pencil);
+                selectedElement = pencil;
+            } else {
+                // Start drawing shape
+                isDrawing = true;
+                dragStart = {x, y};
+            }
+        }
+
+        function handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (isDragging && selectedElement && !selectedElement.locked) {
+                const newX = snapEnabled ? Math.round((x - dragStart.x) / 10) * 10 : x - dragStart.x;
+                const newY = snapEnabled ? Math.round((y - dragStart.y) / 10) * 10 : y - dragStart.y;
+                const deltaX = newX - selectedElement.x;
+                const deltaY = newY - selectedElement.y;
+
+                // Move selected element
+                selectedElement.x = newX;
+                selectedElement.y = newY;
+
+                // Move other selected elements
+                if (selectedElements.length > 1) {
+                    selectedElements.forEach(el => {
+                        if (el !== selectedElement && !el.locked) {
+                            el.x += deltaX;
+                            el.y += deltaY;
+                        }
+                    });
+                }
+
+                updatePropertiesPanel();
+                render();
+            } else if (isResizing && selectedElement) {
+                const dx = x - dragStart.x;
+                const dy = y - dragStart.y;
+
+                switch (resizeHandle) {
+                    case 'se':
+                        selectedElement.width = Math.max(10, selectedElement.width + dx);
+                        selectedElement.height = Math.max(10, selectedElement.height + dy);
+                        break;
+                    case 'sw':
+                        selectedElement.width = Math.max(10, selectedElement.width - dx);
+                        selectedElement.height = Math.max(10, selectedElement.height + dy);
+                        selectedElement.x += dx;
+                        break;
+                    case 'ne':
+                        selectedElement.width = Math.max(10, selectedElement.width + dx);
+                        selectedElement.height = Math.max(10, selectedElement.height - dy);
+                        selectedElement.y += dy;
+                        break;
+                    case 'nw':
+                        selectedElement.width = Math.max(10, selectedElement.width - dx);
+                        selectedElement.height = Math.max(10, selectedElement.height - dy);
+                        selectedElement.x += dx;
+                        selectedElement.y += dy;
+                        break;
+                }
+
+                dragStart = {x, y};
+                updatePropertiesPanel();
+                render();
+            } else if (isDrawing && currentTool === 'pencil' && selectedElement) {
+                selectedElement.points.push({x, y});
+                render();
+            }
+        }
+
+        function handleMouseUp(e) {
+            if (isDrawing && currentTool !== 'select' && currentTool !== 'pencil') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const width = x - dragStart.x;
+                const height = y - dragStart.y;
+
+                if (Math.abs(width) > 10 && Math.abs(height) > 10) {
+                    const element = new Element(
+                        currentTool,
+                        Math.min(dragStart.x, x),
+                        Math.min(dragStart.y, y),
+                        Math.abs(width),
+                        Math.abs(height)
+                    );
+                    element.fill = document.getElementById('propFill').value;
+                    element.stroke = document.getElementById('propStroke').value;
+                    element.strokeWidth = parseInt(document.getElementById('propStrokeWidth').value);
+
+                    elements.push(element);
+                    selectedElement = element;
+                    saveHistory();
+                    updatePropertiesPanel();
+                    updateLayersList();
+                    render();
+                }
+            } else if (currentTool === 'pencil' && selectedElement) {
+                // Calculate bounding box for pencil
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                for (let point of selectedElement.points) {
+                    minX = Math.min(minX, point.x);
+                    minY = Math.min(minY, point.y);
+                    maxX = Math.max(maxX, point.x);
+                    maxY = Math.max(maxY, point.y);
+                }
+                selectedElement.x = minX;
+                selectedElement.y = minY;
+                selectedElement.width = maxX - minX;
+                selectedElement.height = maxY - minY;
+
+                saveHistory();
+                updateLayersList();
+            }
+
+            isDragging = false;
+            isDrawing = false;
+            isResizing = false;
+            resizeHandle = null;
+        }
+
+        function handleDoubleClick(e) {
+            if (currentTool === 'text' || (selectedElement && selectedElement.type === 'text')) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (!selectedElement || selectedElement.type !== 'text') {
+                    const text = new Element('text', x, y, 200, 40);
+                    text.fill = document.getElementById('propFill').value;
+                    elements.push(text);
+                    selectedElement = text;
+                    selectedElements = [text];
+                    saveHistory();
+                }
+
+                // Show inline text editor
+                showInlineTextEditor(selectedElement);
+            }
+        }
+
+        function showInlineTextEditor(textElement) {
+            if (!textElement || textElement.type !== 'text') return;
+
+            isEditingText = true;
+            editingElement = textElement;
+
+            const editor = document.getElementById('inlineTextEditor');
+            const rect = canvas.getBoundingClientRect();
+            const canvasContainer = document.querySelector('.canvas-wrapper');
+
+            // Position the editor
+            editor.style.left = (textElement.x) + 'px';
+            editor.style.top = (textElement.y) + 'px';
+            editor.style.width = Math.max(textElement.width, 100) + 'px';
+            editor.style.minHeight = textElement.height + 'px';
+
+            // Style the editor to match the text element
+            editor.style.fontFamily = textElement.fontFamily;
+            editor.style.fontSize = textElement.fontSize + 'px';
+            editor.style.color = textElement.fill;
+            editor.style.fontWeight = textElement.bold ? 'bold' : 'normal';
+            editor.style.fontStyle = textElement.italic ? 'italic' : 'normal';
+            editor.style.textDecoration = textElement.underline ? 'underline' : 'none';
+            editor.style.textAlign = textElement.textAlign;
+
+            // Set the content
+            editor.value = textElement.text;
+            editor.style.display = 'block';
+            editor.focus();
+            editor.select();
+
+            // Auto-resize as user types
+            editor.oninput = function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            };
+
+            // Handle when user finishes editing
+            editor.onblur = function() {
+                finishTextEditing();
+            };
+
+            editor.onkeydown = function(e) {
+                if (e.key === 'Escape') {
+                    finishTextEditing();
+                } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    finishTextEditing();
+                }
+                e.stopPropagation();
+            };
+        }
+
+        function finishTextEditing() {
+            if (!isEditingText || !editingElement) return;
+
+            const editor = document.getElementById('inlineTextEditor');
+            const newText = editor.value.trim();
+
+            if (newText) {
+                editingElement.text = newText;
+
+                // Measure text width
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                let fontStyle = '';
+                if (editingElement.italic) fontStyle += 'italic ';
+                if (editingElement.bold) fontStyle += 'bold ';
+                tempCtx.font = `${fontStyle}${editingElement.fontSize}px ${editingElement.fontFamily}`;
+                const metrics = tempCtx.measureText(newText);
+                editingElement.width = Math.max(metrics.width + 10, 100);
+                editingElement.height = Math.max(editingElement.fontSize + 10, 40);
+
+                saveHistory();
+            } else if (elements.includes(editingElement)) {
+                // Remove empty text elements
+                const index = elements.indexOf(editingElement);
+                elements.splice(index, 1);
+                selectedElement = null;
+                selectedElements = [];
+            }
+
+            editor.style.display = 'none';
+            editor.value = '';
+            editor.onblur = null;
+            editor.onkeydown = null;
+            editor.oninput = null;
+
+            isEditingText = false;
+            editingElement = null;
+
+            updatePropertiesPanel();
+            updateLayersList();
+            render();
+        }
+
+        function handleKeyDown(e) {
+            // Ignore keyboard shortcuts during text editing
+            if (isEditingText) return;
+
+            if (e.key === 'Delete' && selectedElement) {
+                deleteSelected();
+            } else if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            } else if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'G') {
+                e.preventDefault();
+                ungroupElements();
+            } else if (e.ctrlKey && e.key === 'g') {
+                e.preventDefault();
+                groupElements();
+            } else if (e.ctrlKey && e.key === 'a') {
+                e.preventDefault();
+                selectAll();
+            } else if (e.ctrlKey && e.key === 'c') {
+                e.preventDefault();
+                copySelected();
+            } else if (e.ctrlKey && e.key === 'v') {
+                e.preventDefault();
+                pasteClipboard();
+            } else if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                duplicateSelected();
+            } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                moveSelectedByArrow(e.key, e.ctrlKey);
+            }
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
+
+            if (tool !== 'select') {
+                selectedElement = null;
+                updatePropertiesPanel();
+                render();
+            }
+        }
+
+        function render() {
+            if (!isDirty && !renderScheduled) return;
+
+            if (!renderScheduled) {
+                renderScheduled = true;
+                requestAnimationFrame(() => {
+                    renderScheduled = false;
+                    isDirty = false;
+                    actualRender();
+                });
+            }
+        }
+
+        function actualRender() {
+            // Clear canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            if (gridEnabled) {
+                ctx.strokeStyle = '#f0f0f0';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < canvas.width; i += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i, canvas.height);
+                    ctx.stroke();
+                }
+                for (let i = 0; i < canvas.height; i += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i);
+                    ctx.lineTo(canvas.width, i);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw elements
+            for (let element of elements) {
+                element.draw(ctx);
+            }
+
+            // Draw selection
+            if (currentTool === 'select') {
+                // Draw all selected elements
+                if (selectedElements.length > 1) {
+                    ctx.strokeStyle = '#667eea';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    selectedElements.forEach(el => {
+                        ctx.strokeRect(el.x - 2, el.y - 2, el.width + 4, el.height + 4);
+                    });
+                    ctx.setLineDash([]);
+                } else if (selectedElement) {
+                    ctx.strokeStyle = '#667eea';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(selectedElement.x - 2, selectedElement.y - 2,
+                                  selectedElement.width + 4, selectedElement.height + 4);
+                    ctx.setLineDash([]);
+
+                    // Draw resize handles
+                    if (selectedElement.type !== 'pencil') {
+                        ctx.fillStyle = '#667eea';
+                        const handles = [
+                            {x: selectedElement.x, y: selectedElement.y},
+                            {x: selectedElement.x + selectedElement.width, y: selectedElement.y},
+                            {x: selectedElement.x, y: selectedElement.y + selectedElement.height},
+                            {x: selectedElement.x + selectedElement.width, y: selectedElement.y + selectedElement.height},
+                        ];
+                        for (let handle of handles) {
+                            ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
+                        }
+                    }
+                }
+            }
+        }
+
+        function markDirty() {
+            isDirty = true;
+        }
+
+        function updatePropertiesPanel() {
+            const elementProps = document.getElementById('elementProps');
+            const textProps = document.getElementById('textProps');
+            const imageProps = document.getElementById('imageProps');
+            const gradientSection = document.getElementById('gradientSection');
+
+            if (selectedElement) {
+                elementProps.style.display = 'block';
+                document.getElementById('propX').value = Math.round(selectedElement.x);
+                document.getElementById('propY').value = Math.round(selectedElement.y);
+                document.getElementById('propWidth').value = Math.round(selectedElement.width);
+                document.getElementById('propHeight').value = Math.round(selectedElement.height);
+                document.getElementById('propRotation').value = selectedElement.rotation;
+                document.getElementById('rotationValue').textContent = selectedElement.rotation + '°';
+                document.getElementById('propOpacity').value = selectedElement.opacity * 100;
+                document.getElementById('opacityValue').textContent = Math.round(selectedElement.opacity * 100) + '%';
+                document.getElementById('propFill').value = selectedElement.fill;
+                document.getElementById('propStroke').value = selectedElement.stroke;
+                document.getElementById('propStrokeWidth').value = selectedElement.strokeWidth;
+                document.getElementById('strokeValue').textContent = selectedElement.strokeWidth + 'px';
+
+                // Show gradient section for shapes
+                if (['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon'].includes(selectedElement.type)) {
+                    gradientSection.style.display = 'block';
+                    if (selectedElement.gradient) {
+                        document.getElementById('gradientEnabled').checked = selectedElement.gradient.enabled;
+                        document.getElementById('gradientControls').style.display = selectedElement.gradient.enabled ? 'block' : 'none';
+                        document.getElementById('gradientColor1').value = selectedElement.gradient.color1;
+                        document.getElementById('gradientColor2').value = selectedElement.gradient.color2;
+                        document.getElementById('gradientAngle').value = selectedElement.gradient.angle;
+                        document.getElementById('angleValue').textContent = selectedElement.gradient.angle + '°';
+                    }
+                } else {
+                    gradientSection.style.display = 'none';
+                }
+
+                if (selectedElement.type === 'text') {
+                    textProps.style.display = 'block';
+                    imageProps.style.display = 'none';
+                    document.getElementById('propText').value = selectedElement.text;
+                    document.getElementById('propFont').value = selectedElement.fontFamily;
+                    document.getElementById('propFontSize').value = selectedElement.fontSize;
+                    document.getElementById('fontSizeValue').textContent = selectedElement.fontSize + 'px';
+
+                    // Update text shadow controls
+                    if (selectedElement.textShadow) {
+                        document.getElementById('textShadowEnabled').checked = selectedElement.textShadow.enabled;
+                        document.getElementById('textShadowControls').style.display = selectedElement.textShadow.enabled ? 'block' : 'none';
+                        document.getElementById('shadowOffsetX').value = selectedElement.textShadow.offsetX;
+                        document.getElementById('shadowXValue').textContent = selectedElement.textShadow.offsetX + 'px';
+                        document.getElementById('shadowOffsetY').value = selectedElement.textShadow.offsetY;
+                        document.getElementById('shadowYValue').textContent = selectedElement.textShadow.offsetY + 'px';
+                        document.getElementById('shadowBlur').value = selectedElement.textShadow.blur;
+                        document.getElementById('shadowBlurValue').textContent = selectedElement.textShadow.blur + 'px';
+                        document.getElementById('shadowColor').value = selectedElement.textShadow.color;
+                    }
+                } else if (selectedElement.type === 'image') {
+                    textProps.style.display = 'none';
+                    imageProps.style.display = 'block';
+
+                    // Update image filter controls
+                    if (selectedElement.filters) {
+                        document.getElementById('filterGrayscale').value = selectedElement.filters.grayscale;
+                        document.getElementById('grayscaleValue').textContent = selectedElement.filters.grayscale + '%';
+                        document.getElementById('filterSepia').value = selectedElement.filters.sepia;
+                        document.getElementById('sepiaValue').textContent = selectedElement.filters.sepia + '%';
+                        document.getElementById('filterBlur').value = selectedElement.filters.blur;
+                        document.getElementById('blurValue').textContent = selectedElement.filters.blur + 'px';
+                        document.getElementById('filterBrightness').value = selectedElement.filters.brightness;
+                        document.getElementById('brightnessValue').textContent = selectedElement.filters.brightness + '%';
+                    }
+                } else {
+                    textProps.style.display = 'none';
+                    imageProps.style.display = 'none';
+                }
+
+                // Show animation section (P12)
+                const animationProps = document.getElementById('animationProps');
+                animationProps.style.display = 'block';
+                if (selectedElement.animation) {
+                    document.getElementById('animationType').value = selectedElement.animation.type;
+                    document.getElementById('animationDuration').value = selectedElement.animation.duration;
+                    document.getElementById('durationValue').textContent = selectedElement.animation.duration.toFixed(1) + 's';
+                    document.getElementById('animationDelay').value = selectedElement.animation.delay;
+                    document.getElementById('delayValue').textContent = selectedElement.animation.delay.toFixed(1) + 's';
+                }
+            } else {
+                elementProps.style.display = 'none';
+                textProps.style.display = 'none';
+                imageProps.style.display = 'none';
+                document.getElementById('animationProps').style.display = 'none';
+            }
+        }
+
+        function updateElementProp(prop, value) {
+            if (!selectedElement) return;
+
+            switch (prop) {
+                case 'x':
+                case 'y':
+                case 'width':
+                case 'height':
+                case 'fontSize':
+                    selectedElement[prop] = parseFloat(value);
+                    break;
+                case 'rotation':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('rotationValue').textContent = value + '°';
+                    break;
+                case 'opacity':
+                    selectedElement[prop] = parseFloat(value) / 100;
+                    document.getElementById('opacityValue').textContent = value + '%';
+                    break;
+                case 'strokeWidth':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('strokeValue').textContent = value + 'px';
+                    break;
+                default:
+                    selectedElement[prop] = value;
+            }
+
+            render();
+        }
+
+        function toggleTextStyle(style) {
+            if (!selectedElement || selectedElement.type !== 'text') return;
+
+            selectedElement[style] = !selectedElement[style];
+            render();
+        }
+
+        function toggleTextShadow(enabled) {
+            if (!selectedElement || selectedElement.type !== 'text') return;
+
+            if (!selectedElement.textShadow) {
+                selectedElement.textShadow = {
+                    enabled: false,
+                    offsetX: 2,
+                    offsetY: 2,
+                    blur: 4,
+                    color: '#000000'
+                };
+            }
+
+            selectedElement.textShadow.enabled = enabled;
+            document.getElementById('textShadowControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateTextShadow(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'text' || !selectedElement.textShadow) return;
+
+            switch (prop) {
+                case 'offsetX':
+                    selectedElement.textShadow.offsetX = parseFloat(value);
+                    document.getElementById('shadowXValue').textContent = value + 'px';
+                    break;
+                case 'offsetY':
+                    selectedElement.textShadow.offsetY = parseFloat(value);
+                    document.getElementById('shadowYValue').textContent = value + 'px';
+                    break;
+                case 'blur':
+                    selectedElement.textShadow.blur = parseFloat(value);
+                    document.getElementById('shadowBlurValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.textShadow.color = value;
+                    break;
+            }
+
+            render();
+        }
+
+        function setColor(color) {
+            document.getElementById('propFill').value = color;
+            if (selectedElement) {
+                selectedElement.fill = color;
+                render();
+            }
+        }
+
+        function updateImageFilter(filterType, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.filters) return;
+
+            selectedElement.filters[filterType] = parseFloat(value);
+
+            switch (filterType) {
+                case 'grayscale':
+                    document.getElementById('grayscaleValue').textContent = value + '%';
+                    break;
+                case 'sepia':
+                    document.getElementById('sepiaValue').textContent = value + '%';
+                    break;
+                case 'blur':
+                    document.getElementById('blurValue').textContent = value + 'px';
+                    break;
+                case 'brightness':
+                    document.getElementById('brightnessValue').textContent = value + '%';
+                    break;
+            }
+
+            render();
+        }
+
+        function resetImageFilters() {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            selectedElement.filters = {
+                grayscale: 0,
+                sepia: 0,
+                blur: 0,
+                brightness: 100
+            };
+
+            updatePropertiesPanel();
+            render();
+        }
+
+        function toggleGradient(enabled) {
+            if (!selectedElement || !selectedElement.gradient) return;
+
+            selectedElement.gradient.enabled = enabled;
+            document.getElementById('gradientControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateGradient(prop, value) {
+            if (!selectedElement || !selectedElement.gradient) return;
+
+            selectedElement.gradient[prop] = prop === 'angle' ? parseFloat(value) : value;
+
+            if (prop === 'angle') {
+                document.getElementById('angleValue').textContent = value + '°';
+            }
+
+            render();
+        }
+
+        function updateLayersList() {
+            const layersList = document.getElementById('layersList');
+
+            if (elements.length === 0) {
+                layersList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">요소를 추가하세요</div>';
+                return;
+            }
+
+            layersList.innerHTML = '';
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const element = elements[i];
+                const layer = document.createElement('div');
+                layer.className = 'layer-item' + (element === selectedElement ? ' active' : '');
+                layer.onclick = () => {
+                    selectedElement = element;
+                    updatePropertiesPanel();
+                    updateLayersList();
+                    render();
+                };
+
+                let icon = '';
+                switch (element.type) {
+                    case 'rect': icon = '▢'; break;
+                    case 'circle': icon = '○'; break;
+                    case 'triangle': icon = '△'; break;
+                    case 'star': icon = '★'; break;
+                    case 'diamond': icon = '◆'; break;
+                    case 'hexagon': icon = '⬢'; break;
+                    case 'speech-bubble': icon = '💬'; break;
+                    case 'cloud': icon = '☁️'; break;
+                    case 'line': icon = '─'; break;
+                    case 'arrow': icon = '→'; break;
+                    case 'text': icon = 'T'; break;
+                    case 'image': icon = '🖼️'; break;
+                    case 'pencil': icon = '✏️'; break;
+                }
+
+                layer.innerHTML = `
+                    <div><span class="layer-icon">${icon}</span>${element.type === 'text' ? element.text.substring(0, 15) : element.type}</div>
+                    <div class="layer-actions">
+                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerVisibility(${i})">${element.visible ? '👁️' : '🚫'}</button>
+                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerLock(${i})">${element.locked ? '🔒' : '🔓'}</button>
+                    </div>
+                `;
+                layersList.appendChild(layer);
+            }
+        }
+
+        function toggleLayerVisibility(index) {
+            const actualIndex = elements.length - 1 - index;
+            elements[actualIndex].visible = !elements[actualIndex].visible;
+            updateLayersList();
+            render();
+        }
+
+        function toggleLayerLock(index) {
+            const actualIndex = elements.length - 1 - index;
+            elements[actualIndex].locked = !elements[actualIndex].locked;
+            updateLayersList();
+        }
+
+        function moveLayer(direction) {
+            if (!selectedElement) return;
+
+            const index = elements.indexOf(selectedElement);
+            if (direction === 'up' && index < elements.length - 1) {
+                [elements[index], elements[index + 1]] = [elements[index + 1], elements[index]];
+            } else if (direction === 'down' && index > 0) {
+                [elements[index], elements[index - 1]] = [elements[index - 1], elements[index]];
+            }
+
+            updateLayersList();
+            render();
+        }
+
+        function deleteSelected() {
+            if (!selectedElement) return;
+
+            const index = elements.indexOf(selectedElement);
+            if (index > -1) {
+                elements.splice(index, 1);
+                selectedElement = null;
+                saveHistory();
+                updatePropertiesPanel();
+                updateLayersList();
+                render();
+            }
+        }
+
+        function groupElements() {
+            if (selectedElements.length < 2) {
+                alert('그룹화하려면 2개 이상의 요소를 선택하세요.');
+                return;
+            }
+
+            const groupId = nextGroupId++;
+            selectedElements.forEach(el => {
+                el.groupId = groupId;
+            });
+
+            saveHistory();
+            alert(`${selectedElements.length}개의 요소가 그룹화되었습니다.`);
+        }
+
+        function ungroupElements() {
+            if (!selectedElement || !selectedElement.groupId) {
+                alert('그룹화된 요소를 선택하세요.');
+                return;
+            }
+
+            const groupId = selectedElement.groupId;
+            elements.forEach(el => {
+                if (el.groupId === groupId) {
+                    el.groupId = null;
+                }
+            });
+
+            saveHistory();
+            alert('그룹이 해제되었습니다.');
+        }
+
+        function selectAll() {
+            selectedElements = elements.filter(el => el.visible && !el.locked);
+            if (selectedElements.length > 0) {
+                selectedElement = selectedElements[0];
+                updatePropertiesPanel();
+                updateLayersList();
+                render();
+            }
+        }
+
+        function copySelected() {
+            if (!selectedElement) return;
+
+            clipboard = JSON.parse(JSON.stringify({
+                ...selectedElement,
+                imageData: null,
+                imageDataId: selectedElement.type === 'image' ? selectedElement.id : null
+            }));
+        }
+
+        function pasteClipboard() {
+            if (!clipboard) return;
+
+            const el = new Element(clipboard.type, clipboard.x + 20, clipboard.y + 20, clipboard.width, clipboard.height);
+            Object.assign(el, clipboard);
+            el.id = Date.now() + Math.random();
+
+            // Restore image data from cache
+            if (clipboard.type === 'image' && clipboard.imageDataId) {
+                const cachedImage = imageCache.get(clipboard.imageDataId);
+                if (cachedImage) {
+                    el.imageData = cachedImage;
+                    imageCache.set(el.id, cachedImage);
+                }
+            }
+
+            elements.push(el);
+            selectedElement = el;
+            selectedElements = [el];
+            saveHistory();
+            updatePropertiesPanel();
+            updateLayersList();
+            render();
+        }
+
+        function duplicateSelected() {
+            if (!selectedElement) return;
+
+            copySelected();
+            pasteClipboard();
+        }
+
+        function moveSelectedByArrow(key, ctrlKey) {
+            if (!selectedElement) return;
+
+            const step = ctrlKey ? 10 : 1;
+            const elementsToMove = selectedElements.length > 1 ? selectedElements : [selectedElement];
+
+            elementsToMove.forEach(el => {
+                if (el.locked) return;
+
+                switch (key) {
+                    case 'ArrowUp':
+                        el.y -= step;
+                        break;
+                    case 'ArrowDown':
+                        el.y += step;
+                        break;
+                    case 'ArrowLeft':
+                        el.x -= step;
+                        break;
+                    case 'ArrowRight':
+                        el.x += step;
+                        break;
+                }
+            });
+
+            updatePropertiesPanel();
+            render();
+        }
+
+        function alignElements(alignment) {
+            if (!selectedElement) return;
+
+            switch (alignment) {
+                case 'left':
+                    selectedElement.x = 0;
+                    break;
+                case 'center':
+                    selectedElement.x = (canvas.width - selectedElement.width) / 2;
+                    break;
+                case 'right':
+                    selectedElement.x = canvas.width - selectedElement.width;
+                    break;
+                case 'top':
+                    selectedElement.y = 0;
+                    break;
+                case 'middle':
+                    selectedElement.y = (canvas.height - selectedElement.height) / 2;
+                    break;
+                case 'bottom':
+                    selectedElement.y = canvas.height - selectedElement.height;
+                    break;
+            }
+
+            updatePropertiesPanel();
+            render();
+        }
+
+        function saveHistory() {
+            history = history.slice(0, historyIndex + 1);
+
+            // Serialize elements without image data
+            const serialized = elements.map(el => {
+                const copy = {...el};
+                if (el.type === 'image' && el.imageData) {
+                    // Cache the image and store only the ID
+                    const imageId = el.id;
+                    imageCache.set(imageId, el.imageData);
+                    copy.imageDataId = imageId;
+                    delete copy.imageData;
+                }
+                return copy;
+            });
+
+            history.push(JSON.stringify(serialized));
+            historyIndex++;
+
+            document.getElementById('undoBtn').disabled = historyIndex <= 0;
+            document.getElementById('redoBtn').disabled = true;
+
+            // Limit history to 50 entries to prevent memory issues
+            if (history.length > 50) {
+                history.shift();
+                historyIndex--;
+            }
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreFromHistory();
+
+                document.getElementById('undoBtn').disabled = historyIndex <= 0;
+                document.getElementById('redoBtn').disabled = false;
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                restoreFromHistory();
+
+                document.getElementById('undoBtn').disabled = false;
+                document.getElementById('redoBtn').disabled = historyIndex >= history.length - 1;
+            }
+        }
+
+        function restoreFromHistory() {
+            const serialized = JSON.parse(history[historyIndex]);
+            elements = serialized.map(data => {
+                const el = new Element(data.type, data.x, data.y, data.width, data.height);
+                Object.assign(el, data);
+
+                // Restore image data from cache
+                if (data.type === 'image' && data.imageDataId) {
+                    el.imageData = imageCache.get(data.imageDataId) || null;
+                }
+
+                return el;
+            });
+
+            selectedElement = null;
+            selectedElements = [];
+            updatePropertiesPanel();
+            updateLayersList();
+            render();
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const element = new Element('image', 100, 100, img.width, img.height);
+                    element.imageData = img;
+                    elements.push(element);
+                    selectedElement = element;
+                    saveHistory();
+                    updatePropertiesPanel();
+                    updateLayersList();
+                    render();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function generateAIImage() {
+            const prompt = document.getElementById('aiPrompt').value.trim();
+            if (!prompt) {
+                alert('프롬프트를 입력해주세요.');
+                return;
+            }
+
+            const aiBtn = document.getElementById('aiBtn');
+            const aiMessage = document.getElementById('aiMessage');
+
+            aiBtn.disabled = true;
+            aiBtn.textContent = '생성 중...';
+            aiMessage.innerHTML = '<div class="message loading">AI가 이미지를 생성하고 있습니다...</div>';
+
+            try {
+                const size = document.getElementById('aiSize').value;
+                const response = await fetchWithRetry(`${PYTHON_API_URL}/generate-image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, size, quality: 'standard' })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const element = new Element('image', 50, 50, 400, 400);
+                        element.imageData = img;
+                        elements.push(element);
+                        selectedElement = element;
+                        saveHistory();
+                        updatePropertiesPanel();
+                        updateLayersList();
+                        render();
+
+                        aiMessage.innerHTML = '<div class="message success">이미지가 생성되었습니다!</div>';
+                        setTimeout(() => aiMessage.innerHTML = '', 3000);
+                    };
+                    img.src = data.imageData;
+                } else {
+                    throw new Error('이미지 생성 실패');
+                }
+            } catch (error) {
+                aiMessage.innerHTML = '<div class="message error">이미지 생성 중 오류가 발생했습니다.</div>';
+            } finally {
+                aiBtn.disabled = false;
+                aiBtn.textContent = '이미지 생성';
+            }
+        }
+
+        async function saveProject() {
+            if (!currentProjectId) {
+                alert('프로젝트 ID가 없습니다.');
+                return;
+            }
+
+            const saveMessage = document.getElementById('saveMessage');
+            saveMessage.innerHTML = '<div class="message loading">저장 중...</div>';
+
+            try {
+                const token = localStorage.getItem('token');
+
+                // Save canvas as image
+                const canvasData = canvas.toDataURL('image/jpeg', 0.8);
+
+                const projectData = {
+                    image: canvasData,
+                    elements: elements.map(el => ({
+                        ...el,
+                        imageData: el.imageData ? el.imageData.src : null
+                    })),
+                    prompt: document.getElementById('aiPrompt').value,
+                    lastModified: new Date().toISOString()
+                };
+
+                const response = await fetchWithRetry(`${API_URL}/projects/${currentProjectId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        data: JSON.stringify(projectData)
+                    })
+                });
+
+                if (response.ok) {
+                    lastSaveTime = new Date();
+                    saveMessage.innerHTML = '<div class="message success">프로젝트가 저장되었습니다!</div>';
+                    setTimeout(() => saveMessage.innerHTML = '', 3000);
                 } else {
                     throw new Error('저장 실패');
                 }
             } catch (error) {
-                showMessage('error', '저장 중 오류가 발생했습니다.');
+                saveMessage.innerHTML = '<div class="message error">저장 중 오류가 발생했습니다. 재시도합니다...</div>';
+                console.error('Save error:', error);
             }
         }
 
@@ -566,16 +3109,34 @@
                 if (response.ok) {
                     const project = await response.json();
                     document.getElementById('projectName').textContent = project.name;
-                    document.getElementById('projectDate').textContent = 
-                        '생성일: ' + new Date(project.createdAt).toLocaleDateString('ko-KR');
-                    
+
                     if (project.data) {
                         try {
                             const data = JSON.parse(project.data);
                             if (data.prompt) {
-                                document.getElementById('promptInput').value = data.prompt;
+                                document.getElementById('aiPrompt').value = data.prompt;
                             }
-                            if (data.image) {
+                            if (data.elements) {
+                                // Restore elements
+                                elements = [];
+                                for (let elData of data.elements) {
+                                    const el = new Element(elData.type, elData.x, elData.y, elData.width, elData.height);
+                                    Object.assign(el, elData);
+
+                                    if (elData.imageData) {
+                                        const img = new Image();
+                                        img.onload = () => render();
+                                        img.src = elData.imageData;
+                                        el.imageData = img;
+                                    }
+
+                                    elements.push(el);
+                                }
+                                saveHistory();
+                                updateLayersList();
+                                render();
+                            } else if (data.image) {
+                                // Load legacy image
                                 const img = new Image();
                                 img.onload = function() {
                                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -584,22 +3145,936 @@
                             }
                         } catch (e) {
                             console.log('No saved data');
+                            render();
                         }
+                    } else {
+                        render();
                     }
                 }
             } catch (error) {
                 console.error('Load error:', error);
+                render();
             }
         }
 
-        function showMessage(type, message) {
-            const element = document.getElementById(type + 'Message');
-            element.textContent = message;
-            element.style.display = 'block';
-            setTimeout(() => {
-                element.style.display = 'none';
-            }, 3000);
+        // Export Functions
+        function showExportModal() {
+            document.getElementById('exportModal').classList.add('active');
+
+            // Set default filename from project name
+            const projectName = document.getElementById('projectName').textContent || 'artify-design';
+            document.getElementById('exportFileName').value = projectName.replace(/\s+/g, '-');
         }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('active');
+        }
+
+        function selectExportFormat(format) {
+            exportFormat = format;
+
+            // Update button states
+            document.querySelectorAll('.export-format-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('format' + format.charAt(0).toUpperCase() + format.slice(1)).classList.add('active');
+
+            // Show/hide resolution options for SVG
+            const resolutionGroup = document.getElementById('resolutionGroup');
+            const qualityGroup = document.getElementById('qualityGroup');
+
+            if (format === 'svg') {
+                resolutionGroup.style.display = 'none';
+                qualityGroup.style.display = 'none';
+            } else {
+                resolutionGroup.style.display = 'block';
+                qualityGroup.style.display = format === 'jpg' ? 'block' : 'none';
+            }
+        }
+
+        function selectExportResolution(resolution) {
+            exportResolution = resolution;
+
+            // Update button states
+            document.querySelectorAll('.export-resolution-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('res' + resolution + 'x').classList.add('active');
+        }
+
+        function updateQualityLabel(value) {
+            document.getElementById('qualityValue').textContent = value + '%';
+            exportQuality = value / 100;
+        }
+
+        async function executeExport() {
+            const fileName = document.getElementById('exportFileName').value || 'artify-design';
+
+            try {
+                if (exportFormat === 'svg') {
+                    exportAsSVG(fileName);
+                } else if (exportFormat === 'png') {
+                    exportAsPNG(fileName, exportResolution);
+                } else if (exportFormat === 'jpg') {
+                    exportAsJPG(fileName, exportResolution, exportQuality);
+                }
+
+                closeExportModal();
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('내보내기 중 오류가 발생했습니다.');
+            }
+        }
+
+        function exportAsPNG(fileName, scale) {
+            // Create a temporary canvas with scaled dimensions
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width * scale;
+            tempCanvas.height = canvas.height * scale;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Scale the context
+            tempCtx.scale(scale, scale);
+
+            // Fill white background
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw all elements
+            for (let element of elements) {
+                element.draw(tempCtx);
+            }
+
+            // Convert to blob and download
+            tempCanvas.toBlob((blob) => {
+                downloadBlob(blob, fileName + '.png');
+            }, 'image/png');
+        }
+
+        function exportAsJPG(fileName, scale, quality) {
+            // Create a temporary canvas with scaled dimensions
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width * scale;
+            tempCanvas.height = canvas.height * scale;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Scale the context
+            tempCtx.scale(scale, scale);
+
+            // Fill white background (JPEG doesn't support transparency)
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw all elements
+            for (let element of elements) {
+                element.draw(tempCtx);
+            }
+
+            // Convert to blob and download
+            tempCanvas.toBlob((blob) => {
+                downloadBlob(blob, fileName + '.jpg');
+            }, 'image/jpeg', quality);
+        }
+
+        function exportAsSVG(fileName) {
+            // Create SVG with all elements
+            let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">`;
+
+            // White background
+            svgContent += `<rect x="0" y="0" width="${canvas.width}" height="${canvas.height}" fill="#ffffff"/>`;
+
+            // Convert each element to SVG
+            for (let element of elements) {
+                if (!element.visible) continue;
+
+                const transform = `translate(${element.x + element.width / 2}, ${element.y + element.height / 2}) rotate(${element.rotation}) translate(-${element.x + element.width / 2}, -${element.y + element.height / 2})`;
+
+                switch (element.type) {
+                    case 'rect':
+                        if (element.gradient && element.gradient.enabled) {
+                            const gradId = 'grad-' + element.id;
+                            const angle = element.gradient.angle * Math.PI / 180;
+                            const x1 = 50 - Math.cos(angle) * 50;
+                            const y1 = 50 - Math.sin(angle) * 50;
+                            const x2 = 50 + Math.cos(angle) * 50;
+                            const y2 = 50 + Math.sin(angle) * 50;
+
+                            svgContent += `<defs><linearGradient id="${gradId}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">`;
+                            svgContent += `<stop offset="0%" stop-color="${element.gradient.color1}"/>`;
+                            svgContent += `<stop offset="100%" stop-color="${element.gradient.color2}"/>`;
+                            svgContent += `</linearGradient></defs>`;
+                            svgContent += `<rect x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" fill="url(#${gradId})" stroke="${element.stroke}" stroke-width="${element.strokeWidth}" opacity="${element.opacity}" transform="${transform}"/>`;
+                        } else {
+                            svgContent += `<rect x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" fill="${element.fill}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}" opacity="${element.opacity}" transform="${transform}"/>`;
+                        }
+                        break;
+
+                    case 'circle':
+                        const cx = element.x + element.width / 2;
+                        const cy = element.y + element.height / 2;
+                        const rx = element.width / 2;
+                        const ry = element.height / 2;
+                        svgContent += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${element.fill}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}" opacity="${element.opacity}" transform="${transform}"/>`;
+                        break;
+
+                    case 'triangle':
+                        const x1 = element.x + element.width / 2;
+                        const y1 = element.y;
+                        const x2 = element.x + element.width;
+                        const y2 = element.y + element.height;
+                        const x3 = element.x;
+                        const y3 = element.y + element.height;
+                        svgContent += `<polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3}" fill="${element.fill}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}" opacity="${element.opacity}" transform="${transform}"/>`;
+                        break;
+
+                    case 'line':
+                        svgContent += `<line x1="${element.x}" y1="${element.y}" x2="${element.x + element.width}" y2="${element.y + element.height}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}" opacity="${element.opacity}" transform="${transform}"/>`;
+                        break;
+
+                    case 'text':
+                        let fontWeight = element.bold ? 'bold' : 'normal';
+                        let fontStyle = element.italic ? 'italic' : 'normal';
+                        let textDecoration = element.underline ? 'underline' : 'none';
+                        let textAnchor = element.textAlign === 'center' ? 'middle' : element.textAlign === 'right' ? 'end' : 'start';
+                        let textX = element.x;
+                        if (element.textAlign === 'center') textX += element.width / 2;
+                        else if (element.textAlign === 'right') textX += element.width;
+
+                        // Add text shadow if enabled
+                        let textFilter = '';
+                        if (element.textShadow && element.textShadow.enabled) {
+                            const filterId = 'shadow-' + element.id;
+                            svgContent += `<defs><filter id="${filterId}">`;
+                            svgContent += `<feDropShadow dx="${element.textShadow.offsetX}" dy="${element.textShadow.offsetY}" stdDeviation="${element.textShadow.blur / 2}" flood-color="${element.textShadow.color}"/>`;
+                            svgContent += `</filter></defs>`;
+                            textFilter = ` filter="url(#${filterId})"`;
+                        }
+
+                        svgContent += `<text x="${textX}" y="${element.y}" font-family="${element.fontFamily}" font-size="${element.fontSize}" font-weight="${fontWeight}" font-style="${fontStyle}" text-decoration="${textDecoration}" text-anchor="${textAnchor}" fill="${element.fill}" opacity="${element.opacity}" transform="${transform}"${textFilter}>${escapeXml(element.text)}</text>`;
+                        break;
+
+                    case 'pencil':
+                        if (element.points.length > 0) {
+                            let pathData = `M ${element.points[0].x} ${element.points[0].y}`;
+                            for (let i = 1; i < element.points.length; i++) {
+                                pathData += ` L ${element.points[i].x} ${element.points[i].y}`;
+                            }
+                            svgContent += `<path d="${pathData}" stroke="${element.stroke}" stroke-width="${element.strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="${element.opacity}"/>`;
+                        }
+                        break;
+                }
+            }
+
+            svgContent += '</svg>';
+
+            // Download SVG
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+            downloadBlob(blob, fileName + '.svg');
+        }
+
+        function escapeXml(text) {
+            return text.replace(/&/g, '&amp;')
+                       .replace(/</g, '&lt;')
+                       .replace(/>/g, '&gt;')
+                       .replace(/"/g, '&quot;')
+                       .replace(/'/g, '&apos;');
+        }
+
+        function downloadBlob(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            const exportModal = document.getElementById('exportModal');
+            const templateModal = document.getElementById('templateModal');
+
+            if (e.target === exportModal) {
+                closeExportModal();
+            }
+            if (e.target === templateModal) {
+                closeTemplateModal();
+            }
+        });
+
+        // Template Functions
+        function showTemplateModal() {
+            document.getElementById('templateModal').classList.add('active');
+
+            // Set current canvas size in custom inputs
+            document.getElementById('customWidth').value = canvas.width;
+            document.getElementById('customHeight').value = canvas.height;
+        }
+
+        function closeTemplateModal() {
+            document.getElementById('templateModal').classList.remove('active');
+
+            // Clear active state from all cards
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            selectedTemplate = null;
+        }
+
+        function selectTemplate(templateId) {
+            selectedTemplate = templateId;
+
+            // Update active state
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.target.closest('.template-card').classList.add('active');
+
+            // Update custom inputs with template size
+            const template = templates[templateId];
+            if (template) {
+                document.getElementById('customWidth').value = template.width;
+                document.getElementById('customHeight').value = template.height;
+            }
+        }
+
+        function applyTemplate() {
+            const newWidth = parseInt(document.getElementById('customWidth').value);
+            const newHeight = parseInt(document.getElementById('customHeight').value);
+
+            if (!newWidth || !newHeight || newWidth < 100 || newHeight < 100) {
+                alert('캔버스 크기는 최소 100x100 이상이어야 합니다.');
+                return;
+            }
+
+            if (newWidth > 5000 || newHeight > 5000) {
+                alert('캔버스 크기는 최대 5000x5000까지 가능합니다.');
+                return;
+            }
+
+            // Confirm if there are elements on the canvas
+            if (elements.length > 0) {
+                const confirmed = confirm('캔버스 크기를 변경하면 일부 요소가 보이지 않을 수 있습니다. 계속하시겠습니까?');
+                if (!confirmed) return;
+            }
+
+            // Resize canvas
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Re-render
+            isDirty = true;
+            render();
+
+            closeTemplateModal();
+
+            // Show success message
+            alert(`캔버스 크기가 ${newWidth}x${newHeight}으로 변경되었습니다.`);
+        }
+
+        // Crop Functions
+        function startCropMode() {
+            if (!selectedElement || selectedElement.type !== 'image') {
+                alert('이미지를 선택해주세요.');
+                return;
+            }
+
+            isCropMode = true;
+            cropElement = selectedElement;
+
+            // Initialize crop rect to full image size
+            cropRect = {
+                x: selectedElement.x,
+                y: selectedElement.y,
+                width: selectedElement.width,
+                height: selectedElement.height
+            };
+
+            showCropOverlay();
+            setupCropHandlers();
+        }
+
+        function showCropOverlay() {
+            const overlay = document.getElementById('cropOverlay');
+            overlay.style.display = 'block';
+            overlay.style.left = cropRect.x + 'px';
+            overlay.style.top = cropRect.y + 'px';
+            overlay.style.width = cropRect.width + 'px';
+            overlay.style.height = cropRect.height + 'px';
+        }
+
+        function setupCropHandlers() {
+            const overlay = document.getElementById('cropOverlay');
+            const handles = overlay.querySelectorAll('.crop-handle');
+
+            // Drag overlay to move crop area
+            overlay.addEventListener('mousedown', function(e) {
+                if (e.target.classList.contains('crop-handle')) {
+                    cropResizeHandle = e.target.classList[1]; // nw, ne, sw, se
+                } else if (e.target === overlay) {
+                    cropDragStart = { x: e.clientX, y: e.clientY };
+                }
+                e.stopPropagation();
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (cropDragStart) {
+                    // Move crop area
+                    const dx = e.clientX - cropDragStart.x;
+                    const dy = e.clientY - cropDragStart.y;
+
+                    cropRect.x = Math.max(cropElement.x, Math.min(cropElement.x + cropElement.width - cropRect.width, cropRect.x + dx));
+                    cropRect.y = Math.max(cropElement.y, Math.min(cropElement.y + cropElement.height - cropRect.height, cropRect.y + dy));
+
+                    cropDragStart = { x: e.clientX, y: e.clientY };
+                    showCropOverlay();
+                } else if (cropResizeHandle) {
+                    // Resize crop area
+                    const dx = e.clientX - (cropRect.x + cropRect.width);
+                    const dy = e.clientY - (cropRect.y + cropRect.height);
+
+                    switch (cropResizeHandle) {
+                        case 'se':
+                            cropRect.width = Math.min(cropElement.x + cropElement.width - cropRect.x, Math.max(50, cropRect.width + dx));
+                            cropRect.height = Math.min(cropElement.y + cropElement.height - cropRect.y, Math.max(50, cropRect.height + dy));
+                            break;
+                        case 'sw':
+                            const newX = Math.max(cropElement.x, cropRect.x + dx);
+                            const newWidth = cropRect.width - (newX - cropRect.x);
+                            if (newWidth >= 50) {
+                                cropRect.x = newX;
+                                cropRect.width = newWidth;
+                            }
+                            cropRect.height = Math.min(cropElement.y + cropElement.height - cropRect.y, Math.max(50, cropRect.height + dy));
+                            break;
+                        case 'ne':
+                            cropRect.width = Math.min(cropElement.x + cropElement.width - cropRect.x, Math.max(50, cropRect.width + dx));
+                            const newY = Math.max(cropElement.y, cropRect.y + dy);
+                            const newHeight = cropRect.height - (newY - cropRect.y);
+                            if (newHeight >= 50) {
+                                cropRect.y = newY;
+                                cropRect.height = newHeight;
+                            }
+                            break;
+                        case 'nw':
+                            const newX2 = Math.max(cropElement.x, cropRect.x + dx);
+                            const newWidth2 = cropRect.width - (newX2 - cropRect.x);
+                            if (newWidth2 >= 50) {
+                                cropRect.x = newX2;
+                                cropRect.width = newWidth2;
+                            }
+                            const newY2 = Math.max(cropElement.y, cropRect.y + dy);
+                            const newHeight2 = cropRect.height - (newY2 - cropRect.y);
+                            if (newHeight2 >= 50) {
+                                cropRect.y = newY2;
+                                cropRect.height = newHeight2;
+                            }
+                            break;
+                    }
+                    showCropOverlay();
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                cropDragStart = null;
+                cropResizeHandle = null;
+            });
+        }
+
+        function applyCrop() {
+            if (!cropElement || !isCropMode) return;
+
+            // Calculate crop area relative to image
+            const cropX = (cropRect.x - cropElement.x) / cropElement.width;
+            const cropY = (cropRect.y - cropElement.y) / cropElement.height;
+            const cropW = cropRect.width / cropElement.width;
+            const cropH = cropRect.height / cropElement.height;
+
+            // Create new canvas to crop the image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            const sourceWidth = cropElement.imageData.width * cropW;
+            const sourceHeight = cropElement.imageData.height * cropH;
+
+            tempCanvas.width = sourceWidth;
+            tempCanvas.height = sourceHeight;
+
+            // Draw cropped image
+            tempCtx.drawImage(
+                cropElement.imageData,
+                cropElement.imageData.width * cropX,
+                cropElement.imageData.height * cropY,
+                sourceWidth,
+                sourceHeight,
+                0, 0,
+                sourceWidth,
+                sourceHeight
+            );
+
+            // Create new image from cropped canvas
+            const croppedImg = new Image();
+            croppedImg.onload = function() {
+                cropElement.imageData = croppedImg;
+                cropElement.x = cropRect.x;
+                cropElement.y = cropRect.y;
+                cropElement.width = cropRect.width;
+                cropElement.height = cropRect.height;
+
+                saveHistory();
+                cancelCrop();
+                render();
+            };
+            croppedImg.src = tempCanvas.toDataURL();
+        }
+
+        function cancelCrop() {
+            isCropMode = false;
+            cropElement = null;
+
+            const overlay = document.getElementById('cropOverlay');
+            overlay.style.display = 'none';
+
+            // Remove event listeners
+            const newOverlay = overlay.cloneNode(true);
+            overlay.parentNode.replaceChild(newOverlay, overlay);
+        }
+
+        // P11: Collaboration Functions
+        function showCollaborateModal() {
+            document.getElementById('collaborateModal').classList.add('active');
+            // Auto-generate link on open
+            if (currentProjectId) {
+                const baseUrl = window.location.origin;
+                document.getElementById('shareLink').value = `${baseUrl}/editor-canva.html?id=${currentProjectId}&share=true`;
+            }
+        }
+
+        function closeCollaborateModal() {
+            document.getElementById('collaborateModal').classList.remove('active');
+        }
+
+        function generateShareLink() {
+            if (!currentProjectId) {
+                alert('프로젝트를 먼저 저장해주세요.');
+                return;
+            }
+
+            const permission = document.getElementById('sharePermission').value;
+            const baseUrl = window.location.origin;
+            const shareUrl = `${baseUrl}/editor-canva.html?id=${currentProjectId}&share=true&permission=${permission}`;
+
+            document.getElementById('shareLink').value = shareUrl;
+            alert('공유 링크가 생성되었습니다!');
+        }
+
+        function copyShareLink() {
+            const shareLink = document.getElementById('shareLink');
+            shareLink.select();
+            document.execCommand('copy');
+            alert('링크가 복사되었습니다!');
+        }
+
+        // P12: Animation Functions
+        function updateAnimation(prop, value) {
+            if (!selectedElement || !selectedElement.animation) return;
+
+            selectedElement.animation[prop] = prop === 'type' ? value : parseFloat(value);
+
+            if (prop === 'duration') {
+                document.getElementById('durationValue').textContent = parseFloat(value).toFixed(1) + 's';
+            } else if (prop === 'delay') {
+                document.getElementById('delayValue').textContent = parseFloat(value).toFixed(1) + 's';
+            }
+        }
+
+        function previewAnimation() {
+            if (!selectedElement || !selectedElement.animation || selectedElement.animation.type === 'none') {
+                alert('애니메이션 유형을 선택해주세요.');
+                return;
+            }
+
+            // Simple preview using canvas state changes
+            const originalX = selectedElement.x;
+            const originalY = selectedElement.y;
+            const originalOpacity = selectedElement.opacity;
+
+            const animType = selectedElement.animation.type;
+            const duration = selectedElement.animation.duration * 1000;
+            const delay = selectedElement.animation.delay * 1000;
+
+            setTimeout(() => {
+                const startTime = Date.now();
+                const animateFrame = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    switch (animType) {
+                        case 'fadeIn':
+                            selectedElement.opacity = progress * originalOpacity;
+                            break;
+                        case 'fadeOut':
+                            selectedElement.opacity = (1 - progress) * originalOpacity;
+                            break;
+                        case 'slideLeft':
+                            selectedElement.x = originalX + (1 - progress) * 100;
+                            break;
+                        case 'slideRight':
+                            selectedElement.x = originalX - (1 - progress) * 100;
+                            break;
+                        case 'slideUp':
+                            selectedElement.y = originalY + (1 - progress) * 100;
+                            break;
+                        case 'slideDown':
+                            selectedElement.y = originalY - (1 - progress) * 100;
+                            break;
+                        case 'bounce':
+                            const bounce = Math.abs(Math.sin(progress * Math.PI * 3)) * (1 - progress);
+                            selectedElement.y = originalY - bounce * 50;
+                            break;
+                        case 'pulse':
+                            const scale = 1 + Math.sin(progress * Math.PI * 4) * 0.1;
+                            // Simple pulse effect (would need more complex scaling)
+                            break;
+                    }
+
+                    isDirty = true;
+                    render();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateFrame);
+                    } else {
+                        // Reset to original state
+                        selectedElement.x = originalX;
+                        selectedElement.y = originalY;
+                        selectedElement.opacity = originalOpacity;
+                        isDirty = true;
+                        render();
+                    }
+                };
+                animateFrame();
+            }, delay);
+        }
+
+        // P13: AI Functions
+        async function removeBackground() {
+            if (!selectedElement || selectedElement.type !== 'image') {
+                alert('이미지를 선택해주세요.');
+                return;
+            }
+
+            const confirmed = confirm('AI 배경 제거를 실행하시겠습니까? (AI 서비스 연동 필요)');
+            if (!confirmed) return;
+
+            try {
+                // Prepare image data
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = selectedElement.imageData.width;
+                tempCanvas.height = selectedElement.imageData.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(selectedElement.imageData, 0, 0);
+                const imageDataUrl = tempCanvas.toDataURL('image/png');
+
+                // Call AI service
+                const response = await fetchWithRetry(API_URL + '/api/ai/remove-background', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify({ image: imageDataUrl })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    // Load result image
+                    const img = new Image();
+                    img.onload = function() {
+                        selectedElement.imageData = img;
+                        saveHistory();
+                        isDirty = true;
+                        render();
+                        alert('배경이 제거되었습니다!');
+                    };
+                    img.src = result.processedImage;
+                } else {
+                    throw new Error('AI 서비스 응답 실패');
+                }
+            } catch (error) {
+                console.error('Background removal error:', error);
+                alert('배경 제거 중 오류가 발생했습니다. AI 서비스가 연동되어 있는지 확인해주세요.');
+            }
+        }
+
+        async function upscaleImage() {
+            if (!selectedElement || selectedElement.type !== 'image') {
+                alert('이미지를 선택해주세요.');
+                return;
+            }
+
+            const confirmed = confirm('AI 고해상도 변환을 실행하시겠습니까? (처리 시간이 소요될 수 있습니다)');
+            if (!confirmed) return;
+
+            try {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = selectedElement.imageData.width;
+                tempCanvas.height = selectedElement.imageData.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(selectedElement.imageData, 0, 0);
+                const imageDataUrl = tempCanvas.toDataURL('image/png');
+
+                const response = await fetchWithRetry(API_URL + '/api/ai/upscale', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify({ image: imageDataUrl, scale: 2 })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const img = new Image();
+                    img.onload = function() {
+                        selectedElement.imageData = img;
+                        selectedElement.width *= 2;
+                        selectedElement.height *= 2;
+                        saveHistory();
+                        isDirty = true;
+                        render();
+                        alert('이미지가 고해상도로 변환되었습니다!');
+                    };
+                    img.src = result.upscaledImage;
+                } else {
+                    throw new Error('AI 서비스 응답 실패');
+                }
+            } catch (error) {
+                console.error('Upscale error:', error);
+                alert('업스케일링 중 오류가 발생했습니다. AI 서비스가 연동되어 있는지 확인해주세요.');
+            }
+        }
+
+        function showStyleTransferModal() {
+            if (!selectedElement || selectedElement.type !== 'image') {
+                alert('이미지를 선택해주세요.');
+                return;
+            }
+
+            const styles = ['반 고흐', '피카소', '모네', '수채화', '유화', '연필 스케치'];
+            const style = prompt('스타일을 선택하세요:\n' + styles.map((s, i) => `${i+1}. ${s}`).join('\n'));
+
+            if (!style) return;
+
+            const styleIndex = parseInt(style) - 1;
+            if (styleIndex >= 0 && styleIndex < styles.length) {
+                applyStyleTransfer(styles[styleIndex]);
+            } else {
+                alert('올바른 번호를 입력해주세요.');
+            }
+        }
+
+        async function applyStyleTransfer(styleName) {
+            try {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = selectedElement.imageData.width;
+                tempCanvas.height = selectedElement.imageData.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(selectedElement.imageData, 0, 0);
+                const imageDataUrl = tempCanvas.toDataURL('image/png');
+
+                const response = await fetchWithRetry(API_URL + '/api/ai/style-transfer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify({ image: imageDataUrl, style: styleName })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const img = new Image();
+                    img.onload = function() {
+                        selectedElement.imageData = img;
+                        saveHistory();
+                        isDirty = true;
+                        render();
+                        alert(`${styleName} 스타일이 적용되었습니다!`);
+                    };
+                    img.src = result.styledImage;
+                } else {
+                    throw new Error('AI 서비스 응답 실패');
+                }
+            } catch (error) {
+                console.error('Style transfer error:', error);
+                alert('스타일 변환 중 오류가 발생했습니다. AI 서비스가 연동되어 있는지 확인해주세요.');
+            }
+        }
+
+        // P14: Brand Kit Functions
+        function saveBrandColor() {
+            if (!selectedElement) {
+                alert('요소를 선택해주세요.');
+                return;
+            }
+
+            const color = selectedElement.fill;
+            let brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+
+            if (brandColors.includes(color)) {
+                alert('이미 저장된 색상입니다.');
+                return;
+            }
+
+            if (brandColors.length >= 12) {
+                alert('최대 12개의 브랜드 색상을 저장할 수 있습니다.');
+                return;
+            }
+
+            brandColors.push(color);
+            localStorage.setItem('brandColors', JSON.stringify(brandColors));
+            alert('브랜드 색상이 저장되었습니다!');
+
+            // Refresh brand colors display
+            if (document.getElementById('brandColorGrid').style.display !== 'none') {
+                showBrandColors();
+            }
+        }
+
+        function showBrandColors() {
+            const brandColorGrid = document.getElementById('brandColorGrid');
+            const brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+
+            if (brandColors.length === 0) {
+                alert('저장된 브랜드 색상이 없습니다. 현재 색상을 저장해보세요!');
+                return;
+            }
+
+            // Toggle visibility
+            if (brandColorGrid.style.display === 'none') {
+                brandColorGrid.style.display = 'grid';
+
+                // Populate brand colors
+                brandColorGrid.innerHTML = '';
+                brandColors.forEach((color, index) => {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'color-swatch';
+                    swatch.style.background = color;
+                    swatch.style.position = 'relative';
+                    swatch.onclick = () => setColor(color);
+
+                    // Add remove button
+                    swatch.ondblclick = (e) => {
+                        e.stopPropagation();
+                        removeBrandColor(index);
+                    };
+                    swatch.title = `클릭: 색상 적용 | 더블클릭: 삭제`;
+
+                    brandColorGrid.appendChild(swatch);
+                });
+            } else {
+                brandColorGrid.style.display = 'none';
+            }
+        }
+
+        function removeBrandColor(index) {
+            const confirmed = confirm('이 브랜드 색상을 삭제하시겠습니까?');
+            if (!confirmed) return;
+
+            let brandColors = JSON.parse(localStorage.getItem('brandColors') || '[]');
+            brandColors.splice(index, 1);
+            localStorage.setItem('brandColors', JSON.stringify(brandColors));
+            showBrandColors();
+            showBrandColors(); // Toggle twice to refresh
+        }
+
+        // P15: Plugin System Functions
+        function initializePlugins() {
+            console.log('Initializing Artify Plugin System...');
+
+            // Initialize all registered plugins
+            plugins.forEach(plugin => {
+                try {
+                    plugin.init(pluginAPI.getContext());
+                    console.log(`Plugin "${plugin.name}" initialized successfully`);
+                } catch (error) {
+                    console.error(`Failed to initialize plugin "${plugin.name}":`, error);
+                }
+            });
+
+            console.log(`${plugins.length} plugin(s) loaded`);
+
+            // Example: Register a demo plugin
+            registerDemoPlugin();
+        }
+
+        function registerDemoPlugin() {
+            // Example plugin that adds a rainbow effect
+            const rainbowPlugin = {
+                name: 'Rainbow Effect Plugin',
+                version: '1.0.0',
+                description: 'Adds rainbow color effect to selected elements',
+                init: function(context) {
+                    // Plugin initialization
+                    console.log('Rainbow plugin loaded!');
+
+                    // Add custom function to window for external access
+                    window.applyRainbowEffect = function() {
+                        if (!context.selectedElement) {
+                            context.showMessage('요소를 선택해주세요.');
+                            return;
+                        }
+
+                        const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+                        let colorIndex = 0;
+
+                        const interval = setInterval(() => {
+                            if (context.selectedElement) {
+                                context.updateElement(context.selectedElement, {
+                                    fill: colors[colorIndex % colors.length]
+                                });
+                                colorIndex++;
+
+                                if (colorIndex >= colors.length * 3) {
+                                    clearInterval(interval);
+                                }
+                            } else {
+                                clearInterval(interval);
+                            }
+                        }, 200);
+                    };
+                }
+            };
+
+            pluginAPI.registerPlugin(rainbowPlugin);
+        }
+
+        // Example of how external plugins can register
+        // External developers can use:
+        // <script>
+        //   window.ArtifyPluginAPI.registerPlugin({
+        //     name: 'My Custom Plugin',
+        //     version: '1.0.0',
+        //     init: function(context) {
+        //       // Custom plugin code
+        //     }
+        //   });
+        // </script>
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(e) {
+            const exportModal = document.getElementById('exportModal');
+            const templateModal = document.getElementById('templateModal');
+            const collaborateModal = document.getElementById('collaborateModal');
+
+            if (e.target === exportModal) {
+                closeExportModal();
+            }
+            if (e.target === templateModal) {
+                closeTemplateModal();
+            }
+            if (e.target === collaborateModal) {
+                closeCollaborateModal();
+            }
+        });
     </script>
 </body>
 </html>

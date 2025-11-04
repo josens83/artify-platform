@@ -39,10 +39,14 @@
 
     <script src="config.js"></script>
     <script>
+        console.log('Index page loaded');
+        console.log('API URL:', API_URL);
+
         // 인증 확인
         function checkAuth() {
             const token = localStorage.getItem('token');
             if (!token) {
+                console.log('No token found, redirecting to login');
                 window.location.href = 'login.html';
                 return false;
             }
@@ -59,48 +63,68 @@
         }
 
         // 새 프로젝트
-        function handleCreateProject() {
+        async function handleCreateProject() {
             const projectName = prompt('프로젝트 이름을 입력하세요:');
             if (!projectName) return;
 
             const token = localStorage.getItem('token');
-            
-            fetch(API_URL + '/projects', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({ name: projectName })
-            })
-            .then(res => res.json())
-            .then(data => {
+
+            try {
+                console.log('Creating project:', projectName);
+                const response = await fetch(API_URL + '/projects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ name: projectName })
+                });
+
+                console.log('Create project response status:', response.status);
+                const data = await response.json();
+                console.log('Create project response data:', data);
+
                 if (data.project) {
                     alert('프로젝트가 생성되었습니다!');
                     window.location.href = 'editor-canva.html?id=' + data.project.id;
                 } else {
                     alert('프로젝트 생성 실패: ' + (data.error || '알 수 없는 오류'));
                 }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('프로젝트 생성 중 오류가 발생했습니다.');
-            });
+            } catch (err) {
+                console.error('Create project error:', err);
+                alert('프로젝트 생성 중 오류가 발생했습니다.\n\n' + err.message + '\n\n서버 연결을 확인해주세요.');
+            }
         }
 
         // 프로젝트 목록 로드
-        function loadProjects() {
+        async function loadProjects() {
             const token = localStorage.getItem('token');
-            
-            fetch(API_URL + '/projects', {
-                headers: {
-                    'Authorization': 'Bearer ' + token
+            const projectsList = document.getElementById('projectsList');
+
+            try {
+                console.log('Loading projects from:', API_URL + '/projects');
+                const response = await fetch(API_URL + '/projects', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                console.log('Load projects response status:', response.status);
+
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    throw new Error('HTTP ' + response.status);
                 }
-            })
-            .then(res => res.json())
-            .then(data => {
-                const projectsList = document.getElementById('projectsList');
-                
+
+                const data = await response.json();
+                console.log('Load projects response data:', data);
+
                 if (data.projects && data.projects.length > 0) {
                     projectsList.innerHTML = data.projects.map(project => `
                         <div class="project-card">
@@ -112,11 +136,10 @@
                 } else {
                     projectsList.innerHTML = '<p>프로젝트가 없습니다. 새 프로젝트를 만들어보세요!</p>';
                 }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                document.getElementById('projectsList').innerHTML = '<p>프로젝트를 불러오는 중 오류가 발생했습니다.</p>';
-            });
+            } catch (err) {
+                console.error('Load projects error:', err);
+                projectsList.innerHTML = '<p>⚠️ 서버에 연결할 수 없습니다.<br><br>' + err.message + '<br><br>Render 서버가 시작되는 데 시간이 걸릴 수 있습니다.<br>잠시 후 새로고침해주세요.</p>';
+            }
         }
 
         // 프로젝트 열기

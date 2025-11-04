@@ -15,24 +15,47 @@
             
             <div id="loginForm">
                 <h2>로그인</h2>
-                <input type="email" id="loginEmail" placeholder="이메일" required>
-                <input type="password" id="loginPassword" placeholder="비밀번호" required>
-                <button onclick="handleLogin()">로그인</button>
+                <form onsubmit="handleLogin(event)">
+                    <input type="email" id="loginEmail" placeholder="이메일" required>
+                    <input type="password" id="loginPassword" placeholder="비밀번호" required>
+                    <button type="submit">로그인</button>
+                </form>
                 <p class="switch-form">계정이 없으신가요? <a href="#" onclick="showRegister(); return false;">회원가입</a></p>
             </div>
 
             <div id="registerForm" style="display: none;">
                 <h2>회원가입</h2>
-                <input type="text" id="registerUsername" placeholder="사용자명" required>
-                <input type="email" id="registerEmail" placeholder="이메일" required>
-                <input type="password" id="registerPassword" placeholder="비밀번호" required>
-                <button onclick="handleRegister()">회원가입</button>
+                <form onsubmit="handleRegister(event)">
+                    <input type="text" id="registerUsername" placeholder="사용자명" required>
+                    <input type="email" id="registerEmail" placeholder="이메일" required>
+                    <input type="password" id="registerPassword" placeholder="비밀번호" required>
+                    <button type="submit">회원가입</button>
+                </form>
                 <p class="switch-form">이미 계정이 있으신가요? <a href="#" onclick="showLogin(); return false;">로그인</a></p>
             </div>
         </div>
     </div>
 
     <script>
+        // 페이지 로드 시 백엔드 연결 확인
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('API URL:', API_URL);
+            try {
+                const response = await fetch(API_URL.replace('/api', '/api/health'), {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    console.log('Backend server is online');
+                } else {
+                    console.warn('Backend server returned non-OK status:', response.status);
+                }
+            } catch (error) {
+                console.error('Backend connection error:', error);
+                alert('⚠️ 서버에 연결할 수 없습니다. Render 서버가 시작되는 데 최대 1분이 걸릴 수 있습니다.\n\n잠시 후 다시 시도해주세요.');
+            }
+        });
+
         function showRegister() {
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
@@ -43,7 +66,9 @@
             document.getElementById('loginForm').style.display = 'block';
         }
 
-        async function handleLogin() {
+        async function handleLogin(event) {
+            if (event) event.preventDefault();
+
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
@@ -53,28 +78,35 @@
             }
 
             try {
+                console.log('Attempting login to:', API_URL + '/login');
                 const response = await fetch(API_URL + '/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ email, password })
                 });
 
+                console.log('Login response status:', response.status);
                 const data = await response.json();
+                console.log('Login response data:', data);
 
                 if (response.ok && data.token) {
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
                     window.location.href = 'index.html';
                 } else {
-                    alert(data.error || '로그인 실패');
+                    alert(data.error || '로그인 실패: ' + response.status);
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                alert('로그인 중 오류가 발생했습니다.');
+                alert('로그인 중 오류가 발생했습니다.\n\n' + error.message + '\n\nAPI URL: ' + API_URL);
             }
         }
 
-        async function handleRegister() {
+        async function handleRegister(event) {
+            if (event) event.preventDefault();
+
             const username = document.getElementById('registerUsername').value;
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
@@ -85,13 +117,18 @@
             }
 
             try {
+                console.log('Attempting registration to:', API_URL + '/register');
                 const response = await fetch(API_URL + '/register', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ username, email, password })
                 });
 
+                console.log('Register response status:', response.status);
                 const data = await response.json();
+                console.log('Register response data:', data);
 
                 if (response.ok && data.token) {
                     localStorage.setItem('token', data.token);
@@ -99,11 +136,11 @@
                     alert('회원가입 성공!');
                     window.location.href = 'index.html';
                 } else {
-                    alert(data.error || '회원가입 실패');
+                    alert(data.error || '회원가입 실패: ' + response.status);
                 }
             } catch (error) {
                 console.error('Register error:', error);
-                alert('회원가입 중 오류가 발생했습니다.');
+                alert('회원가입 중 오류가 발생했습니다.\n\n' + error.message + '\n\nAPI URL: ' + API_URL);
             }
         }
 
