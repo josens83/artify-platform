@@ -71,21 +71,42 @@ const db = {
   }
 };
 
-// CORS Middleware - Vercel 허용 추가!
-app.use(cors({
-  origin: [
-    'https://artify-ruddy.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173'
-  ],
+// CORS Middleware - 모든 Vercel 도메인 허용
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://artify-ruddy.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:5500'
+    ];
+
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Allow all Vercel preview deployments
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 // Preflight 요청 처리
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
@@ -103,10 +124,24 @@ const authenticateToken = (req, res, next) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'healthy',
     service: 'artify-backend',
-    timestamp: new Date().toISOString()
+    version: '1.1.0',
+    timestamp: new Date().toISOString(),
+    cors: {
+      enabled: true,
+      allowedOrigins: [
+        'https://artify-ruddy.vercel.app',
+        '*.vercel.app',
+        'localhost'
+      ]
+    },
+    database: {
+      type: 'in-memory',
+      users: db.users.size / 3, // 각 유저는 3개 키로 저장됨
+      projects: db.projects.size
+    }
   });
 });
 
@@ -214,8 +249,20 @@ app.delete('/api/projects/:id', authenticateToken, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log('Server running on port ' + PORT);
-  console.log('Environment: ' + (process.env.NODE_ENV || 'development'));
+  console.log('='.repeat(50));
+  console.log('🚀 Artify Backend Server Started');
+  console.log('='.repeat(50));
+  console.log('Port:', PORT);
+  console.log('Environment:', process.env.NODE_ENV || 'development');
+  console.log('JWT Secret:', JWT_SECRET ? 'Configured ✓' : 'Using default (not secure!)');
+  console.log('');
+  console.log('CORS Configuration:');
+  console.log('- Allowed Origins:');
+  console.log('  • https://artify-ruddy.vercel.app');
+  console.log('  • *.vercel.app (all Vercel deployments)');
+  console.log('  • localhost (development)');
+  console.log('');
   console.log('In-memory database initialized');
-  console.log('CORS enabled for Vercel deployment');
+  console.log('Ready to accept connections!');
+  console.log('='.repeat(50));
 });
