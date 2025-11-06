@@ -819,6 +819,107 @@
             color: white;
             border-color: #667eea;
         }
+
+        /* P24: Page Navigation */
+        .page-navigation {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            max-width: calc(100% - 200px);
+            z-index: 100;
+        }
+
+        .page-nav-btn {
+            width: 36px;
+            height: 36px;
+            border: 2px dashed #667eea;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .page-nav-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .page-thumbnails {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            max-width: 600px;
+        }
+
+        .page-thumb {
+            position: relative;
+            width: 80px;
+            height: 60px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .page-thumb:hover {
+            border-color: #667eea;
+        }
+
+        .page-thumb.active {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+
+        .page-thumb-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .page-thumb-label {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .page-thumb-delete {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            background: #ff4444;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-thumb:hover .page-thumb-delete {
+            display: flex;
+        }
     </style>
 </head>
 <body>
@@ -839,6 +940,7 @@
             </div>
             <div class="header-right">
                 <button class="header-btn" onclick="location.href='index.html'" aria-label="프로젝트 목록으로 돌아가기">← 목록</button>
+                <button class="header-btn" onclick="showVersionHistoryModal()" aria-label="버전 히스토리">🕐 버전</button>
                 <button class="header-btn" onclick="showCollaborateModal()" aria-label="협업">👥 협업</button>
                 <button class="header-btn" onclick="showTemplateModal()" aria-label="캔버스 크기 변경">📐 캔버스 크기</button>
                 <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
@@ -948,6 +1050,12 @@
                 <div class="zoom-level" id="zoomLevel">100%</div>
                 <button class="zoom-btn" onclick="zoomIn()" title="확대 (Ctrl + +)">+</button>
                 <button class="zoom-btn" onclick="fitToScreen()" title="화면에 맞춤 (Ctrl + 0)" style="font-size: 14px;">⊡</button>
+            </div>
+
+            <!-- P24: Page Navigation -->
+            <div class="page-navigation">
+                <button class="page-nav-btn" onclick="addNewPage()" title="새 페이지">+</button>
+                <div class="page-thumbnails" id="pageThumbnails"></div>
             </div>
         </div>
 
@@ -1541,6 +1649,24 @@
         </div>
     </div>
 
+    <!-- P25: Version History Modal -->
+    <div class="modal-overlay" id="versionHistoryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">버전 히스토리</h2>
+                <button class="modal-close" onclick="closeVersionHistoryModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div id="versionsList" style="max-height: 400px; overflow-y: auto;"></div>
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 클릭하여 버전 복원 | 자동 저장 주기: 5분
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script>
         // Global State
@@ -1602,6 +1728,14 @@
 
         // P23: Style Library
         let savedStyles = JSON.parse(localStorage.getItem('savedStyles') || '[]');
+
+        // P24: Multi-page Design
+        let pages = [{ id: 1, name: 'Page 1', elements: [] }];
+        let currentPageIndex = 0;
+
+        // P25: Version History
+        let versions = JSON.parse(localStorage.getItem('projectVersions_' + (new URLSearchParams(window.location.search).get('id') || 'temp')) || '[]');
+        let versionInterval = null;
 
         // P15: Plugin System
         const plugins = [];
@@ -2219,6 +2353,8 @@
                 loadProject(currentProjectId);
                 // Enable auto-save every 5 minutes
                 autoSaveInterval = setInterval(autoSave, 5 * 60 * 1000);
+                // P25: Start version auto-save
+                startVersionAutoSave();
             } else {
                 render();
             }
@@ -2231,6 +2367,9 @@
 
             // P17: Initialize layer filter
             document.getElementById('filterAll').classList.add('active');
+
+            // P24: Initialize page thumbnails
+            updatePageThumbnails();
         };
 
         function checkAuth() {
@@ -4513,6 +4652,234 @@
             showStylesModal(); // Refresh the list
         }
 
+        // P24: Multi-page Design Functions
+        function saveCurrentPage() {
+            // Save current elements to current page
+            pages[currentPageIndex].elements = JSON.parse(JSON.stringify(elements));
+        }
+
+        function loadPage(index) {
+            if (index < 0 || index >= pages.length) return;
+
+            // Save current page before switching
+            saveCurrentPage();
+
+            // Load new page
+            currentPageIndex = index;
+            elements = JSON.parse(JSON.stringify(pages[index].elements));
+            selectedElement = null;
+            selectedElements = [];
+
+            // Restore image cache for loaded elements
+            elements.forEach(el => {
+                if (el.type === 'image' && el.imageData) {
+                    const img = new Image();
+                    img.onload = () => {
+                        el.imageData = img;
+                        imageCache.set(el.id, img);
+                        render();
+                    };
+                    img.src = el.imageData;
+                }
+            });
+
+            updatePropertiesPanel();
+            updateLayersList();
+            updatePageThumbnails();
+            render();
+        }
+
+        function addNewPage() {
+            saveCurrentPage();
+
+            const newPage = {
+                id: Date.now(),
+                name: `Page ${pages.length + 1}`,
+                elements: []
+            };
+
+            pages.push(newPage);
+            loadPage(pages.length - 1);
+        }
+
+        function deletePage(index) {
+            if (pages.length === 1) {
+                alert('마지막 페이지는 삭제할 수 없습니다.');
+                return;
+            }
+
+            const confirmed = confirm(`"${pages[index].name}"을(를) 삭제하시겠습니까?`);
+            if (!confirmed) return;
+
+            pages.splice(index, 1);
+
+            // Adjust current page index if needed
+            if (currentPageIndex >= pages.length) {
+                currentPageIndex = pages.length - 1;
+            }
+
+            loadPage(currentPageIndex);
+        }
+
+        function updatePageThumbnails() {
+            const container = document.getElementById('pageThumbnails');
+            container.innerHTML = '';
+
+            pages.forEach((page, index) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'page-thumb' + (index === currentPageIndex ? ' active' : '');
+
+                // Create mini canvas for thumbnail
+                const miniCanvas = document.createElement('canvas');
+                miniCanvas.className = 'page-thumb-canvas';
+                miniCanvas.width = 80;
+                miniCanvas.height = 60;
+                const miniCtx = miniCanvas.getContext('2d');
+
+                // Draw page contents
+                miniCtx.fillStyle = 'white';
+                miniCtx.fillRect(0, 0, 80, 60);
+
+                const scale = Math.min(80 / canvas.width, 60 / canvas.height);
+                miniCtx.save();
+                miniCtx.scale(scale, scale);
+
+                page.elements.forEach(el => {
+                    if (el.visible && el.type !== 'image') {
+                        miniCtx.fillStyle = el.fill;
+                        miniCtx.globalAlpha = el.opacity || 1;
+                        if (el.type === 'rect') {
+                            miniCtx.fillRect(el.x, el.y, el.width, el.height);
+                        } else if (el.type === 'circle') {
+                            miniCtx.beginPath();
+                            miniCtx.arc(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, 0, Math.PI * 2);
+                            miniCtx.fill();
+                        }
+                    }
+                });
+
+                miniCtx.restore();
+
+                thumb.appendChild(miniCanvas);
+
+                // Delete button
+                const deleteBtn = document.createElement('div');
+                deleteBtn.className = 'page-thumb-delete';
+                deleteBtn.textContent = '×';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deletePage(index);
+                };
+                thumb.appendChild(deleteBtn);
+
+                thumb.onclick = () => loadPage(index);
+                container.appendChild(thumb);
+            });
+        }
+
+        // P25: Version History Functions
+        function saveVersion() {
+            if (!currentProjectId) return;
+
+            saveCurrentPage(); // Save current page first
+
+            const version = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                pages: JSON.parse(JSON.stringify(pages)),
+                currentPageIndex: currentPageIndex
+            };
+
+            versions.push(version);
+
+            // Keep only last 20 versions
+            if (versions.length > 20) {
+                versions = versions.slice(-20);
+            }
+
+            localStorage.setItem('projectVersions_' + currentProjectId, JSON.stringify(versions));
+        }
+
+        function showVersionHistoryModal() {
+            const modal = document.getElementById('versionHistoryModal');
+            const list = document.getElementById('versionsList');
+
+            if (versions.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">저장된 버전이 없습니다.</p>';
+            } else {
+                list.innerHTML = '';
+                // Show newest first
+                [...versions].reverse().forEach((version, index) => {
+                    const actualIndex = versions.length - 1 - index;
+                    const date = new Date(version.timestamp);
+                    const timeStr = date.toLocaleString('ko-KR');
+
+                    const card = document.createElement('div');
+                    card.style.cssText = `
+                        padding: 15px;
+                        margin-bottom: 10px;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    `;
+
+                    card.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 8px;">버전 ${actualIndex + 1}</div>
+                        <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                            ${timeStr}
+                        </div>
+                        <div style="font-size: 12px; color: #999;">
+                            ${version.pages.length}개 페이지
+                        </div>
+                    `;
+
+                    card.onclick = () => restoreVersion(actualIndex);
+
+                    card.onmouseenter = () => {
+                        card.style.borderColor = '#667eea';
+                        card.style.background = '#f8f9ff';
+                    };
+
+                    card.onmouseleave = () => {
+                        card.style.borderColor = '#e0e0e0';
+                        card.style.background = 'white';
+                    };
+
+                    list.appendChild(card);
+                });
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeVersionHistoryModal() {
+            document.getElementById('versionHistoryModal').classList.remove('active');
+        }
+
+        function restoreVersion(index) {
+            const confirmed = confirm('이 버전으로 복원하시겠습니까? 현재 작업 내용은 저장되지 않습니다.');
+            if (!confirmed) return;
+
+            const version = versions[index];
+            pages = JSON.parse(JSON.stringify(version.pages));
+            currentPageIndex = version.currentPageIndex || 0;
+
+            loadPage(currentPageIndex);
+            closeVersionHistoryModal();
+            alert('버전이 복원되었습니다!');
+        }
+
+        function startVersionAutoSave() {
+            // Save version every 5 minutes
+            versionInterval = setInterval(() => {
+                saveVersion();
+            }, 5 * 60 * 1000);
+
+            // Save initial version
+            saveVersion();
+        }
+
         // P11: Collaboration Functions
         function showCollaborateModal() {
             document.getElementById('collaborateModal').classList.add('active');
@@ -5052,6 +5419,7 @@
             const templateModal = document.getElementById('templateModal');
             const collaborateModal = document.getElementById('collaborateModal');
             const stylesModal = document.getElementById('stylesModal'); // P23
+            const versionHistoryModal = document.getElementById('versionHistoryModal'); // P25
 
             if (e.target === exportModal) {
                 closeExportModal();
@@ -5064,6 +5432,9 @@
             }
             if (e.target === stylesModal) { // P23
                 closeStylesModal();
+            }
+            if (e.target === versionHistoryModal) { // P25
+                closeVersionHistoryModal();
             }
         });
     </script>
