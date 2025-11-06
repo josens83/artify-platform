@@ -151,6 +151,84 @@
             cursor: crosshair;
         }
 
+        /* P16: Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+
+        .zoom-level {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .canvas-container.panning #mainCanvas {
+            cursor: grab;
+        }
+
+        .canvas-container.panning.dragging #mainCanvas {
+            cursor: grabbing;
+        }
+
+        /* P17: Filter Buttons */
+        .filter-btn {
+            padding: 6px 10px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .filter-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
         /* Right Properties Panel */
         .properties-panel {
             grid-area: properties;
@@ -698,6 +776,150 @@
             background: #e0e0e0;
             color: #333;
         }
+
+        /* P19: Enhanced Crop Controls */
+        .crop-controls {
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            min-width: 260px;
+        }
+
+        .crop-ratio-btns,
+        .crop-transform-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .crop-ratio-btns button,
+        .crop-transform-btns button {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .crop-ratio-btns button:hover,
+        .crop-transform-btns button:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .crop-ratio-btns button.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* P24: Page Navigation */
+        .page-navigation {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            max-width: calc(100% - 200px);
+            z-index: 100;
+        }
+
+        .page-nav-btn {
+            width: 36px;
+            height: 36px;
+            border: 2px dashed #667eea;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .page-nav-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .page-thumbnails {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            max-width: 600px;
+        }
+
+        .page-thumb {
+            position: relative;
+            width: 80px;
+            height: 60px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .page-thumb:hover {
+            border-color: #667eea;
+        }
+
+        .page-thumb.active {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+
+        .page-thumb-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .page-thumb-label {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .page-thumb-delete {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            background: #ff4444;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-thumb:hover .page-thumb-delete {
+            display: flex;
+        }
     </style>
 </head>
 <body>
@@ -718,6 +940,7 @@
             </div>
             <div class="header-right">
                 <button class="header-btn" onclick="location.href='index.html'" aria-label="프로젝트 목록으로 돌아가기">← 목록</button>
+                <button class="header-btn" onclick="showVersionHistoryModal()" aria-label="버전 히스토리">🕐 버전</button>
                 <button class="header-btn" onclick="showCollaborateModal()" aria-label="협업">👥 협업</button>
                 <button class="header-btn" onclick="showTemplateModal()" aria-label="캔버스 크기 변경">📐 캔버스 크기</button>
                 <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
@@ -788,7 +1011,7 @@
         </div>
 
         <!-- Canvas Area -->
-        <div class="canvas-container">
+        <div class="canvas-container" id="canvasContainer">
             <div class="canvas-wrapper">
                 <canvas id="mainCanvas" width="1200" height="800" role="img" aria-label="디자인 캔버스"></canvas>
                 <textarea id="inlineTextEditor" class="inline-text-editor"></textarea>
@@ -797,11 +1020,42 @@
                     <div class="crop-handle ne"></div>
                     <div class="crop-handle sw"></div>
                     <div class="crop-handle se"></div>
+                    <!-- P19: Enhanced Crop Controls -->
+                    <div class="crop-controls">
+                        <div style="margin-bottom: 8px; font-size: 12px; color: #666;">비율:</div>
+                        <div class="crop-ratio-btns">
+                            <button onclick="setCropRatio('free')">자유</button>
+                            <button onclick="setCropRatio('1:1')">1:1</button>
+                            <button onclick="setCropRatio('16:9')">16:9</button>
+                            <button onclick="setCropRatio('4:3')">4:3</button>
+                            <button onclick="setCropRatio('3:2')">3:2</button>
+                        </div>
+                        <div style="margin-top: 10px; margin-bottom: 8px; font-size: 12px; color: #666;">변형:</div>
+                        <div class="crop-transform-btns">
+                            <button onclick="rotateImage(-90)" title="왼쪽 90° 회전">↶</button>
+                            <button onclick="rotateImage(90)" title="오른쪽 90° 회전">↷</button>
+                            <button onclick="flipImage('horizontal')" title="좌우 뒤집기">↔</button>
+                            <button onclick="flipImage('vertical')" title="상하 뒤집기">↕</button>
+                        </div>
+                    </div>
                     <div class="crop-actions">
                         <button class="apply" onclick="applyCrop()">✓ 적용</button>
                         <button class="cancel" onclick="cancelCrop()">✕ 취소</button>
                     </div>
                 </div>
+            </div>
+            <!-- P16: Zoom Controls -->
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomOut()" title="축소 (Ctrl + -)">−</button>
+                <div class="zoom-level" id="zoomLevel">100%</div>
+                <button class="zoom-btn" onclick="zoomIn()" title="확대 (Ctrl + +)">+</button>
+                <button class="zoom-btn" onclick="fitToScreen()" title="화면에 맞춤 (Ctrl + 0)" style="font-size: 14px;">⊡</button>
+            </div>
+
+            <!-- P24: Page Navigation -->
+            <div class="page-navigation">
+                <button class="page-nav-btn" onclick="addNewPage()" title="새 페이지">+</button>
+                <div class="page-thumbnails" id="pageThumbnails"></div>
             </div>
         </div>
 
@@ -859,6 +1113,38 @@
                         <span class="slider-value" id="opacityValue">100%</span>
                     </div>
                 </div>
+
+                <!-- P21: Blend Mode -->
+                <div class="panel-group">
+                    <label class="panel-label">블렌드 모드</label>
+                    <select class="panel-input" id="propBlendMode" onchange="updateElementProp('blendMode', this.value)">
+                        <option value="source-over">Normal</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="screen">Screen</option>
+                        <option value="overlay">Overlay</option>
+                        <option value="darken">Darken</option>
+                        <option value="lighten">Lighten</option>
+                        <option value="color-dodge">Color Dodge</option>
+                        <option value="color-burn">Color Burn</option>
+                        <option value="hard-light">Hard Light</option>
+                        <option value="soft-light">Soft Light</option>
+                        <option value="difference">Difference</option>
+                        <option value="exclusion">Exclusion</option>
+                        <option value="hue">Hue</option>
+                        <option value="saturation">Saturation</option>
+                        <option value="color">Color</option>
+                        <option value="luminosity">Luminosity</option>
+                    </select>
+                </div>
+
+                <!-- P23: Style Library -->
+                <div class="panel-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                    <div class="panel-title" style="font-size: 13px; margin-bottom: 10px;">스타일 관리</div>
+                    <div class="btn-group">
+                        <button class="btn-icon" onclick="saveCurrentStyle()" style="flex: 1; font-size: 12px;">💾 스타일 저장</button>
+                        <button class="btn-icon" onclick="showStylesModal()" style="flex: 1; font-size: 12px;">🎨 스타일 적용</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Text Properties -->
@@ -911,6 +1197,23 @@
                         <button class="btn-icon" onclick="updateElementProp('textAlign', 'left')">⬅️</button>
                         <button class="btn-icon" onclick="updateElementProp('textAlign', 'center')">↔️</button>
                         <button class="btn-icon" onclick="updateElementProp('textAlign', 'right')">➡️</button>
+                    </div>
+                </div>
+
+                <!-- P22: Advanced Text Properties -->
+                <div class="panel-group">
+                    <label class="panel-label">줄간격</label>
+                    <div class="slider-group">
+                        <input type="range" min="0.5" max="3" step="0.1" value="1.2" id="propLineHeight" oninput="updateElementProp('lineHeight', this.value)">
+                        <span class="slider-value" id="lineHeightValue">1.2</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">자간</label>
+                    <div class="slider-group">
+                        <input type="range" min="-10" max="20" step="0.5" value="0" id="propLetterSpacing" oninput="updateElementProp('letterSpacing', this.value)">
+                        <span class="slider-value" id="letterSpacingValue">0px</span>
                     </div>
                 </div>
 
@@ -1079,6 +1382,16 @@
             <!-- Layers -->
             <div class="panel-section">
                 <div class="panel-title">레이어</div>
+                <!-- P17: Search & Filter -->
+                <div style="margin-bottom: 10px;">
+                    <input type="text" id="layerSearch" class="panel-input" placeholder="레이어 검색..." oninput="filterLayers()" style="margin-bottom: 8px;">
+                    <div class="btn-group">
+                        <button class="filter-btn" id="filterAll" onclick="setLayerFilter('all')">전체</button>
+                        <button class="filter-btn" id="filterText" onclick="setLayerFilter('text')">텍스트</button>
+                        <button class="filter-btn" id="filterImage" onclick="setLayerFilter('image')">이미지</button>
+                        <button class="filter-btn" id="filterShape" onclick="setLayerFilter('shape')">도형</button>
+                    </div>
+                </div>
                 <div class="layers-list" id="layersList">
                     <div style="padding: 20px; text-align: center; color: #999;">
                         요소를 추가하세요
@@ -1318,6 +1631,42 @@
         </div>
     </div>
 
+    <!-- P23: Style Library Modal -->
+    <div class="modal-overlay" id="stylesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">저장된 스타일</h2>
+                <button class="modal-close" onclick="closeStylesModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div id="savedStylesList" style="max-height: 400px; overflow-y: auto;"></div>
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 클릭하여 스타일 적용 | 더블클릭하여 삭제
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- P25: Version History Modal -->
+    <div class="modal-overlay" id="versionHistoryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">버전 히스토리</h2>
+                <button class="modal-close" onclick="closeVersionHistoryModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div id="versionsList" style="max-height: 400px; overflow-y: auto;"></div>
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 클릭하여 버전 복원 | 자동 저장 주기: 5분
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script>
         // Global State
@@ -1354,6 +1703,39 @@
         let cropRect = { x: 0, y: 0, width: 0, height: 0 };
         let cropDragStart = null;
         let cropResizeHandle = null;
+        let cropAspectRatio = null; // P19: 'free', '1:1', '16:9', '4:3', '3:2'
+
+        // P16: Zoom & Pan
+        let zoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let isPanning = false;
+        let spacePressed = false;
+        let panStart = { x: 0, y: 0 };
+        const MIN_ZOOM = 0.25;
+        const MAX_ZOOM = 4;
+
+        // P17: Layer Filter
+        let layerFilter = 'all';
+        let layerSearchTerm = '';
+
+        // P18: Smart Alignment Guidelines
+        let snapGuides = {
+            vertical: [],
+            horizontal: []
+        };
+        const SNAP_THRESHOLD = 5;
+
+        // P23: Style Library
+        let savedStyles = JSON.parse(localStorage.getItem('savedStyles') || '[]');
+
+        // P24: Multi-page Design
+        let pages = [{ id: 1, name: 'Page 1', elements: [] }];
+        let currentPageIndex = 0;
+
+        // P25: Version History
+        let versions = JSON.parse(localStorage.getItem('projectVersions_' + (new URLSearchParams(window.location.search).get('id') || 'temp')) || '[]');
+        let versionInterval = null;
 
         // P15: Plugin System
         const plugins = [];
@@ -1441,6 +1823,13 @@
                     angle: 0
                 };
 
+                // P21: Blend Mode & Masking
+                this.blendMode = 'normal';
+                this.mask = {
+                    enabled: false,
+                    elementId: null
+                };
+
                 // Animation (P12)
                 this.animation = {
                     type: 'none',
@@ -1457,6 +1846,11 @@
                     this.bold = false;
                     this.italic = false;
                     this.underline = false;
+
+                    // P22: Advanced text properties
+                    this.lineHeight = 1.2;
+                    this.letterSpacing = 0;
+
                     this.textShadow = {
                         enabled: false,
                         offsetX: 2,
@@ -1488,6 +1882,10 @@
 
                 context.save();
                 context.globalAlpha = this.opacity;
+
+                // P21: Apply blend mode
+                context.globalCompositeOperation = this.blendMode || 'source-over';
+
                 context.translate(this.x + this.width / 2, this.y + this.height / 2);
                 context.rotate(this.rotation * Math.PI / 180);
                 context.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
@@ -1616,7 +2014,35 @@
                         if (this.textAlign === 'center') textX += this.width / 2;
                         else if (this.textAlign === 'right') textX += this.width;
 
-                        context.fillText(this.text, textX, this.y);
+                        // P22: Apply letter spacing
+                        if (this.letterSpacing && this.letterSpacing !== 0) {
+                            // Draw each character separately with spacing
+                            let currentX = textX;
+                            const chars = this.text.split('');
+
+                            for (let i = 0; i < chars.length; i++) {
+                                const char = chars[i];
+                                const metrics = context.measureText(char);
+
+                                if (this.textAlign === 'center') {
+                                    const totalWidth = this.text.split('').reduce((acc, c) => {
+                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                    }, 0);
+                                    currentX = this.x + this.width / 2 - totalWidth / 2 + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                } else if (this.textAlign === 'right') {
+                                    const totalWidth = this.text.split('').reduce((acc, c) => {
+                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                    }, 0);
+                                    currentX = this.x + this.width - totalWidth + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                } else {
+                                    currentX = this.x + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                }
+
+                                context.fillText(char, currentX, this.y);
+                            }
+                        } else {
+                            context.fillText(this.text, textX, this.y);
+                        }
 
                         // Reset shadow
                         context.shadowOffsetX = 0;
@@ -1624,11 +2050,31 @@
                         context.shadowBlur = 0;
                         context.shadowColor = 'transparent';
 
+                        // P22: Underline with letter spacing consideration
                         if (this.underline) {
-                            const metrics = context.measureText(this.text);
+                            let underlineWidth;
+                            let underlineX;
+
+                            if (this.letterSpacing && this.letterSpacing !== 0) {
+                                // Calculate total width with letter spacing
+                                underlineWidth = this.text.split('').reduce((acc, c, i) => {
+                                    return acc + context.measureText(c).width + (i < this.text.length - 1 ? this.letterSpacing : 0);
+                                }, 0);
+                            } else {
+                                underlineWidth = context.measureText(this.text).width;
+                            }
+
+                            if (this.textAlign === 'center') {
+                                underlineX = this.x + this.width / 2 - underlineWidth / 2;
+                            } else if (this.textAlign === 'right') {
+                                underlineX = this.x + this.width - underlineWidth;
+                            } else {
+                                underlineX = this.x;
+                            }
+
                             context.beginPath();
-                            context.moveTo(textX, this.y + this.fontSize + 2);
-                            context.lineTo(textX + metrics.width, this.y + this.fontSize + 2);
+                            context.moveTo(underlineX, this.y + this.fontSize + 2);
+                            context.lineTo(underlineX + underlineWidth, this.y + this.fontSize + 2);
                             context.strokeStyle = this.fill;
                             context.lineWidth = 1;
                             context.stroke();
@@ -1907,6 +2353,8 @@
                 loadProject(currentProjectId);
                 // Enable auto-save every 5 minutes
                 autoSaveInterval = setInterval(autoSave, 5 * 60 * 1000);
+                // P25: Start version auto-save
+                startVersionAutoSave();
             } else {
                 render();
             }
@@ -1916,6 +2364,12 @@
 
             // P15: Initialize plugins
             initializePlugins();
+
+            // P17: Initialize layer filter
+            document.getElementById('filterAll').classList.add('active');
+
+            // P24: Initialize page thumbnails
+            updatePageThumbnails();
         };
 
         function checkAuth() {
@@ -1942,6 +2396,14 @@
             canvas.addEventListener('dblclick', handleDoubleClick);
 
             document.addEventListener('keydown', handleKeyDown);
+
+            // P16: Zoom & Pan event listeners
+            canvas.addEventListener('wheel', handleWheel, { passive: false });
+            document.addEventListener('keydown', handleSpaceKeyDown);
+            document.addEventListener('keyup', handleSpaceKeyUp);
+            canvas.addEventListener('mousedown', handlePanStart);
+            canvas.addEventListener('mousemove', handlePanMove);
+            canvas.addEventListener('mouseup', handlePanEnd);
         }
 
         function setupOnlineStatusListener() {
@@ -2010,9 +2472,13 @@
         }
 
         function handleMouseDown(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // P16: Don't handle if panning
+            if (isPanning || spacePressed) return;
+
+            // P16: Convert screen coordinates to canvas coordinates
+            const coords = screenToCanvas(e.clientX, e.clientY);
+            const x = coords.x;
+            const y = coords.y;
 
             if (currentTool === 'select') {
                 // Check for resize handle
@@ -2080,13 +2546,34 @@
         }
 
         function handleMouseMove(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // P16: Handle panning separately
+            if (isPanning && spacePressed) {
+                handlePanMove(e);
+                return;
+            }
+
+            // P16: Convert screen coordinates to canvas coordinates
+            const coords = screenToCanvas(e.clientX, e.clientY);
+            const x = coords.x;
+            const y = coords.y;
 
             if (isDragging && selectedElement && !selectedElement.locked) {
-                const newX = snapEnabled ? Math.round((x - dragStart.x) / 10) * 10 : x - dragStart.x;
-                const newY = snapEnabled ? Math.round((y - dragStart.y) / 10) * 10 : y - dragStart.y;
+                let newX = x - dragStart.x;
+                let newY = y - dragStart.y;
+
+                // P18: Calculate smart alignment guides
+                if (snapEnabled) {
+                    const snapResult = calculateSnapGuides(newX, newY, selectedElement);
+                    newX = snapResult.x;
+                    newY = snapResult.y;
+                    snapGuides = snapResult.guides;
+                } else {
+                    snapGuides = { vertical: [], horizontal: [] };
+                    // Grid snap only
+                    newX = Math.round(newX / 10) * 10;
+                    newY = Math.round(newY / 10) * 10;
+                }
+
                 const deltaX = newX - selectedElement.x;
                 const deltaY = newY - selectedElement.y;
 
@@ -2192,6 +2679,10 @@
             isDrawing = false;
             isResizing = false;
             resizeHandle = null;
+
+            // P18: Clear snap guides
+            snapGuides = { vertical: [], horizontal: [] };
+            render();
         }
 
         function handleDoubleClick(e) {
@@ -2342,6 +2833,42 @@
             } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                 e.preventDefault();
                 moveSelectedByArrow(e.key, e.ctrlKey);
+            } else if (e.ctrlKey && (e.key === '+' || e.key === '=')) {
+                // P16: Zoom in
+                e.preventDefault();
+                zoomIn();
+            } else if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
+                // P16: Zoom out
+                e.preventDefault();
+                zoomOut();
+            } else if (e.ctrlKey && e.key === '0') {
+                // P16: Fit to screen
+                e.preventDefault();
+                fitToScreen();
+            } else if (e.ctrlKey && e.key === '[') {
+                // P20: Move layer down
+                e.preventDefault();
+                moveLayer('down');
+            } else if (e.ctrlKey && e.key === ']') {
+                // P20: Move layer up
+                e.preventDefault();
+                moveLayer('up');
+            } else if (e.ctrlKey && e.key === 'l') {
+                // P20: Toggle lock
+                e.preventDefault();
+                toggleSelectedLock();
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                // P20: Duplicate in place
+                e.preventDefault();
+                duplicateInPlace();
+            } else if (e.key === '/' && !isEditingText) {
+                // P20: Quick search focus
+                e.preventDefault();
+                const searchInput = document.getElementById('layerSearch');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
             }
         }
 
@@ -2377,20 +2904,25 @@
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // P16: Apply zoom and pan transform
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(zoom, zoom);
+
             // Draw grid
             if (gridEnabled) {
                 ctx.strokeStyle = '#f0f0f0';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < canvas.width; i += 50) {
+                ctx.lineWidth = 1 / zoom; // Adjust line width for zoom
+                for (let i = 0; i < canvas.width / zoom; i += 50) {
                     ctx.beginPath();
                     ctx.moveTo(i, 0);
-                    ctx.lineTo(i, canvas.height);
+                    ctx.lineTo(i, canvas.height / zoom);
                     ctx.stroke();
                 }
-                for (let i = 0; i < canvas.height; i += 50) {
+                for (let i = 0; i < canvas.height / zoom; i += 50) {
                     ctx.beginPath();
                     ctx.moveTo(0, i);
-                    ctx.lineTo(canvas.width, i);
+                    ctx.lineTo(canvas.width / zoom, i);
                     ctx.stroke();
                 }
             }
@@ -2434,6 +2966,34 @@
                     }
                 }
             }
+
+            // P18: Draw smart alignment guidelines
+            if (isDragging && selectedElement && (snapGuides.vertical.length > 0 || snapGuides.horizontal.length > 0)) {
+                ctx.strokeStyle = '#FF6B6B';
+                ctx.lineWidth = 1 / zoom;
+                ctx.setLineDash([5, 5]);
+
+                // Draw vertical guides
+                snapGuides.vertical.forEach(x => {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height / zoom);
+                    ctx.stroke();
+                });
+
+                // Draw horizontal guides
+                snapGuides.horizontal.forEach(y => {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width / zoom, y);
+                    ctx.stroke();
+                });
+
+                ctx.setLineDash([]);
+            }
+
+            // P16: Restore transform
+            ctx.restore();
         }
 
         function markDirty() {
@@ -2461,6 +3021,9 @@
                 document.getElementById('propStrokeWidth').value = selectedElement.strokeWidth;
                 document.getElementById('strokeValue').textContent = selectedElement.strokeWidth + 'px';
 
+                // P21: Update blend mode
+                document.getElementById('propBlendMode').value = selectedElement.blendMode || 'source-over';
+
                 // Show gradient section for shapes
                 if (['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon'].includes(selectedElement.type)) {
                     gradientSection.style.display = 'block';
@@ -2483,6 +3046,16 @@
                     document.getElementById('propFont').value = selectedElement.fontFamily;
                     document.getElementById('propFontSize').value = selectedElement.fontSize;
                     document.getElementById('fontSizeValue').textContent = selectedElement.fontSize + 'px';
+
+                    // P22: Update advanced text properties
+                    if (selectedElement.lineHeight !== undefined) {
+                        document.getElementById('propLineHeight').value = selectedElement.lineHeight;
+                        document.getElementById('lineHeightValue').textContent = selectedElement.lineHeight.toFixed(1);
+                    }
+                    if (selectedElement.letterSpacing !== undefined) {
+                        document.getElementById('propLetterSpacing').value = selectedElement.letterSpacing;
+                        document.getElementById('letterSpacingValue').textContent = selectedElement.letterSpacing + 'px';
+                    }
 
                     // Update text shadow controls
                     if (selectedElement.textShadow) {
@@ -2686,9 +3259,44 @@
                 return;
             }
 
+            // P17: Filter elements based on search and type filter
+            let filteredElements = elements.filter(element => {
+                // Type filter
+                let typeMatch = true;
+                if (layerFilter === 'text') {
+                    typeMatch = element.type === 'text';
+                } else if (layerFilter === 'image') {
+                    typeMatch = element.type === 'image';
+                } else if (layerFilter === 'shape') {
+                    typeMatch = ['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon',
+                                 'speech-bubble', 'cloud', 'line', 'arrow', 'pencil'].includes(element.type);
+                }
+
+                // Search filter
+                let searchMatch = true;
+                if (layerSearchTerm) {
+                    const searchLower = layerSearchTerm.toLowerCase();
+                    if (element.type === 'text') {
+                        searchMatch = element.text.toLowerCase().includes(searchLower);
+                    } else {
+                        searchMatch = element.type.toLowerCase().includes(searchLower);
+                    }
+                }
+
+                return typeMatch && searchMatch;
+            });
+
+            if (filteredElements.length === 0) {
+                layersList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">검색 결과가 없습니다</div>';
+                return;
+            }
+
             layersList.innerHTML = '';
             for (let i = elements.length - 1; i >= 0; i--) {
                 const element = elements[i];
+
+                // P17: Skip if element doesn't match filter
+                if (!filteredElements.includes(element)) continue;
                 const layer = document.createElement('div');
                 layer.className = 'layer-item' + (element === selectedElement ? ' active' : '');
                 layer.onclick = () => {
@@ -2736,6 +3344,100 @@
         function toggleLayerLock(index) {
             const actualIndex = elements.length - 1 - index;
             elements[actualIndex].locked = !elements[actualIndex].locked;
+            updateLayersList();
+        }
+
+        // P18: Smart Alignment Guide Calculation
+        function calculateSnapGuides(targetX, targetY, targetElement) {
+            const guides = { vertical: [], horizontal: [] };
+            let snappedX = targetX;
+            let snappedY = targetY;
+
+            // Key points of target element
+            const targetPoints = {
+                left: targetX,
+                centerX: targetX + targetElement.width / 2,
+                right: targetX + targetElement.width,
+                top: targetY,
+                centerY: targetY + targetElement.height / 2,
+                bottom: targetY + targetElement.height
+            };
+
+            let minDistX = Infinity;
+            let minDistY = Infinity;
+
+            // Compare with other elements
+            elements.forEach(element => {
+                if (element === targetElement || !element.visible || element.locked) return;
+
+                const elementPoints = {
+                    left: element.x,
+                    centerX: element.x + element.width / 2,
+                    right: element.x + element.width,
+                    top: element.y,
+                    centerY: element.y + element.height / 2,
+                    bottom: element.y + element.height
+                };
+
+                // Check vertical alignment
+                ['left', 'centerX', 'right'].forEach(targetKey => {
+                    ['left', 'centerX', 'right'].forEach(elementKey => {
+                        const dist = Math.abs(targetPoints[targetKey] - elementPoints[elementKey]);
+                        if (dist < SNAP_THRESHOLD && dist < minDistX) {
+                            minDistX = dist;
+                            const offset = elementPoints[elementKey] - targetPoints[targetKey];
+                            snappedX = targetX + offset;
+                            guides.vertical = [elementPoints[elementKey]];
+                        }
+                    });
+                });
+
+                // Check horizontal alignment
+                ['top', 'centerY', 'bottom'].forEach(targetKey => {
+                    ['top', 'centerY', 'bottom'].forEach(elementKey => {
+                        const dist = Math.abs(targetPoints[targetKey] - elementPoints[elementKey]);
+                        if (dist < SNAP_THRESHOLD && dist < minDistY) {
+                            minDistY = dist;
+                            const offset = elementPoints[elementKey] - targetPoints[targetKey];
+                            snappedY = targetY + offset;
+                            guides.horizontal = [elementPoints[elementKey]];
+                        }
+                    });
+                });
+            });
+
+            // If no snap, apply grid snap
+            if (minDistX === Infinity) {
+                snappedX = Math.round(targetX / 10) * 10;
+            }
+            if (minDistY === Infinity) {
+                snappedY = Math.round(targetY / 10) * 10;
+            }
+
+            return { x: snappedX, y: snappedY, guides };
+        }
+
+        // P17: Layer Search & Filter Functions
+        function filterLayers() {
+            layerSearchTerm = document.getElementById('layerSearch').value;
+            updateLayersList();
+        }
+
+        function setLayerFilter(filter) {
+            layerFilter = filter;
+
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Capitalize first letter for ID (filterAll, filterText, etc.)
+            const filterId = 'filter' + filter.charAt(0).toUpperCase() + filter.slice(1);
+            const filterBtn = document.getElementById(filterId);
+            if (filterBtn) {
+                filterBtn.classList.add('active');
+            }
+
             updateLayersList();
         }
 
@@ -2849,6 +3551,46 @@
 
             copySelected();
             pasteClipboard();
+        }
+
+        // P20: Enhanced Keyboard Shortcuts
+        function toggleSelectedLock() {
+            if (!selectedElement) return;
+
+            selectedElement.locked = !selectedElement.locked;
+            updateLayersList();
+            render();
+        }
+
+        function duplicateInPlace() {
+            if (!selectedElement) return;
+
+            clipboard = JSON.parse(JSON.stringify({
+                ...selectedElement,
+                imageData: null,
+                imageDataId: selectedElement.type === 'image' ? selectedElement.id : null
+            }));
+
+            const el = new Element(clipboard.type, clipboard.x, clipboard.y, clipboard.width, clipboard.height);
+            Object.assign(el, clipboard);
+            el.id = Date.now() + Math.random();
+
+            // Restore image data from cache
+            if (clipboard.type === 'image' && clipboard.imageDataId) {
+                const cachedImage = imageCache.get(clipboard.imageDataId);
+                if (cachedImage) {
+                    el.imageData = cachedImage;
+                    imageCache.set(el.id, cachedImage);
+                }
+            }
+
+            elements.push(el);
+            selectedElement = el;
+            selectedElements = [el];
+            saveHistory();
+            updatePropertiesPanel();
+            updateLayersList();
+            render();
         }
 
         function moveSelectedByArrow(key, ctrlKey) {
@@ -3629,6 +4371,7 @@
         function cancelCrop() {
             isCropMode = false;
             cropElement = null;
+            cropAspectRatio = null;
 
             const overlay = document.getElementById('cropOverlay');
             overlay.style.display = 'none';
@@ -3636,6 +4379,505 @@
             // Remove event listeners
             const newOverlay = overlay.cloneNode(true);
             overlay.parentNode.replaceChild(newOverlay, overlay);
+        }
+
+        // P19: Enhanced Crop Functions
+        function setCropRatio(ratio) {
+            cropAspectRatio = ratio;
+
+            // Update button states
+            document.querySelectorAll('.crop-ratio-btns button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Apply aspect ratio to current crop
+            if (ratio !== 'free' && cropRect) {
+                const ratios = {
+                    '1:1': 1/1,
+                    '16:9': 16/9,
+                    '4:3': 4/3,
+                    '3:2': 3/2
+                };
+
+                const targetRatio = ratios[ratio];
+                const currentRatio = cropRect.width / cropRect.height;
+
+                if (currentRatio > targetRatio) {
+                    // Too wide, adjust width
+                    const newWidth = cropRect.height * targetRatio;
+                    cropRect.x += (cropRect.width - newWidth) / 2;
+                    cropRect.width = newWidth;
+                } else {
+                    // Too tall, adjust height
+                    const newHeight = cropRect.width / targetRatio;
+                    cropRect.y += (cropRect.height - newHeight) / 2;
+                    cropRect.height = newHeight;
+                }
+
+                showCropOverlay();
+            }
+        }
+
+        function rotateImage(degrees) {
+            if (!cropElement || !cropElement.imageData) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = cropElement.imageData;
+
+            // Swap dimensions for 90 or -90 degree rotation
+            if (Math.abs(degrees) === 90) {
+                canvas.width = img.height;
+                canvas.height = img.width;
+            } else {
+                canvas.width = img.width;
+                canvas.height = img.height;
+            }
+
+            // Rotate
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(degrees * Math.PI / 180);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+            // Create new image
+            const newImg = new Image();
+            newImg.onload = function() {
+                cropElement.imageData = newImg;
+                imageCache.set(cropElement.id, newImg);
+
+                // Update element dimensions
+                if (Math.abs(degrees) === 90) {
+                    const temp = cropElement.width;
+                    cropElement.width = cropElement.height;
+                    cropElement.height = temp;
+                }
+
+                // Reset crop rect
+                cropRect = {
+                    x: cropElement.x,
+                    y: cropElement.y,
+                    width: cropElement.width,
+                    height: cropElement.height
+                };
+
+                showCropOverlay();
+                render();
+            };
+            newImg.src = canvas.toDataURL();
+        }
+
+        function flipImage(direction) {
+            if (!cropElement || !cropElement.imageData) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = cropElement.imageData;
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            ctx.save();
+
+            if (direction === 'horizontal') {
+                ctx.scale(-1, 1);
+                ctx.drawImage(img, -img.width, 0);
+            } else {
+                ctx.scale(1, -1);
+                ctx.drawImage(img, 0, -img.height);
+            }
+
+            ctx.restore();
+
+            // Create new image
+            const newImg = new Image();
+            newImg.onload = function() {
+                cropElement.imageData = newImg;
+                imageCache.set(cropElement.id, newImg);
+                render();
+            };
+            newImg.src = canvas.toDataURL();
+        }
+
+        // P23: Style Library Functions
+        function saveCurrentStyle() {
+            if (!selectedElement) {
+                alert('스타일을 저장할 요소를 선택해주세요.');
+                return;
+            }
+
+            const styleName = prompt('스타일 이름을 입력하세요:', `Style ${savedStyles.length + 1}`);
+            if (!styleName) return;
+
+            const style = {
+                id: Date.now(),
+                name: styleName,
+                type: selectedElement.type,
+                fill: selectedElement.fill,
+                stroke: selectedElement.stroke,
+                strokeWidth: selectedElement.strokeWidth,
+                opacity: selectedElement.opacity,
+                blendMode: selectedElement.blendMode
+            };
+
+            // Add type-specific properties
+            if (selectedElement.type === 'text') {
+                style.fontSize = selectedElement.fontSize;
+                style.fontFamily = selectedElement.fontFamily;
+                style.bold = selectedElement.bold;
+                style.italic = selectedElement.italic;
+                style.underline = selectedElement.underline;
+                style.textAlign = selectedElement.textAlign;
+                style.lineHeight = selectedElement.lineHeight;
+                style.letterSpacing = selectedElement.letterSpacing;
+                if (selectedElement.textShadow) {
+                    style.textShadow = {...selectedElement.textShadow};
+                }
+            }
+
+            if (selectedElement.gradient && selectedElement.gradient.enabled) {
+                style.gradient = {...selectedElement.gradient};
+            }
+
+            savedStyles.push(style);
+            localStorage.setItem('savedStyles', JSON.stringify(savedStyles));
+            alert(`스타일 "${styleName}"이 저장되었습니다!`);
+        }
+
+        function showStylesModal() {
+            if (!selectedElement) {
+                alert('스타일을 적용할 요소를 선택해주세요.');
+                return;
+            }
+
+            const modal = document.getElementById('stylesModal');
+            const list = document.getElementById('savedStylesList');
+
+            if (savedStyles.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">저장된 스타일이 없습니다.</p>';
+            } else {
+                list.innerHTML = '';
+                savedStyles.forEach((style, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'style-card';
+                    card.style.cssText = `
+                        padding: 15px;
+                        margin-bottom: 10px;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    `;
+
+                    card.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 8px;">${style.name}</div>
+                        <div style="font-size: 12px; color: #666; margin-bottom: 8px;">Type: ${style.type}</div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            ${style.fill ? `<div style="width: 24px; height: 24px; background: ${style.fill}; border: 1px solid #ccc; border-radius: 4px;"></div>` : ''}
+                            ${style.fontSize ? `<span style="font-size: 12px;">Font: ${style.fontSize}px ${style.fontFamily}</span>` : ''}
+                            ${style.blendMode && style.blendMode !== 'source-over' ? `<span style="font-size: 11px; background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${style.blendMode}</span>` : ''}
+                        </div>
+                    `;
+
+                    card.onclick = () => applyStyle(style);
+                    card.ondblclick = (e) => {
+                        e.stopPropagation();
+                        deleteStyle(index);
+                    };
+
+                    card.onmouseenter = () => {
+                        card.style.borderColor = '#667eea';
+                        card.style.background = '#f8f9ff';
+                    };
+
+                    card.onmouseleave = () => {
+                        card.style.borderColor = '#e0e0e0';
+                        card.style.background = 'white';
+                    };
+
+                    list.appendChild(card);
+                });
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeStylesModal() {
+            document.getElementById('stylesModal').classList.remove('active');
+        }
+
+        function applyStyle(style) {
+            if (!selectedElement) return;
+
+            // Apply common properties
+            selectedElement.fill = style.fill;
+            selectedElement.stroke = style.stroke;
+            selectedElement.strokeWidth = style.strokeWidth;
+            selectedElement.opacity = style.opacity;
+            if (style.blendMode) {
+                selectedElement.blendMode = style.blendMode;
+            }
+
+            // Apply type-specific properties
+            if (style.type === 'text' && selectedElement.type === 'text') {
+                if (style.fontSize) selectedElement.fontSize = style.fontSize;
+                if (style.fontFamily) selectedElement.fontFamily = style.fontFamily;
+                if (style.bold !== undefined) selectedElement.bold = style.bold;
+                if (style.italic !== undefined) selectedElement.italic = style.italic;
+                if (style.underline !== undefined) selectedElement.underline = style.underline;
+                if (style.textAlign) selectedElement.textAlign = style.textAlign;
+                if (style.lineHeight) selectedElement.lineHeight = style.lineHeight;
+                if (style.letterSpacing !== undefined) selectedElement.letterSpacing = style.letterSpacing;
+                if (style.textShadow) {
+                    selectedElement.textShadow = {...style.textShadow};
+                }
+            }
+
+            if (style.gradient) {
+                selectedElement.gradient = {...style.gradient};
+            }
+
+            updatePropertiesPanel();
+            saveHistory();
+            render();
+            closeStylesModal();
+        }
+
+        function deleteStyle(index) {
+            const confirmed = confirm('이 스타일을 삭제하시겠습니까?');
+            if (!confirmed) return;
+
+            savedStyles.splice(index, 1);
+            localStorage.setItem('savedStyles', JSON.stringify(savedStyles));
+            showStylesModal(); // Refresh the list
+        }
+
+        // P24: Multi-page Design Functions
+        function saveCurrentPage() {
+            // Save current elements to current page
+            pages[currentPageIndex].elements = JSON.parse(JSON.stringify(elements));
+        }
+
+        function loadPage(index) {
+            if (index < 0 || index >= pages.length) return;
+
+            // Save current page before switching
+            saveCurrentPage();
+
+            // Load new page
+            currentPageIndex = index;
+            elements = JSON.parse(JSON.stringify(pages[index].elements));
+            selectedElement = null;
+            selectedElements = [];
+
+            // Restore image cache for loaded elements
+            elements.forEach(el => {
+                if (el.type === 'image' && el.imageData) {
+                    const img = new Image();
+                    img.onload = () => {
+                        el.imageData = img;
+                        imageCache.set(el.id, img);
+                        render();
+                    };
+                    img.src = el.imageData;
+                }
+            });
+
+            updatePropertiesPanel();
+            updateLayersList();
+            updatePageThumbnails();
+            render();
+        }
+
+        function addNewPage() {
+            saveCurrentPage();
+
+            const newPage = {
+                id: Date.now(),
+                name: `Page ${pages.length + 1}`,
+                elements: []
+            };
+
+            pages.push(newPage);
+            loadPage(pages.length - 1);
+        }
+
+        function deletePage(index) {
+            if (pages.length === 1) {
+                alert('마지막 페이지는 삭제할 수 없습니다.');
+                return;
+            }
+
+            const confirmed = confirm(`"${pages[index].name}"을(를) 삭제하시겠습니까?`);
+            if (!confirmed) return;
+
+            pages.splice(index, 1);
+
+            // Adjust current page index if needed
+            if (currentPageIndex >= pages.length) {
+                currentPageIndex = pages.length - 1;
+            }
+
+            loadPage(currentPageIndex);
+        }
+
+        function updatePageThumbnails() {
+            const container = document.getElementById('pageThumbnails');
+            container.innerHTML = '';
+
+            pages.forEach((page, index) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'page-thumb' + (index === currentPageIndex ? ' active' : '');
+
+                // Create mini canvas for thumbnail
+                const miniCanvas = document.createElement('canvas');
+                miniCanvas.className = 'page-thumb-canvas';
+                miniCanvas.width = 80;
+                miniCanvas.height = 60;
+                const miniCtx = miniCanvas.getContext('2d');
+
+                // Draw page contents
+                miniCtx.fillStyle = 'white';
+                miniCtx.fillRect(0, 0, 80, 60);
+
+                const scale = Math.min(80 / canvas.width, 60 / canvas.height);
+                miniCtx.save();
+                miniCtx.scale(scale, scale);
+
+                page.elements.forEach(el => {
+                    if (el.visible && el.type !== 'image') {
+                        miniCtx.fillStyle = el.fill;
+                        miniCtx.globalAlpha = el.opacity || 1;
+                        if (el.type === 'rect') {
+                            miniCtx.fillRect(el.x, el.y, el.width, el.height);
+                        } else if (el.type === 'circle') {
+                            miniCtx.beginPath();
+                            miniCtx.arc(el.x + el.width / 2, el.y + el.height / 2, el.width / 2, 0, Math.PI * 2);
+                            miniCtx.fill();
+                        }
+                    }
+                });
+
+                miniCtx.restore();
+
+                thumb.appendChild(miniCanvas);
+
+                // Delete button
+                const deleteBtn = document.createElement('div');
+                deleteBtn.className = 'page-thumb-delete';
+                deleteBtn.textContent = '×';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deletePage(index);
+                };
+                thumb.appendChild(deleteBtn);
+
+                thumb.onclick = () => loadPage(index);
+                container.appendChild(thumb);
+            });
+        }
+
+        // P25: Version History Functions
+        function saveVersion() {
+            if (!currentProjectId) return;
+
+            saveCurrentPage(); // Save current page first
+
+            const version = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                pages: JSON.parse(JSON.stringify(pages)),
+                currentPageIndex: currentPageIndex
+            };
+
+            versions.push(version);
+
+            // Keep only last 20 versions
+            if (versions.length > 20) {
+                versions = versions.slice(-20);
+            }
+
+            localStorage.setItem('projectVersions_' + currentProjectId, JSON.stringify(versions));
+        }
+
+        function showVersionHistoryModal() {
+            const modal = document.getElementById('versionHistoryModal');
+            const list = document.getElementById('versionsList');
+
+            if (versions.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">저장된 버전이 없습니다.</p>';
+            } else {
+                list.innerHTML = '';
+                // Show newest first
+                [...versions].reverse().forEach((version, index) => {
+                    const actualIndex = versions.length - 1 - index;
+                    const date = new Date(version.timestamp);
+                    const timeStr = date.toLocaleString('ko-KR');
+
+                    const card = document.createElement('div');
+                    card.style.cssText = `
+                        padding: 15px;
+                        margin-bottom: 10px;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    `;
+
+                    card.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 8px;">버전 ${actualIndex + 1}</div>
+                        <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                            ${timeStr}
+                        </div>
+                        <div style="font-size: 12px; color: #999;">
+                            ${version.pages.length}개 페이지
+                        </div>
+                    `;
+
+                    card.onclick = () => restoreVersion(actualIndex);
+
+                    card.onmouseenter = () => {
+                        card.style.borderColor = '#667eea';
+                        card.style.background = '#f8f9ff';
+                    };
+
+                    card.onmouseleave = () => {
+                        card.style.borderColor = '#e0e0e0';
+                        card.style.background = 'white';
+                    };
+
+                    list.appendChild(card);
+                });
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeVersionHistoryModal() {
+            document.getElementById('versionHistoryModal').classList.remove('active');
+        }
+
+        function restoreVersion(index) {
+            const confirmed = confirm('이 버전으로 복원하시겠습니까? 현재 작업 내용은 저장되지 않습니다.');
+            if (!confirmed) return;
+
+            const version = versions[index];
+            pages = JSON.parse(JSON.stringify(version.pages));
+            currentPageIndex = version.currentPageIndex || 0;
+
+            loadPage(currentPageIndex);
+            closeVersionHistoryModal();
+            alert('버전이 복원되었습니다!');
+        }
+
+        function startVersionAutoSave() {
+            // Save version every 5 minutes
+            versionInterval = setInterval(() => {
+                saveVersion();
+            }, 5 * 60 * 1000);
+
+            // Save initial version
+            saveVersion();
         }
 
         // P11: Collaboration Functions
@@ -4059,11 +5301,125 @@
         //   });
         // </script>
 
+        // P16: Zoom & Pan Functions
+        function updateZoomLevel() {
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+        }
+
+        function zoomIn() {
+            const oldZoom = zoom;
+            zoom = Math.min(zoom * 1.2, MAX_ZOOM);
+
+            // Zoom toward center
+            const canvasRect = canvas.getBoundingClientRect();
+            const centerX = canvasRect.width / 2;
+            const centerY = canvasRect.height / 2;
+
+            panX = centerX - (centerX - panX) * (zoom / oldZoom);
+            panY = centerY - (centerY - panY) * (zoom / oldZoom);
+
+            updateZoomLevel();
+            render();
+        }
+
+        function zoomOut() {
+            const oldZoom = zoom;
+            zoom = Math.max(zoom / 1.2, MIN_ZOOM);
+
+            // Zoom toward center
+            const canvasRect = canvas.getBoundingClientRect();
+            const centerX = canvasRect.width / 2;
+            const centerY = canvasRect.height / 2;
+
+            panX = centerX - (centerX - panX) * (zoom / oldZoom);
+            panY = centerY - (centerY - panY) * (zoom / oldZoom);
+
+            updateZoomLevel();
+            render();
+        }
+
+        function fitToScreen() {
+            // Reset zoom and pan
+            zoom = 1;
+            panX = 0;
+            panY = 0;
+            updateZoomLevel();
+            render();
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+
+            const oldZoom = zoom;
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * delta));
+
+            // Zoom toward mouse position
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            panX = mouseX - (mouseX - panX) * (zoom / oldZoom);
+            panY = mouseY - (mouseY - panY) * (zoom / oldZoom);
+
+            updateZoomLevel();
+            render();
+        }
+
+        function handleSpaceKeyDown(e) {
+            if (e.code === 'Space' && !isEditingText && !spacePressed) {
+                e.preventDefault();
+                spacePressed = true;
+                document.getElementById('canvasContainer').classList.add('panning');
+            }
+        }
+
+        function handleSpaceKeyUp(e) {
+            if (e.code === 'Space') {
+                spacePressed = false;
+                isPanning = false;
+                document.getElementById('canvasContainer').classList.remove('panning', 'dragging');
+            }
+        }
+
+        function handlePanStart(e) {
+            if (spacePressed) {
+                isPanning = true;
+                panStart = { x: e.clientX - panX, y: e.clientY - panY };
+                document.getElementById('canvasContainer').classList.add('dragging');
+            }
+        }
+
+        function handlePanMove(e) {
+            if (isPanning && spacePressed) {
+                panX = e.clientX - panStart.x;
+                panY = e.clientY - panStart.y;
+                render();
+            }
+        }
+
+        function handlePanEnd() {
+            if (isPanning) {
+                isPanning = false;
+                document.getElementById('canvasContainer').classList.remove('dragging');
+            }
+        }
+
+        // Convert screen coordinates to canvas coordinates (accounting for zoom/pan)
+        function screenToCanvas(screenX, screenY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (screenX - rect.left - panX) / zoom;
+            const y = (screenY - rect.top - panY) / zoom;
+            return { x, y };
+        }
+
         // Close modals when clicking outside
         document.addEventListener('click', function(e) {
             const exportModal = document.getElementById('exportModal');
             const templateModal = document.getElementById('templateModal');
             const collaborateModal = document.getElementById('collaborateModal');
+            const stylesModal = document.getElementById('stylesModal'); // P23
+            const versionHistoryModal = document.getElementById('versionHistoryModal'); // P25
 
             if (e.target === exportModal) {
                 closeExportModal();
@@ -4073,6 +5429,12 @@
             }
             if (e.target === collaborateModal) {
                 closeCollaborateModal();
+            }
+            if (e.target === stylesModal) { // P23
+                closeStylesModal();
+            }
+            if (e.target === versionHistoryModal) { // P25
+                closeVersionHistoryModal();
             }
         });
     </script>
