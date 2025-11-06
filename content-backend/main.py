@@ -1,23 +1,55 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, campaigns, segments, creatives, vector_search
-from utils.config import settings
+from contextlib import asynccontextmanager
 import logging
+
+from app.config import settings
+from app.database import init_db
+from routers import auth, segments, generate, metrics
+from utils.rate_limiter import clean_expired_entries
 
 # Logging configuration
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, settings.LOG_LEVEL),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events"""
+    # Startup
+    logger.info(f"Starting {settings.APP_NAME} v{settings.VERSION}")
+    logger.info(f"Environment: {'Development' if settings.DEBUG else 'Production'}")
+    logger.info(f"Database: {settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'configured'}")
+
+    # Initialize database tables
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+
+    logger.info("API is ready!")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down...")
+    clean_expired_entries()
+    logger.info("Shutdown complete")
+
+# Create FastAPI app
 app = FastAPI(
-    title="Content Management API",
-    description="AI-powered content generation and management backend with Supabase and ChromaDB",
-    version="1.0.0"
+    title=settings.APP_NAME,
+    description="AI-powered content generation and management backend",
+    version=settings.VERSION,
+    lifespan=lifespan,
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None
 )
 
-# CORS 설정
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -26,50 +58,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록
+# Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(campaigns.router, prefix="/api/campaigns", tags=["Campaigns"])
 app.include_router(segments.router, prefix="/api/segments", tags=["Segments"])
-app.include_router(creatives.router, prefix="/api/creatives", tags=["Creatives"])
-app.include_router(vector_search.router, prefix="/api/vector", tags=["Vector Search"])
+app.include_router(generate.router, prefix="/api/generate", tags=["Generation"])
+app.include_router(metrics.router, prefix="/api/metrics", tags=["Metrics"])
 
 @app.get("/")
 async def root():
+    """Root endpoint"""
     return {
-        "message": "Content Management API",
-        "version": "1.0.0",
+        "name": settings.APP_NAME,
+        "version": settings.VERSION,
         "status": "running",
-        "database": "Supabase",
-        "vector_db": "ChromaDB (embedded)"
+        "docs": "/docs" if settings.DEBUG else "disabled"
     }
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint for monitoring"""
     return {
         "status": "healthy",
-        "database": "connected",
-        "vector_db": "ready"
+        "version": settings.VERSION
     }
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    logger.info("Starting Content Management API...")
-    logger.info(f"Supabase URL: {settings.SUPABASE_URL}")
-    logger.info(f"ChromaDB persist dir: {settings.CHROMA_PERSIST_DIR}")
-    logger.info("API is ready!")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown"""
-    logger.info("Shutting down Content Management API...")
+@app.get("/info")
+async def info():
+    """API information endpoint"""
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.VERSION,
+        "environment": "development" if settings.DEBUG else "production",
+        "features": {
+            "authentication": "JWT",
+            "database": "PostgreSQL + SQLAlchemy",
+            "vector_db": "ChromaDB (embedded)",
+            "ai": "OpenAI GPT-4 & DALL-E"
+        },
+        "endpoints": {
+            "docs": "/docs" if settings.DEBUG else None,
+            "health": "/health",
+            "auth": "/api/auth",
+            "segments": "/api/segments",
+            "generate": "/api/generate",
+            "metrics": "/api/metrics"
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host=settings.HOST,
         port=settings.PORT,
-        reload=settings.DEBUG
+        reload=settings.DEBUG,
+        log_level=settings.LOG_LEVEL.lower()
     )

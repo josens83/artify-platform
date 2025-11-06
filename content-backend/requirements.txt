@@ -4,16 +4,26 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
-# Supabase
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Alternative: Supabase
 supabase==2.3.0
 
 # ChromaDB (embedded mode)
 chromadb==0.4.22
 
-# OpenAI for embeddings
+# OpenAI
 openai==1.6.1
 
-# Authentication
+# Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
+
+# Email validation
+email-validator==2.1.0
+
+# Logging
+python-json-logger==2.0.7
