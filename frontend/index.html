@@ -422,6 +422,192 @@
             background: #f5f5f5;
         }
 
+        /* Features Section */
+        .features-section {
+            padding: 80px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 48px;
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 32px;
+            border-radius: 16px;
+            background: white;
+            border: 2px solid #f0f0f0;
+            transition: all 0.3s;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.15);
+            border-color: #667eea;
+        }
+
+        .feature-icon {
+            font-size: 56px;
+            margin-bottom: 24px;
+        }
+
+        .feature-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #191919;
+        }
+
+        .feature-desc {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 80px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 48px;
+            max-width: 1200px;
+            margin: 48px auto 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        .main-footer {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 60px 40px 32px;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+
+        .footer-brand {
+            max-width: 300px;
+        }
+
+        .footer-logo {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+        }
+
+        .footer-desc {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 16px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .social-link:hover {
+            background: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .footer-column h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            color: #b0b0b0;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: #667eea;
+        }
+
+        .footer-bottom {
+            padding-top: 32px;
+            border-top: 1px solid #2a2a2a;
+            text-align: center;
+            color: #808080;
+            font-size: 14px;
+        }
+
+        /* Scroll Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .main-header {
@@ -451,6 +637,15 @@
 
             .section-title {
                 font-size: 24px;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+
+            .footer-brand {
+                max-width: 100%;
             }
         }
     </style>
@@ -528,6 +723,66 @@
         </div>
     </section>
 
+    <!-- Features Section -->
+    <section class="features-section fade-in">
+        <h2 class="section-title">왜 Artify를 선택해야 할까요?</h2>
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="feature-icon">🎨</div>
+                <h3 class="feature-title">직관적인 디자인 도구</h3>
+                <p class="feature-desc">드래그 앤 드롭만으로 전문가 수준의 디자인을 만들 수 있습니다. 복잡한 기술 없이도 누구나 쉽게 사용할 수 있습니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">실시간 협업</h3>
+                <p class="feature-desc">팀원들과 함께 실시간으로 프로젝트를 편집하고 피드백을 주고받으세요. 어디서든 동시에 작업할 수 있습니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">AI 기반 자동화</h3>
+                <p class="feature-desc">인공지능이 디자인을 제안하고 자동으로 레이아웃을 최적화합니다. 시간을 절약하고 더 나은 결과를 얻으세요.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📱</div>
+                <h3 class="feature-title">모든 플랫폼 지원</h3>
+                <p class="feature-desc">웹, 모바일, 태블릿 어디서든 자유롭게 작업하세요. 클라우드 동기화로 모든 기기에서 접근 가능합니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">다양한 템플릿</h3>
+                <p class="feature-desc">10,000개 이상의 전문 디자이너가 제작한 템플릿을 사용하세요. 소셜 미디어부터 비즈니스까지 모든 용도를 커버합니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">💾</div>
+                <h3 class="feature-title">자동 저장</h3>
+                <p class="feature-desc">작업 중 데이터를 잃어버릴 걱정이 없습니다. 모든 변경사항이 자동으로 저장되어 안전하게 보관됩니다.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section fade-in">
+        <h2 class="section-title">전 세계 크리에이터들이 선택한 플랫폼</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">100K+</div>
+                <div class="stat-label">활성 사용자</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">1M+</div>
+                <div class="stat-label">제작된 디자인</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">10K+</div>
+                <div class="stat-label">템플릿 제공</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">99.9%</div>
+                <div class="stat-label">고객 만족도</div>
+            </div>
+        </div>
+    </section>
+
     <!-- Create Project Modal -->
     <div id="createModal" class="modal">
         <div class="modal-content">
@@ -542,6 +797,58 @@
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">Artify</div>
+                    <p class="footer-desc">
+                        모두를 위한 온라인 디자인 플랫폼. 전문가가 아니어도 누구나 쉽게 아름다운 디자인을 만들 수 있습니다.
+                    </p>
+                    <div class="footer-social">
+                        <a href="#" class="social-link">📘</a>
+                        <a href="#" class="social-link">🐦</a>
+                        <a href="#" class="social-link">📷</a>
+                        <a href="#" class="social-link">💼</a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>제품</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">기능</a></li>
+                        <li><a href="#">템플릿</a></li>
+                        <li><a href="#">가격</a></li>
+                        <li><a href="#">업데이트</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>지원</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">도움말 센터</a></li>
+                        <li><a href="#">튜토리얼</a></li>
+                        <li><a href="#">커뮤니티</a></li>
+                        <li><a href="#">문의하기</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>회사</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">소개</a></li>
+                        <li><a href="#">채용</a></li>
+                        <li><a href="#">블로그</a></li>
+                        <li><a href="#">파트너십</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                © 2025 Artify. All rights reserved. |
+                <a href="#" style="color: #808080; text-decoration: none;">개인정보처리방침</a> |
+                <a href="#" style="color: #808080; text-decoration: none;">이용약관</a>
+            </div>
+        </div>
+    </footer>
 
     <script src="config.js"></script>
     <script>
@@ -794,6 +1101,26 @@
             displayUser();
             loadProjects();
         }
+
+        // Scroll Animation
+        function handleScrollAnimation() {
+            const elements = document.querySelectorAll('.fade-in');
+
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight;
+
+                if (elementTop < windowHeight * 0.8) {
+                    element.classList.add('visible');
+                }
+            });
+        }
+
+        // 스크롤 이벤트 리스너 추가
+        window.addEventListener('scroll', handleScrollAnimation);
+
+        // 페이지 로드 시 한 번 실행
+        window.addEventListener('load', handleScrollAnimation);
     </script>
 </body>
 </html>
