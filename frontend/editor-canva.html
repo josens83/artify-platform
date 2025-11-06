@@ -1359,22 +1359,96 @@
                 </div>
 
                 <div id="gradientControls" style="display:none;">
+                    <!-- P26: Gradient type selector -->
+                    <div class="panel-group">
+                        <label class="panel-label">그라데이션 타입</label>
+                        <select class="panel-input" id="gradientType" onchange="updateGradient('type', this.value)">
+                            <option value="linear">선형 (Linear)</option>
+                            <option value="radial">원형 (Radial)</option>
+                        </select>
+                    </div>
+
                     <div class="panel-group">
                         <label class="panel-label">시작 색상</label>
                         <input type="color" class="panel-input" id="gradientColor1" value="#667eea" onchange="updateGradient('color1', this.value)">
                     </div>
 
                     <div class="panel-group">
-                        <label class="panel-label">끝 색상</label>
-                        <input type="color" class="panel-input" id="gradientColor2" value="#764ba2" onchange="updateGradient('color2', this.value)">
+                        <label class="panel-label">중간 색상 (선택)</label>
+                        <input type="color" class="panel-input" id="gradientColor2" value="#a855f7" onchange="updateGradient('color2', this.value)">
+                        <label style="font-size: 11px; margin-top: 4px;">
+                            <input type="checkbox" id="gradientMiddleEnabled" onchange="toggleGradientMiddleColor(this.checked)">
+                            중간 색상 사용
+                        </label>
                     </div>
 
                     <div class="panel-group">
+                        <label class="panel-label">끝 색상</label>
+                        <input type="color" class="panel-input" id="gradientColor3" value="#764ba2" onchange="updateGradient('color3', this.value)">
+                    </div>
+
+                    <!-- Linear gradient controls -->
+                    <div class="panel-group" id="gradientAngleGroup">
                         <label class="panel-label">각도</label>
                         <div class="slider-group">
                             <input type="range" min="0" max="360" value="0" id="gradientAngle" oninput="updateGradient('angle', this.value)">
                             <span class="slider-value" id="angleValue">0°</span>
                         </div>
+                    </div>
+
+                    <!-- Radial gradient controls -->
+                    <div id="radialGradientControls" style="display:none;">
+                        <div class="panel-group">
+                            <label class="panel-label">반지름</label>
+                            <div class="slider-group">
+                                <input type="range" min="0.1" max="1.5" step="0.1" value="0.7" id="radialRadius" oninput="updateGradient('radius', this.value)">
+                                <span class="slider-value" id="radiusValue">0.7</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- P27: Drop Shadow -->
+                <div class="panel-group" id="dropShadowSection" style="display:none; margin-top: 15px;">
+                    <label class="panel-label">
+                        <input type="checkbox" id="dropShadowEnabled" onchange="toggleDropShadow(this.checked)">
+                        드롭 그림자
+                    </label>
+                </div>
+
+                <div id="dropShadowControls" style="display:none;">
+                    <div class="panel-group">
+                        <label class="panel-label">가로 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="4" id="dropShadowX" oninput="updateDropShadow('offsetX', this.value)">
+                            <span class="slider-value" id="dropShadowXValue">4px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">세로 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="4" id="dropShadowY" oninput="updateDropShadow('offsetY', this.value)">
+                            <span class="slider-value" id="dropShadowYValue">4px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">블러</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="50" value="8" id="dropShadowBlur" oninput="updateDropShadow('blur', this.value)">
+                            <span class="slider-value" id="dropShadowBlurValue">8px</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-group">
+                        <label class="panel-label">그림자 색상</label>
+                        <input type="color" class="panel-input" id="dropShadowColor" value="#000000" onchange="updateDropShadow('color', this.value)">
+                        <label style="font-size: 11px; margin-top: 4px;">
+                            <span>투명도</span>
+                            <input type="range" min="0" max="100" value="30" id="dropShadowOpacity" oninput="updateDropShadow('opacity', this.value)" style="width: 100%; margin-top: 4px;">
+                            <span id="dropShadowOpacityValue">30%</span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -1815,12 +1889,18 @@
                 this.visible = true;
                 this.locked = false;
                 this.groupId = null;
+                // P26: Enhanced gradient with multi-stop support
                 this.gradient = {
                     enabled: false,
-                    type: 'linear',
-                    color1: '#667eea',
-                    color2: '#764ba2',
-                    angle: 0
+                    type: 'linear', // 'linear' or 'radial'
+                    stops: [
+                        { position: 0, color: '#667eea' },
+                        { position: 1, color: '#764ba2' }
+                    ],
+                    angle: 0, // For linear gradients
+                    radialCenterX: 0.5, // For radial gradients (0-1)
+                    radialCenterY: 0.5,
+                    radialRadius: 0.7 // Relative to shape size
                 };
 
                 // P21: Blend Mode & Masking
@@ -1828,6 +1908,15 @@
                 this.mask = {
                     enabled: false,
                     elementId: null
+                };
+
+                // P27: Drop Shadow (for all shapes)
+                this.dropShadow = {
+                    enabled: false,
+                    offsetX: 4,
+                    offsetY: 4,
+                    blur: 8,
+                    color: 'rgba(0, 0, 0, 0.3)'
                 };
 
                 // Animation (P12)
@@ -1877,6 +1966,40 @@
                 }
             }
 
+            // P26: Create gradient for element
+            createGradient(context) {
+                if (!this.gradient || !this.gradient.enabled) {
+                    return this.fill;
+                }
+
+                let gradient;
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                if (this.gradient.type === 'radial') {
+                    // Radial gradient
+                    const centerX = this.x + this.width * this.gradient.radialCenterX;
+                    const centerY = this.y + this.height * this.gradient.radialCenterY;
+                    const radius = Math.max(this.width, this.height) * this.gradient.radialRadius;
+                    gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                } else {
+                    // Linear gradient
+                    const angle = this.gradient.angle * Math.PI / 180;
+                    const x0 = cx - Math.cos(angle) * this.width / 2;
+                    const y0 = cy - Math.sin(angle) * this.height / 2;
+                    const x1 = cx + Math.cos(angle) * this.width / 2;
+                    const y1 = cy + Math.sin(angle) * this.height / 2;
+                    gradient = context.createLinearGradient(x0, y0, x1, y1);
+                }
+
+                // Add color stops
+                for (const stop of this.gradient.stops) {
+                    gradient.addColorStop(stop.position, stop.color);
+                }
+
+                return gradient;
+            }
+
             draw(context) {
                 if (!this.visible) return;
 
@@ -1886,26 +2009,22 @@
                 // P21: Apply blend mode
                 context.globalCompositeOperation = this.blendMode || 'source-over';
 
+                // P27: Apply drop shadow
+                if (this.dropShadow && this.dropShadow.enabled) {
+                    context.shadowOffsetX = this.dropShadow.offsetX;
+                    context.shadowOffsetY = this.dropShadow.offsetY;
+                    context.shadowBlur = this.dropShadow.blur;
+                    context.shadowColor = this.dropShadow.color;
+                }
+
                 context.translate(this.x + this.width / 2, this.y + this.height / 2);
                 context.rotate(this.rotation * Math.PI / 180);
                 context.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
 
                 switch (this.type) {
                     case 'rect':
-                        // Apply gradient or solid fill
-                        if (this.gradient && this.gradient.enabled) {
-                            const angle = this.gradient.angle * Math.PI / 180;
-                            const x0 = this.x + this.width / 2 - Math.cos(angle) * this.width / 2;
-                            const y0 = this.y + this.height / 2 - Math.sin(angle) * this.height / 2;
-                            const x1 = this.x + this.width / 2 + Math.cos(angle) * this.width / 2;
-                            const y1 = this.y + this.height / 2 + Math.sin(angle) * this.height / 2;
-                            const gradient = context.createLinearGradient(x0, y0, x1, y1);
-                            gradient.addColorStop(0, this.gradient.color1);
-                            gradient.addColorStop(1, this.gradient.color2);
-                            context.fillStyle = gradient;
-                        } else {
-                            context.fillStyle = this.fill;
-                        }
+                        // P26: Apply gradient or solid fill
+                        context.fillStyle = this.createGradient(context);
                         context.strokeStyle = this.stroke;
                         context.lineWidth = this.strokeWidth;
                         context.fillRect(this.x, this.y, this.width, this.height);
@@ -1915,24 +2034,8 @@
                         break;
 
                     case 'circle':
-                        // Apply gradient or solid fill
-                        if (this.gradient && this.gradient.enabled) {
-                            const angle = this.gradient.angle * Math.PI / 180;
-                            const radiusX = this.width / 2;
-                            const radiusY = this.height / 2;
-                            const cx = this.x + radiusX;
-                            const cy = this.y + radiusY;
-                            const x0 = cx - Math.cos(angle) * radiusX;
-                            const y0 = cy - Math.sin(angle) * radiusY;
-                            const x1 = cx + Math.cos(angle) * radiusX;
-                            const y1 = cy + Math.sin(angle) * radiusY;
-                            const gradient = context.createLinearGradient(x0, y0, x1, y1);
-                            gradient.addColorStop(0, this.gradient.color1);
-                            gradient.addColorStop(1, this.gradient.color2);
-                            context.fillStyle = gradient;
-                        } else {
-                            context.fillStyle = this.fill;
-                        }
+                        // P26: Apply gradient or solid fill
+                        context.fillStyle = this.createGradient(context);
                         context.strokeStyle = this.stroke;
                         context.lineWidth = this.strokeWidth;
                         context.beginPath();
@@ -1946,7 +2049,8 @@
                         break;
 
                     case 'triangle':
-                        context.fillStyle = this.fill;
+                        // P26: Apply gradient or solid fill
+                        context.fillStyle = this.createGradient(context);
                         context.strokeStyle = this.stroke;
                         context.lineWidth = this.strokeWidth;
                         context.beginPath();
@@ -2123,7 +2227,8 @@
                 const innerRadius = outerRadius / 2;
                 const points = 5;
 
-                context.fillStyle = this.fill;
+                // P26: Apply gradient or solid fill
+                context.fillStyle = this.createGradient(context);
                 context.strokeStyle = this.stroke;
                 context.lineWidth = this.strokeWidth;
                 context.beginPath();
@@ -2176,7 +2281,8 @@
             }
 
             drawDiamond(context) {
-                context.fillStyle = this.fill;
+                // P26: Apply gradient or solid fill
+                context.fillStyle = this.createGradient(context);
                 context.strokeStyle = this.stroke;
                 context.lineWidth = this.strokeWidth;
                 context.beginPath();
@@ -2198,7 +2304,8 @@
             }
 
             drawHexagon(context) {
-                context.fillStyle = this.fill;
+                // P26: Apply gradient or solid fill
+                context.fillStyle = this.createGradient(context);
                 context.strokeStyle = this.stroke;
                 context.lineWidth = this.strokeWidth;
                 context.beginPath();
@@ -2227,7 +2334,8 @@
             }
 
             drawSpeechBubble(context) {
-                context.fillStyle = this.fill;
+                // P26: Apply gradient or solid fill
+                context.fillStyle = this.createGradient(context);
                 context.strokeStyle = this.stroke;
                 context.lineWidth = this.strokeWidth;
 
@@ -2263,7 +2371,8 @@
             }
 
             drawCloud(context) {
-                context.fillStyle = this.fill;
+                // P26: Apply gradient or solid fill
+                context.fillStyle = this.createGradient(context);
                 context.strokeStyle = this.stroke;
                 context.lineWidth = this.strokeWidth;
 
@@ -3026,19 +3135,71 @@
                 // P21: Update blend mode
                 document.getElementById('propBlendMode').value = selectedElement.blendMode || 'source-over';
 
-                // Show gradient section for shapes
-                if (['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon'].includes(selectedElement.type)) {
+                // P26: Show gradient section for shapes (including new shape types)
+                if (['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon', 'speech-bubble', 'cloud'].includes(selectedElement.type)) {
                     gradientSection.style.display = 'block';
                     if (selectedElement.gradient) {
                         document.getElementById('gradientEnabled').checked = selectedElement.gradient.enabled;
                         document.getElementById('gradientControls').style.display = selectedElement.gradient.enabled ? 'block' : 'none';
-                        document.getElementById('gradientColor1').value = selectedElement.gradient.color1;
-                        document.getElementById('gradientColor2').value = selectedElement.gradient.color2;
+
+                        // P26: Update gradient controls with new stops-based system
+                        document.getElementById('gradientType').value = selectedElement.gradient.type;
+                        const isRadial = selectedElement.gradient.type === 'radial';
+                        document.getElementById('gradientAngleGroup').style.display = isRadial ? 'none' : 'block';
+                        document.getElementById('radialGradientControls').style.display = isRadial ? 'block' : 'none';
+
+                        // Color stops
+                        const stops = selectedElement.gradient.stops;
+                        document.getElementById('gradientColor1').value = stops[0].color;
+                        const hasMiddle = stops.length === 3;
+                        document.getElementById('gradientMiddleEnabled').checked = hasMiddle;
+                        if (hasMiddle) {
+                            document.getElementById('gradientColor2').value = stops[1].color;
+                            document.getElementById('gradientColor3').value = stops[2].color;
+                        } else {
+                            document.getElementById('gradientColor3').value = stops[1].color;
+                        }
+
+                        // Angle and radius
                         document.getElementById('gradientAngle').value = selectedElement.gradient.angle;
                         document.getElementById('angleValue').textContent = selectedElement.gradient.angle + '°';
+                        document.getElementById('radialRadius').value = selectedElement.gradient.radialRadius;
+                        document.getElementById('radiusValue').textContent = selectedElement.gradient.radialRadius;
                     }
                 } else {
                     gradientSection.style.display = 'none';
+                }
+
+                // P27: Show drop shadow section for shapes (not text, text has its own shadow)
+                const dropShadowSection = document.getElementById('dropShadowSection');
+                if (['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon', 'speech-bubble', 'cloud', 'line', 'arrow'].includes(selectedElement.type)) {
+                    dropShadowSection.style.display = 'block';
+                    if (selectedElement.dropShadow) {
+                        document.getElementById('dropShadowEnabled').checked = selectedElement.dropShadow.enabled;
+                        document.getElementById('dropShadowControls').style.display = selectedElement.dropShadow.enabled ? 'block' : 'none';
+
+                        // Update drop shadow controls
+                        document.getElementById('dropShadowX').value = selectedElement.dropShadow.offsetX;
+                        document.getElementById('dropShadowXValue').textContent = selectedElement.dropShadow.offsetX + 'px';
+                        document.getElementById('dropShadowY').value = selectedElement.dropShadow.offsetY;
+                        document.getElementById('dropShadowYValue').textContent = selectedElement.dropShadow.offsetY + 'px';
+                        document.getElementById('dropShadowBlur').value = selectedElement.dropShadow.blur;
+                        document.getElementById('dropShadowBlurValue').textContent = selectedElement.dropShadow.blur + 'px';
+
+                        // Parse rgba color to hex and opacity
+                        const rgbaMatch = selectedElement.dropShadow.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+                        if (rgbaMatch) {
+                            const r = parseInt(rgbaMatch[1]).toString(16).padStart(2, '0');
+                            const g = parseInt(rgbaMatch[2]).toString(16).padStart(2, '0');
+                            const b = parseInt(rgbaMatch[3]).toString(16).padStart(2, '0');
+                            const alpha = rgbaMatch[4] ? parseFloat(rgbaMatch[4]) : 1;
+                            document.getElementById('dropShadowColor').value = '#' + r + g + b;
+                            document.getElementById('dropShadowOpacity').value = Math.round(alpha * 100);
+                            document.getElementById('dropShadowOpacityValue').textContent = Math.round(alpha * 100) + '%';
+                        }
+                    }
+                } else {
+                    dropShadowSection.style.display = 'none';
                 }
 
                 if (selectedElement.type === 'text') {
@@ -3241,13 +3402,118 @@
             render();
         }
 
+        // P26: Enhanced gradient update function
         function updateGradient(prop, value) {
             if (!selectedElement || !selectedElement.gradient) return;
 
-            selectedElement.gradient[prop] = prop === 'angle' ? parseFloat(value) : value;
-
-            if (prop === 'angle') {
+            if (prop === 'type') {
+                selectedElement.gradient.type = value;
+                // Show/hide appropriate controls
+                const isRadial = value === 'radial';
+                document.getElementById('gradientAngleGroup').style.display = isRadial ? 'none' : 'block';
+                document.getElementById('radialGradientControls').style.display = isRadial ? 'block' : 'none';
+            } else if (prop === 'color1') {
+                selectedElement.gradient.stops[0].color = value;
+            } else if (prop === 'color2') {
+                // Middle color
+                const middleEnabled = document.getElementById('gradientMiddleEnabled').checked;
+                if (middleEnabled) {
+                    if (selectedElement.gradient.stops.length === 2) {
+                        // Insert middle color
+                        selectedElement.gradient.stops = [
+                            selectedElement.gradient.stops[0],
+                            { position: 0.5, color: value },
+                            selectedElement.gradient.stops[1]
+                        ];
+                    } else {
+                        selectedElement.gradient.stops[1].color = value;
+                    }
+                }
+            } else if (prop === 'color3') {
+                // End color
+                const lastIndex = selectedElement.gradient.stops.length - 1;
+                selectedElement.gradient.stops[lastIndex].color = value;
+            } else if (prop === 'angle') {
+                selectedElement.gradient.angle = parseFloat(value);
                 document.getElementById('angleValue').textContent = value + '°';
+            } else if (prop === 'radius') {
+                selectedElement.gradient.radialRadius = parseFloat(value);
+                document.getElementById('radiusValue').textContent = value;
+            }
+
+            render();
+        }
+
+        // P26: Toggle middle color in gradient
+        function toggleGradientMiddleColor(enabled) {
+            if (!selectedElement || !selectedElement.gradient) return;
+
+            if (enabled) {
+                // Add middle color stop
+                if (selectedElement.gradient.stops.length === 2) {
+                    const color2 = document.getElementById('gradientColor2').value;
+                    selectedElement.gradient.stops = [
+                        selectedElement.gradient.stops[0],
+                        { position: 0.5, color: color2 },
+                        selectedElement.gradient.stops[1]
+                    ];
+                }
+            } else {
+                // Remove middle color stop
+                if (selectedElement.gradient.stops.length === 3) {
+                    selectedElement.gradient.stops = [
+                        selectedElement.gradient.stops[0],
+                        selectedElement.gradient.stops[2]
+                    ];
+                }
+            }
+
+            render();
+        }
+
+        // P27: Toggle drop shadow
+        function toggleDropShadow(enabled) {
+            if (!selectedElement || !selectedElement.dropShadow) return;
+
+            selectedElement.dropShadow.enabled = enabled;
+            document.getElementById('dropShadowControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        // P27: Update drop shadow properties
+        function updateDropShadow(prop, value) {
+            if (!selectedElement || !selectedElement.dropShadow) return;
+
+            if (prop === 'offsetX') {
+                selectedElement.dropShadow.offsetX = parseFloat(value);
+                document.getElementById('dropShadowXValue').textContent = value + 'px';
+            } else if (prop === 'offsetY') {
+                selectedElement.dropShadow.offsetY = parseFloat(value);
+                document.getElementById('dropShadowYValue').textContent = value + 'px';
+            } else if (prop === 'blur') {
+                selectedElement.dropShadow.blur = parseFloat(value);
+                document.getElementById('dropShadowBlurValue').textContent = value + 'px';
+            } else if (prop === 'color') {
+                // Parse existing color to get alpha
+                const currentColor = selectedElement.dropShadow.color;
+                const alpha = currentColor.includes('rgba') ?
+                    parseFloat(currentColor.split(',')[3]) : 0.3;
+
+                // Convert hex to rgba
+                const r = parseInt(value.substr(1, 2), 16);
+                const g = parseInt(value.substr(3, 2), 16);
+                const b = parseInt(value.substr(5, 2), 16);
+                selectedElement.dropShadow.color = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            } else if (prop === 'opacity') {
+                const opacity = parseFloat(value) / 100;
+                document.getElementById('dropShadowOpacityValue').textContent = value + '%';
+
+                // Update color with new opacity
+                const colorInput = document.getElementById('dropShadowColor').value;
+                const r = parseInt(colorInput.substr(1, 2), 16);
+                const g = parseInt(colorInput.substr(3, 2), 16);
+                const b = parseInt(colorInput.substr(5, 2), 16);
+                selectedElement.dropShadow.color = `rgba(${r}, ${g}, ${b}, ${opacity})`;
             }
 
             render();
