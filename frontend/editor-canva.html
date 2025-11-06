@@ -929,6 +929,10 @@
             <div class="header-left">
                 <div class="logo">Artify</div>
                 <div class="project-name" id="projectName">새 프로젝트</div>
+                <!-- P30: Save status indicator -->
+                <div id="saveStatus" style="font-size: 12px; color: #999; margin-left: 10px; display: flex; align-items: center; gap: 5px;">
+                    <span id="saveStatusText">저장됨</span>
+                </div>
             </div>
             <div class="header-center">
                 <button class="header-btn" onclick="undo()" id="undoBtn" disabled aria-label="실행 취소" title="실행 취소 (Ctrl+Z)">
@@ -1811,6 +1815,11 @@
         let versions = JSON.parse(localStorage.getItem('projectVersions_' + (new URLSearchParams(window.location.search).get('id') || 'temp')) || '[]');
         let versionInterval = null;
 
+        // P30: Auto-save to server
+        let hasUnsavedChanges = false;
+        let autoSaveInterval = null;
+        let lastAutoSaveTime = null;
+
         // P15: Plugin System
         const plugins = [];
         const pluginAPI = {
@@ -2464,6 +2473,8 @@
                 autoSaveInterval = setInterval(autoSave, 5 * 60 * 1000);
                 // P25: Start version auto-save
                 startVersionAutoSave();
+                // P30: Start auto-save to server
+                startAutoSave();
             } else {
                 render();
             }
@@ -2914,6 +2925,13 @@
         function handleKeyDown(e) {
             // Ignore keyboard shortcuts during text editing
             if (isEditingText) return;
+
+            // P30: Ctrl+S to save
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveProject();
+                return;
+            }
 
             if (e.key === 'Delete' && selectedElement) {
                 deleteSelected();
@@ -3945,6 +3963,9 @@
                 history.shift();
                 historyIndex--;
             }
+
+            // P30: Mark as having unsaved changes
+            markAsUnsaved();
         }
 
         function undo() {
@@ -4060,6 +4081,45 @@
             }
         }
 
+        // P30: Update save status indicator
+        function updateSaveStatus(status) {
+            const statusEl = document.getElementById('saveStatusText');
+            const saveStatusDiv = document.getElementById('saveStatus');
+
+            if (status === 'saving') {
+                statusEl.textContent = '저장 중...';
+                saveStatusDiv.style.color = '#ffa500';
+            } else if (status === 'saved') {
+                statusEl.textContent = '저장됨';
+                saveStatusDiv.style.color = '#10b981';
+                hasUnsavedChanges = false;
+            } else if (status === 'unsaved') {
+                statusEl.textContent = '저장되지 않음';
+                saveStatusDiv.style.color = '#999';
+                hasUnsavedChanges = true;
+            } else if (status === 'error') {
+                statusEl.textContent = '저장 실패';
+                saveStatusDiv.style.color = '#ef4444';
+            }
+        }
+
+        // P30: Mark as having unsaved changes
+        function markAsUnsaved() {
+            if (!hasUnsavedChanges) {
+                updateSaveStatus('unsaved');
+            }
+        }
+
+        // P30: Start auto-save to server
+        function startAutoSave() {
+            // Auto-save every 30 seconds if there are unsaved changes
+            autoSaveInterval = setInterval(() => {
+                if (hasUnsavedChanges && currentProjectId) {
+                    saveProject();
+                }
+            }, 30 * 1000); // 30 seconds
+        }
+
         async function saveProject() {
             if (!currentProjectId) {
                 alert('프로젝트 ID가 없습니다.');
@@ -4068,6 +4128,7 @@
 
             const saveMessage = document.getElementById('saveMessage');
             saveMessage.innerHTML = '<div class="message loading">저장 중...</div>';
+            updateSaveStatus('saving'); // P30: Update status indicator
 
             try {
                 const token = localStorage.getItem('token');
@@ -4098,14 +4159,17 @@
 
                 if (response.ok) {
                     lastSaveTime = new Date();
+                    lastAutoSaveTime = new Date(); // P30: Track auto-save time
                     saveMessage.innerHTML = '<div class="message success">프로젝트가 저장되었습니다!</div>';
                     setTimeout(() => saveMessage.innerHTML = '', 3000);
+                    updateSaveStatus('saved'); // P30: Update status indicator
                 } else {
                     throw new Error('저장 실패');
                 }
             } catch (error) {
                 saveMessage.innerHTML = '<div class="message error">저장 중 오류가 발생했습니다. 재시도합니다...</div>';
                 console.error('Save error:', error);
+                updateSaveStatus('error'); // P30: Update status indicator
             }
         }
 
