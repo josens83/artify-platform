@@ -1,3 +1,3 @@
-from . import auth
+from . import auth, campaigns, segments, creatives, vector_search
 
-__all__ = ["auth"]
+__all__ = ["auth", "campaigns", "segments", "creatives", "vector_search"]

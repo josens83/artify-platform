@@ -1,25 +1,31 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from supabase import create_client, Client
 from utils.config import settings
+import logging
 
-# 데이터베이스 엔진 생성
-engine = create_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_pre_ping=True
-)
+logger = logging.getLogger(__name__)
 
-# 세션 팩토리
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Supabase 클라이언트
+supabase: Client = None
 
-# Base 클래스
-Base = declarative_base()
+def get_supabase_client() -> Client:
+    """Get or create Supabase client instance"""
+    global supabase
+    if supabase is None:
+        supabase = create_client(
+            settings.SUPABASE_URL,
+            settings.SUPABASE_KEY
+        )
+        logger.info("Supabase client initialized")
+    return supabase
 
-# 의존성: 데이터베이스 세션
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_supabase_admin_client() -> Client:
+    """Get Supabase client with service role key for admin operations"""
+    return create_client(
+        settings.SUPABASE_URL,
+        settings.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+# Dependency for FastAPI routes
+async def get_db() -> Client:
+    """FastAPI dependency to get Supabase client"""
+    return get_supabase_client()
