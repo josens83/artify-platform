@@ -2,17 +2,19 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    # Qdrant Configuration
-    QDRANT_URL: str = "http://localhost:6333"
-    QDRANT_API_KEY: Optional[str] = None
-    QDRANT_TIMEOUT: int = 30
+    # ChromaDB Configuration
+    CHROMA_PERSIST_DIR: str = "./chroma_data"
 
-    # Collection Settings
-    COLLECTION_NAME: str = "content_embeddings"
-    VECTOR_SIZE: int = 1536  # OpenAI embedding size
+    # OpenAI Configuration
+    OPENAI_API_KEY: str = "your-openai-api-key-here"
 
     # Embedding Model
     EMBEDDING_MODEL: str = "text-embedding-ada-002"
+
+    # Collection Names (정의된 컬렉션)
+    COLLECTION_COPY_TEXTS: str = "copy_texts"
+    COLLECTION_IMAGES: str = "images"
+    COLLECTION_TEMPLATES: str = "templates"
 
     class Config:
         env_file = ".env"
