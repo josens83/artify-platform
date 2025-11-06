@@ -2631,9 +2631,10 @@
 
         function handleMouseUp(e) {
             if (isDrawing && currentTool !== 'select' && currentTool !== 'pencil') {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                // P16: Convert screen coordinates to canvas coordinates
+                const coords = screenToCanvas(e.clientX, e.clientY);
+                const x = coords.x;
+                const y = coords.y;
 
                 const width = x - dragStart.x;
                 const height = y - dragStart.y;
@@ -2687,9 +2688,10 @@
 
         function handleDoubleClick(e) {
             if (currentTool === 'text' || (selectedElement && selectedElement.type === 'text')) {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                // P16: Convert screen coordinates to canvas coordinates
+                const coords = screenToCanvas(e.clientX, e.clientY);
+                const x = coords.x;
+                const y = coords.y;
 
                 if (!selectedElement || selectedElement.type !== 'text') {
                     const text = new Element('text', x, y, 200, 40);
