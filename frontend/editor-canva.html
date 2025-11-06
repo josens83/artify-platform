@@ -1005,6 +1005,29 @@
                         <span class="slider-value" id="opacityValue">100%</span>
                     </div>
                 </div>
+
+                <!-- P21: Blend Mode -->
+                <div class="panel-group">
+                    <label class="panel-label">블렌드 모드</label>
+                    <select class="panel-input" id="propBlendMode" onchange="updateElementProp('blendMode', this.value)">
+                        <option value="source-over">Normal</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="screen">Screen</option>
+                        <option value="overlay">Overlay</option>
+                        <option value="darken">Darken</option>
+                        <option value="lighten">Lighten</option>
+                        <option value="color-dodge">Color Dodge</option>
+                        <option value="color-burn">Color Burn</option>
+                        <option value="hard-light">Hard Light</option>
+                        <option value="soft-light">Soft Light</option>
+                        <option value="difference">Difference</option>
+                        <option value="exclusion">Exclusion</option>
+                        <option value="hue">Hue</option>
+                        <option value="saturation">Saturation</option>
+                        <option value="color">Color</option>
+                        <option value="luminosity">Luminosity</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Text Properties -->
@@ -1057,6 +1080,23 @@
                         <button class="btn-icon" onclick="updateElementProp('textAlign', 'left')">⬅️</button>
                         <button class="btn-icon" onclick="updateElementProp('textAlign', 'center')">↔️</button>
                         <button class="btn-icon" onclick="updateElementProp('textAlign', 'right')">➡️</button>
+                    </div>
+                </div>
+
+                <!-- P22: Advanced Text Properties -->
+                <div class="panel-group">
+                    <label class="panel-label">줄간격</label>
+                    <div class="slider-group">
+                        <input type="range" min="0.5" max="3" step="0.1" value="1.2" id="propLineHeight" oninput="updateElementProp('lineHeight', this.value)">
+                        <span class="slider-value" id="lineHeightValue">1.2</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">자간</label>
+                    <div class="slider-group">
+                        <input type="range" min="-10" max="20" step="0.5" value="0" id="propLetterSpacing" oninput="updateElementProp('letterSpacing', this.value)">
+                        <span class="slider-value" id="letterSpacingValue">0px</span>
                     </div>
                 </div>
 
@@ -1619,6 +1659,13 @@
                     angle: 0
                 };
 
+                // P21: Blend Mode & Masking
+                this.blendMode = 'normal';
+                this.mask = {
+                    enabled: false,
+                    elementId: null
+                };
+
                 // Animation (P12)
                 this.animation = {
                     type: 'none',
@@ -1635,6 +1682,11 @@
                     this.bold = false;
                     this.italic = false;
                     this.underline = false;
+
+                    // P22: Advanced text properties
+                    this.lineHeight = 1.2;
+                    this.letterSpacing = 0;
+
                     this.textShadow = {
                         enabled: false,
                         offsetX: 2,
@@ -1666,6 +1718,10 @@
 
                 context.save();
                 context.globalAlpha = this.opacity;
+
+                // P21: Apply blend mode
+                context.globalCompositeOperation = this.blendMode || 'source-over';
+
                 context.translate(this.x + this.width / 2, this.y + this.height / 2);
                 context.rotate(this.rotation * Math.PI / 180);
                 context.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
@@ -1794,7 +1850,35 @@
                         if (this.textAlign === 'center') textX += this.width / 2;
                         else if (this.textAlign === 'right') textX += this.width;
 
-                        context.fillText(this.text, textX, this.y);
+                        // P22: Apply letter spacing
+                        if (this.letterSpacing && this.letterSpacing !== 0) {
+                            // Draw each character separately with spacing
+                            let currentX = textX;
+                            const chars = this.text.split('');
+
+                            for (let i = 0; i < chars.length; i++) {
+                                const char = chars[i];
+                                const metrics = context.measureText(char);
+
+                                if (this.textAlign === 'center') {
+                                    const totalWidth = this.text.split('').reduce((acc, c) => {
+                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                    }, 0);
+                                    currentX = this.x + this.width / 2 - totalWidth / 2 + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                } else if (this.textAlign === 'right') {
+                                    const totalWidth = this.text.split('').reduce((acc, c) => {
+                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                    }, 0);
+                                    currentX = this.x + this.width - totalWidth + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                } else {
+                                    currentX = this.x + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                }
+
+                                context.fillText(char, currentX, this.y);
+                            }
+                        } else {
+                            context.fillText(this.text, textX, this.y);
+                        }
 
                         // Reset shadow
                         context.shadowOffsetX = 0;
@@ -1802,11 +1886,31 @@
                         context.shadowBlur = 0;
                         context.shadowColor = 'transparent';
 
+                        // P22: Underline with letter spacing consideration
                         if (this.underline) {
-                            const metrics = context.measureText(this.text);
+                            let underlineWidth;
+                            let underlineX;
+
+                            if (this.letterSpacing && this.letterSpacing !== 0) {
+                                // Calculate total width with letter spacing
+                                underlineWidth = this.text.split('').reduce((acc, c, i) => {
+                                    return acc + context.measureText(c).width + (i < this.text.length - 1 ? this.letterSpacing : 0);
+                                }, 0);
+                            } else {
+                                underlineWidth = context.measureText(this.text).width;
+                            }
+
+                            if (this.textAlign === 'center') {
+                                underlineX = this.x + this.width / 2 - underlineWidth / 2;
+                            } else if (this.textAlign === 'right') {
+                                underlineX = this.x + this.width - underlineWidth;
+                            } else {
+                                underlineX = this.x;
+                            }
+
                             context.beginPath();
-                            context.moveTo(textX, this.y + this.fontSize + 2);
-                            context.lineTo(textX + metrics.width, this.y + this.fontSize + 2);
+                            context.moveTo(underlineX, this.y + this.fontSize + 2);
+                            context.lineTo(underlineX + underlineWidth, this.y + this.fontSize + 2);
                             context.strokeStyle = this.fill;
                             context.lineWidth = 1;
                             context.stroke();
@@ -2748,6 +2852,9 @@
                 document.getElementById('propStrokeWidth').value = selectedElement.strokeWidth;
                 document.getElementById('strokeValue').textContent = selectedElement.strokeWidth + 'px';
 
+                // P21: Update blend mode
+                document.getElementById('propBlendMode').value = selectedElement.blendMode || 'source-over';
+
                 // Show gradient section for shapes
                 if (['rect', 'circle', 'triangle', 'star', 'diamond', 'hexagon'].includes(selectedElement.type)) {
                     gradientSection.style.display = 'block';
@@ -2770,6 +2877,16 @@
                     document.getElementById('propFont').value = selectedElement.fontFamily;
                     document.getElementById('propFontSize').value = selectedElement.fontSize;
                     document.getElementById('fontSizeValue').textContent = selectedElement.fontSize + 'px';
+
+                    // P22: Update advanced text properties
+                    if (selectedElement.lineHeight !== undefined) {
+                        document.getElementById('propLineHeight').value = selectedElement.lineHeight;
+                        document.getElementById('lineHeightValue').textContent = selectedElement.lineHeight.toFixed(1);
+                    }
+                    if (selectedElement.letterSpacing !== undefined) {
+                        document.getElementById('propLetterSpacing').value = selectedElement.letterSpacing;
+                        document.getElementById('letterSpacingValue').textContent = selectedElement.letterSpacing + 'px';
+                    }
 
                     // Update text shadow controls
                     if (selectedElement.textShadow) {
