@@ -1028,6 +1028,15 @@
                         <option value="luminosity">Luminosity</option>
                     </select>
                 </div>
+
+                <!-- P23: Style Library -->
+                <div class="panel-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                    <div class="panel-title" style="font-size: 13px; margin-bottom: 10px;">스타일 관리</div>
+                    <div class="btn-group">
+                        <button class="btn-icon" onclick="saveCurrentStyle()" style="flex: 1; font-size: 12px;">💾 스타일 저장</button>
+                        <button class="btn-icon" onclick="showStylesModal()" style="flex: 1; font-size: 12px;">🎨 스타일 적용</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Text Properties -->
@@ -1514,6 +1523,24 @@
         </div>
     </div>
 
+    <!-- P23: Style Library Modal -->
+    <div class="modal-overlay" id="stylesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">저장된 스타일</h2>
+                <button class="modal-close" onclick="closeStylesModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div id="savedStylesList" style="max-height: 400px; overflow-y: auto;"></div>
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 클릭하여 스타일 적용 | 더블클릭하여 삭제
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script>
         // Global State
@@ -1572,6 +1599,9 @@
             horizontal: []
         };
         const SNAP_THRESHOLD = 5;
+
+        // P23: Style Library
+        let savedStyles = JSON.parse(localStorage.getItem('savedStyles') || '[]');
 
         // P15: Plugin System
         const plugins = [];
@@ -4330,6 +4360,159 @@
             newImg.src = canvas.toDataURL();
         }
 
+        // P23: Style Library Functions
+        function saveCurrentStyle() {
+            if (!selectedElement) {
+                alert('스타일을 저장할 요소를 선택해주세요.');
+                return;
+            }
+
+            const styleName = prompt('스타일 이름을 입력하세요:', `Style ${savedStyles.length + 1}`);
+            if (!styleName) return;
+
+            const style = {
+                id: Date.now(),
+                name: styleName,
+                type: selectedElement.type,
+                fill: selectedElement.fill,
+                stroke: selectedElement.stroke,
+                strokeWidth: selectedElement.strokeWidth,
+                opacity: selectedElement.opacity,
+                blendMode: selectedElement.blendMode
+            };
+
+            // Add type-specific properties
+            if (selectedElement.type === 'text') {
+                style.fontSize = selectedElement.fontSize;
+                style.fontFamily = selectedElement.fontFamily;
+                style.bold = selectedElement.bold;
+                style.italic = selectedElement.italic;
+                style.underline = selectedElement.underline;
+                style.textAlign = selectedElement.textAlign;
+                style.lineHeight = selectedElement.lineHeight;
+                style.letterSpacing = selectedElement.letterSpacing;
+                if (selectedElement.textShadow) {
+                    style.textShadow = {...selectedElement.textShadow};
+                }
+            }
+
+            if (selectedElement.gradient && selectedElement.gradient.enabled) {
+                style.gradient = {...selectedElement.gradient};
+            }
+
+            savedStyles.push(style);
+            localStorage.setItem('savedStyles', JSON.stringify(savedStyles));
+            alert(`스타일 "${styleName}"이 저장되었습니다!`);
+        }
+
+        function showStylesModal() {
+            if (!selectedElement) {
+                alert('스타일을 적용할 요소를 선택해주세요.');
+                return;
+            }
+
+            const modal = document.getElementById('stylesModal');
+            const list = document.getElementById('savedStylesList');
+
+            if (savedStyles.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">저장된 스타일이 없습니다.</p>';
+            } else {
+                list.innerHTML = '';
+                savedStyles.forEach((style, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'style-card';
+                    card.style.cssText = `
+                        padding: 15px;
+                        margin-bottom: 10px;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    `;
+
+                    card.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 8px;">${style.name}</div>
+                        <div style="font-size: 12px; color: #666; margin-bottom: 8px;">Type: ${style.type}</div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            ${style.fill ? `<div style="width: 24px; height: 24px; background: ${style.fill}; border: 1px solid #ccc; border-radius: 4px;"></div>` : ''}
+                            ${style.fontSize ? `<span style="font-size: 12px;">Font: ${style.fontSize}px ${style.fontFamily}</span>` : ''}
+                            ${style.blendMode && style.blendMode !== 'source-over' ? `<span style="font-size: 11px; background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${style.blendMode}</span>` : ''}
+                        </div>
+                    `;
+
+                    card.onclick = () => applyStyle(style);
+                    card.ondblclick = (e) => {
+                        e.stopPropagation();
+                        deleteStyle(index);
+                    };
+
+                    card.onmouseenter = () => {
+                        card.style.borderColor = '#667eea';
+                        card.style.background = '#f8f9ff';
+                    };
+
+                    card.onmouseleave = () => {
+                        card.style.borderColor = '#e0e0e0';
+                        card.style.background = 'white';
+                    };
+
+                    list.appendChild(card);
+                });
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeStylesModal() {
+            document.getElementById('stylesModal').classList.remove('active');
+        }
+
+        function applyStyle(style) {
+            if (!selectedElement) return;
+
+            // Apply common properties
+            selectedElement.fill = style.fill;
+            selectedElement.stroke = style.stroke;
+            selectedElement.strokeWidth = style.strokeWidth;
+            selectedElement.opacity = style.opacity;
+            if (style.blendMode) {
+                selectedElement.blendMode = style.blendMode;
+            }
+
+            // Apply type-specific properties
+            if (style.type === 'text' && selectedElement.type === 'text') {
+                if (style.fontSize) selectedElement.fontSize = style.fontSize;
+                if (style.fontFamily) selectedElement.fontFamily = style.fontFamily;
+                if (style.bold !== undefined) selectedElement.bold = style.bold;
+                if (style.italic !== undefined) selectedElement.italic = style.italic;
+                if (style.underline !== undefined) selectedElement.underline = style.underline;
+                if (style.textAlign) selectedElement.textAlign = style.textAlign;
+                if (style.lineHeight) selectedElement.lineHeight = style.lineHeight;
+                if (style.letterSpacing !== undefined) selectedElement.letterSpacing = style.letterSpacing;
+                if (style.textShadow) {
+                    selectedElement.textShadow = {...style.textShadow};
+                }
+            }
+
+            if (style.gradient) {
+                selectedElement.gradient = {...style.gradient};
+            }
+
+            updatePropertiesPanel();
+            saveHistory();
+            render();
+            closeStylesModal();
+        }
+
+        function deleteStyle(index) {
+            const confirmed = confirm('이 스타일을 삭제하시겠습니까?');
+            if (!confirmed) return;
+
+            savedStyles.splice(index, 1);
+            localStorage.setItem('savedStyles', JSON.stringify(savedStyles));
+            showStylesModal(); // Refresh the list
+        }
+
         // P11: Collaboration Functions
         function showCollaborateModal() {
             document.getElementById('collaborateModal').classList.add('active');
@@ -4868,6 +5051,7 @@
             const exportModal = document.getElementById('exportModal');
             const templateModal = document.getElementById('templateModal');
             const collaborateModal = document.getElementById('collaborateModal');
+            const stylesModal = document.getElementById('stylesModal'); // P23
 
             if (e.target === exportModal) {
                 closeExportModal();
@@ -4877,6 +5061,9 @@
             }
             if (e.target === collaborateModal) {
                 closeCollaborateModal();
+            }
+            if (e.target === stylesModal) { // P23
+                closeStylesModal();
             }
         });
     </script>
