@@ -3,14 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
-from app.config import settings
+from app.config import get_settings
 from app.database import init_db
 from routers import auth, segments, generate, metrics
 from utils.rate_limiter import clean_expired_entries
 
 # Logging configuration
 logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL),
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -19,9 +19,8 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events"""
     # Startup
-    logger.info(f"Starting {settings.APP_NAME} v{settings.VERSION}")
-    logger.info(f"Environment: {'Development' if settings.DEBUG else 'Production'}")
-    logger.info(f"Database: {settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'configured'}")
+    logger.info("Starting Content Management API")
+    logger.info(f"Database: {get_settings().database_url.split('@')[1] if '@' in get_settings().database_url else 'configured'}")
 
     # Initialize database tables
     try:
@@ -41,18 +40,18 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title=settings.APP_NAME,
+    title="Content Management API",
     description="AI-powered content generation and management backend",
-    version=settings.VERSION,
+    version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["*"],  # Configure in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,10 +67,10 @@ app.include_router(metrics.router, prefix="/api/metrics", tags=["Metrics"])
 async def root():
     """Root endpoint"""
     return {
-        "name": settings.APP_NAME,
-        "version": settings.VERSION,
+        "name": "Content Management API",
+        "version": "1.0.0",
         "status": "running",
-        "docs": "/docs" if settings.DEBUG else "disabled"
+        "docs": "/docs"
     }
 
 @app.get("/health")
@@ -79,16 +78,15 @@ async def health_check():
     """Health check endpoint for monitoring"""
     return {
         "status": "healthy",
-        "version": settings.VERSION
+        "version": "1.0.0"
     }
 
 @app.get("/info")
 async def info():
     """API information endpoint"""
     return {
-        "name": settings.APP_NAME,
-        "version": settings.VERSION,
-        "environment": "development" if settings.DEBUG else "production",
+        "name": "Content Management API",
+        "version": "1.0.0",
         "features": {
             "authentication": "JWT",
             "database": "PostgreSQL + SQLAlchemy",
@@ -96,7 +94,7 @@ async def info():
             "ai": "OpenAI GPT-4 & DALL-E"
         },
         "endpoints": {
-            "docs": "/docs" if settings.DEBUG else None,
+            "docs": "/docs",
             "health": "/health",
             "auth": "/api/auth",
             "segments": "/api/segments",
@@ -109,8 +107,7 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-        log_level=settings.LOG_LEVEL.lower()
+        host="0.0.0.0",
+        port=8001,
+        reload=False
     )

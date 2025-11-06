@@ -1,16 +1,16 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.config import settings
+from app.config import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
 
 # SQLAlchemy setup
 engine = create_engine(
-    settings.DATABASE_URL,
+    get_settings().database_url,
     pool_pre_ping=True,
-    echo=settings.DEBUG
+    echo=False
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

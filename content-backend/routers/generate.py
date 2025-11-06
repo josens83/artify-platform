@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 import openai
 from app.database import get_db
 from app.models import User, GenJob
-from app.config import settings
+from app.config import get_settings
 from utils.jwt_handler import get_current_user
 from utils.rate_limiter import rate_limit
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Set OpenAI API key
-openai.api_key = settings.OPENAI_API_KEY
+openai.api_key = get_settings().openai_api_key
 
 # Pydantic schemas
 class TextGenerateRequest(BaseModel):
@@ -49,7 +49,7 @@ async def generate_text(
 ):
     """Generate text using OpenAI GPT"""
 
-    model = request.model or settings.OPENAI_MODEL
+    model = request.model or "gpt-4"
 
     try:
         # Call OpenAI API
