@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models import User, Segment
 from utils.jwt_handler import get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/segments", tags=["Segments"])
 
 # Pydantic schemas
 class SegmentCreate(BaseModel):
