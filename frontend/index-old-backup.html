@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artify - 무엇을 디자인하시겠습니까?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #ffffff;
+            color: #191919;
+        }
+
+        /* Header */
+        .main-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-search {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 40px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .btn-logout {
+            padding: 8px 20px;
+            background: transparent;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #f5f5f5;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 40px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 20px;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        .hero-cta {
+            display: inline-flex;
+            gap: 16px;
+        }
+
+        .btn-primary {
+            padding: 16px 40px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Template Categories */
+        .templates-section {
+            padding: 60px 40px;
+            background: #fafafa;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .template-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .category-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-color: #667eea;
+        }
+
+        .category-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #191919;
+        }
+
+        .category-desc {
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* Projects Section */
+        .projects-section {
+            padding: 60px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .btn-secondary {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .project-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #e8e8e8;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .project-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .project-thumbnail {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+        }
+
+        .project-info {
+            padding: 20px;
+        }
+
+        .project-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #191919;
+        }
+
+        .project-meta {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            flex: 1;
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-small:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .btn-small.primary {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .btn-small.primary:hover {
+            background: #5568d3;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            color: #191919;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+            margin-bottom: 32px;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal for Create Project */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #191919;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #f5f5f5;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 80px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 48px;
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 32px;
+            border-radius: 16px;
+            background: white;
+            border: 2px solid #f0f0f0;
+            transition: all 0.3s;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.15);
+            border-color: #667eea;
+        }
+
+        .feature-icon {
+            font-size: 56px;
+            margin-bottom: 24px;
+        }
+
+        .feature-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #191919;
+        }
+
+        .feature-desc {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 80px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 48px;
+            max-width: 1200px;
+            margin: 48px auto 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        .main-footer {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 60px 40px 32px;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+
+        .footer-brand {
+            max-width: 300px;
+        }
+
+        .footer-logo {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+        }
+
+        .footer-desc {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 16px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .social-link:hover {
+            background: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .footer-column h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            color: #b0b0b0;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: #667eea;
+        }
+
+        .footer-bottom {
+            padding-top: 32px;
+            border-top: 1px solid #2a2a2a;
+            text-align: center;
+            color: #808080;
+            font-size: 14px;
+        }
+
+        /* Scroll Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-header {
+                padding: 12px 20px;
+            }
+
+            .header-search {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .hero p {
+                font-size: 16px;
+            }
+
+            .template-categories {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 12px;
+            }
+
+            .category-card {
+                padding: 20px 16px;
+            }
+
+            .section-title {
+                font-size: 24px;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+
+            .footer-brand {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="logo">Artify</div>
+        <div class="header-search">
+            <input type="text" class="search-input" placeholder="무엇을 만들고 싶으세요? 소셜 미디어, 프레젠테이션, 포스터..." id="searchInput">
+        </div>
+        <div class="header-actions">
+            <span class="user-info" id="userDisplay">Loading...</span>
+            <button onclick="handleLogout()" class="btn-logout">로그아웃</button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>오늘 무엇을 디자인하시겠습니까?</h1>
+        <p>AI 기반 디자인 플랫폼으로 전문가처럼 쉽고 빠르게 디자인하세요</p>
+        <div class="hero-cta">
+            <button class="btn-primary" onclick="showCreateModal()">✨ 새 디자인 시작</button>
+        </div>
+    </section>
+
+    <!-- Template Categories -->
+    <section class="templates-section">
+        <h2 class="section-title">무엇을 만들고 싶으세요?</h2>
+        <div class="template-categories">
+            <div class="category-card" onclick="createProjectWithTemplate('소셜 미디어 포스트')">
+                <div class="category-icon">📱</div>
+                <div class="category-title">소셜 미디어</div>
+                <div class="category-desc">Instagram, Facebook</div>
+            </div>
+            <div class="category-card" onclick="createProjectWithTemplate('프레젠테이션')">
+                <div class="category-icon">📊</div>
+                <div class="category-title">프레젠테이션</div>
+                <div class="category-desc">PT, 제안서</div>
+            </div>
+            <div class="category-card" onclick="createProjectWithTemplate('포스터')">
+                <div class="category-icon">🎨</div>
+                <div class="category-title">포스터</div>
+                <div class="category-desc">광고, 홍보물</div>
+            </div>
+            <div class="category-card" onclick="createProjectWithTemplate('로고')">
+                <div class="category-icon">⭐</div>
+                <div class="category-title">로고</div>
+                <div class="category-desc">브랜드 아이덴티티</div>
+            </div>
+            <div class="category-card" onclick="createProjectWithTemplate('배너')">
+                <div class="category-icon">🖼️</div>
+                <div class="category-title">배너</div>
+                <div class="category-desc">웹, 블로그</div>
+            </div>
+            <div class="category-card" onclick="createProjectWithTemplate('명함')">
+                <div class="category-icon">💼</div>
+                <div class="category-title">명함</div>
+                <div class="category-desc">비즈니스 카드</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Projects -->
+    <section class="projects-section">
+        <div class="section-header">
+            <h2 class="section-title" style="margin-bottom: 0;">최근 디자인</h2>
+            <button class="btn-secondary" onclick="showCreateModal()">+ 새 프로젝트</button>
+        </div>
+        <div id="projectsList" class="projects-grid">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>프로젝트를 불러오는 중...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section fade-in">
+        <h2 class="section-title">왜 Artify를 선택해야 할까요?</h2>
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="feature-icon">🎨</div>
+                <h3 class="feature-title">직관적인 디자인 도구</h3>
+                <p class="feature-desc">드래그 앤 드롭만으로 전문가 수준의 디자인을 만들 수 있습니다. 복잡한 기술 없이도 누구나 쉽게 사용할 수 있습니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">실시간 협업</h3>
+                <p class="feature-desc">팀원들과 함께 실시간으로 프로젝트를 편집하고 피드백을 주고받으세요. 어디서든 동시에 작업할 수 있습니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">AI 기반 자동화</h3>
+                <p class="feature-desc">인공지능이 디자인을 제안하고 자동으로 레이아웃을 최적화합니다. 시간을 절약하고 더 나은 결과를 얻으세요.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📱</div>
+                <h3 class="feature-title">모든 플랫폼 지원</h3>
+                <p class="feature-desc">웹, 모바일, 태블릿 어디서든 자유롭게 작업하세요. 클라우드 동기화로 모든 기기에서 접근 가능합니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">다양한 템플릿</h3>
+                <p class="feature-desc">10,000개 이상의 전문 디자이너가 제작한 템플릿을 사용하세요. 소셜 미디어부터 비즈니스까지 모든 용도를 커버합니다.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">💾</div>
+                <h3 class="feature-title">자동 저장</h3>
+                <p class="feature-desc">작업 중 데이터를 잃어버릴 걱정이 없습니다. 모든 변경사항이 자동으로 저장되어 안전하게 보관됩니다.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section fade-in">
+        <h2 class="section-title">전 세계 크리에이터들이 선택한 플랫폼</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">100K+</div>
+                <div class="stat-label">활성 사용자</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">1M+</div>
+                <div class="stat-label">제작된 디자인</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">10K+</div>
+                <div class="stat-label">템플릿 제공</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">99.9%</div>
+                <div class="stat-label">고객 만족도</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Create Project Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">새 프로젝트 만들기</h2>
+            <div class="form-group">
+                <label class="form-label">프로젝트 이름</label>
+                <input type="text" class="form-input" id="projectNameInput" placeholder="멋진 디자인 프로젝트">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="hideCreateModal()">취소</button>
+                <button class="btn-secondary" onclick="handleCreateProject()">만들기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">Artify</div>
+                    <p class="footer-desc">
+                        모두를 위한 온라인 디자인 플랫폼. 전문가가 아니어도 누구나 쉽게 아름다운 디자인을 만들 수 있습니다.
+                    </p>
+                    <div class="footer-social">
+                        <a href="#" class="social-link">📘</a>
+                        <a href="#" class="social-link">🐦</a>
+                        <a href="#" class="social-link">📷</a>
+                        <a href="#" class="social-link">💼</a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>제품</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">기능</a></li>
+                        <li><a href="#">템플릿</a></li>
+                        <li><a href="#">가격</a></li>
+                        <li><a href="#">업데이트</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>지원</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">도움말 센터</a></li>
+                        <li><a href="#">튜토리얼</a></li>
+                        <li><a href="#">커뮤니티</a></li>
+                        <li><a href="#">문의하기</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>회사</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">소개</a></li>
+                        <li><a href="#">채용</a></li>
+                        <li><a href="#">블로그</a></li>
+                        <li><a href="#">파트너십</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                © 2025 Artify. All rights reserved. |
+                <a href="#" style="color: #808080; text-decoration: none;">개인정보처리방침</a> |
+                <a href="#" style="color: #808080; text-decoration: none;">이용약관</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script>
+        console.log('Index page loaded');
+        console.log('API URL:', API_URL);
+
+        // 인증 확인
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('No token found, redirecting to login');
+                window.location.href = 'login.html';
+                return false;
+            }
+            return true;
+        }
+
+        // 로그아웃
+        function handleLogout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Modal 열기/닫기
+        function showCreateModal() {
+            document.getElementById('createModal').classList.add('active');
+            document.getElementById('projectNameInput').focus();
+        }
+
+        function hideCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+            document.getElementById('projectNameInput').value = '';
+        }
+
+        // 템플릿으로 프로젝트 생성
+        function createProjectWithTemplate(template) {
+            document.getElementById('projectNameInput').value = template;
+            showCreateModal();
+        }
+
+        // 새 프로젝트 생성
+        async function handleCreateProject() {
+            const projectName = document.getElementById('projectNameInput').value.trim();
+            if (!projectName) {
+                alert('프로젝트 이름을 입력해주세요.');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+
+            try {
+                console.log('Creating project:', projectName);
+                const response = await fetch(API_URL + '/projects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ name: projectName })
+                });
+
+                console.log('Create project response status:', response.status);
+                const data = await response.json();
+                console.log('Create project response data:', data);
+
+                if (data.project) {
+                    hideCreateModal();
+                    window.location.href = 'editor-canva.html?id=' + data.project.id;
+                } else {
+                    alert('프로젝트 생성 실패: ' + (data.error || '알 수 없는 오류'));
+                }
+            } catch (err) {
+                console.error('Create project error:', err);
+                alert('프로젝트 생성 중 오류가 발생했습니다.\n\n' + err.message);
+            }
+        }
+
+        // Enter 키로 프로젝트 생성
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('projectNameInput');
+            if (input) {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        handleCreateProject();
+                    }
+                });
+            }
+
+            // ESC 키로 모달 닫기
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    hideCreateModal();
+                }
+            });
+
+            // 모달 배경 클릭으로 닫기
+            document.getElementById('createModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideCreateModal();
+                }
+            });
+        });
+
+        // 프로젝트 목록 로드
+        async function loadProjects() {
+            const token = localStorage.getItem('token');
+            const projectsList = document.getElementById('projectsList');
+
+            try {
+                console.log('Loading projects from:', API_URL + '/projects');
+                const response = await fetch(API_URL + '/projects', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                console.log('Load projects response status:', response.status);
+
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                const data = await response.json();
+                console.log('Load projects response data:', data);
+
+                if (data.projects && data.projects.length > 0) {
+                    projectsList.innerHTML = data.projects.map(project => `
+                        <div class="project-card" onclick="openProject(${project.id})">
+                            <div class="project-thumbnail">🎨</div>
+                            <div class="project-info">
+                                <div class="project-name">${project.name}</div>
+                                <div class="project-meta">
+                                    수정일: ${new Date(project.updatedAt || project.createdAt).toLocaleDateString('ko-KR', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </div>
+                                <div class="project-actions">
+                                    <button class="btn-small primary" onclick="event.stopPropagation(); openProject(${project.id})">열기</button>
+                                    <button class="btn-small" onclick="event.stopPropagation(); duplicateProject(${project.id})">복제</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    projectsList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <h3>아직 프로젝트가 없습니다</h3>
+                            <p>새로운 디자인을 시작해보세요!</p>
+                            <button class="btn-primary" onclick="showCreateModal()">첫 프로젝트 만들기</button>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Load projects error:', err);
+                projectsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>서버에 연결할 수 없습니다</h3>
+                        <p>${err.message}<br><br>Render 서버가 시작되는 데 시간이 걸릴 수 있습니다.</p>
+                        <button class="btn-secondary" onclick="loadProjects()">다시 시도</button>
+                    </div>
+                `;
+            }
+        }
+
+        // 프로젝트 열기
+        function openProject(id) {
+            window.location.href = 'editor-canva.html?id=' + id;
+        }
+
+        // 프로젝트 복제
+        async function duplicateProject(id) {
+            if (!confirm('이 프로젝트를 복제하시겠습니까?')) return;
+
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(API_URL + '/projects/' + id, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    const project = await response.json();
+                    const newName = project.name + ' (사본)';
+
+                    const createResponse = await fetch(API_URL + '/projects', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({ name: newName, data: project.data })
+                    });
+
+                    if (createResponse.ok) {
+                        loadProjects();
+                    }
+                }
+            } catch (err) {
+                console.error('Duplicate project error:', err);
+                alert('프로젝트 복제 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 사용자 정보 표시
+        function displayUser() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const userDisplay = document.getElementById('userDisplay');
+            if (user.username) {
+                userDisplay.textContent = user.username + '님 환영합니다';
+            } else {
+                userDisplay.textContent = '사용자';
+            }
+        }
+
+        // 검색 기능
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    const query = e.target.value.toLowerCase();
+                    const cards = document.querySelectorAll('.project-card');
+
+                    cards.forEach(card => {
+                        const name = card.querySelector('.project-name').textContent.toLowerCase();
+                        if (name.includes(query)) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        });
+
+        // 페이지 로드 시
+        if (checkAuth()) {
+            displayUser();
+            loadProjects();
+        }
+
+        // Scroll Animation
+        function handleScrollAnimation() {
+            const elements = document.querySelectorAll('.fade-in');
+
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight;
+
+                if (elementTop < windowHeight * 0.8) {
+                    element.classList.add('visible');
+                }
+            });
+        }
+
+        // 스크롤 이벤트 리스너 추가
+        window.addEventListener('scroll', handleScrollAnimation);
+
+        // 페이지 로드 시 한 번 실행
+        window.addEventListener('load', handleScrollAnimation);
+    </script>
+</body>
+</html>
