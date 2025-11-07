@@ -835,6 +835,18 @@ vercel
 
 ### ⚠️ 개선 필요 사항 (Must-Have)
 
+다음 7가지 핵심 개선사항은 프로덕션 환경에서 **반드시** 구현되어야 합니다:
+
+1. **데이터베이스 마이그레이션 관리** - 스키마 버전 관리 및 롤백
+2. **데이터베이스 통합 전략** - 단일 소스 오브 트루스 결정
+3. **백업 및 재해 복구** - 데이터 손실 방지
+4. **정적 vs 동적 데이터 분리** - Redis 캐시 계층
+5. **조회 우선순위 및 TTL 전략** - 성능 최적화
+6. **비용·안전장치** - Rate Limiting, 쿼터, 프롬프트 캐싱, 비동기 큐 (🚨 최우선)
+7. **Vector DB 의미 기반 활용** - 브랜드 RAG, 고성과 검색, 시맨틱 디듑
+
+---
+
 #### 1. 데이터베이스 마이그레이션 관리
 
 **현재 상태:**
@@ -1026,34 +1038,925 @@ async def get_segments(db: Session = Depends(get_db)):
 실시간 메트릭: 캐시 안 함 (항상 최신 데이터)
 ```
 
+#### 6. 비용·안전장치
+
+**현재 상태:**
+- ✅ Backend: express-rate-limit (3-tier 전략)
+- ✅ gen_jobs 테이블: 토큰/비용 로깅 구조 존재
+- ❌ Content Backend: Rate limiting 없음
+- ❌ 사용자별/캠페인별 쿼터 시스템 없음
+- ❌ 프롬프트 캐싱 없음
+- ❌ 비동기 작업 큐 없음 (현재 동기 처리)
+- ❌ 일일/월간 비용 캡 없음
+
+**권장 조치:**
+
+##### 6.1. Content Backend에 Rate Limiting 추가
+
+```python
+# requirements.txt
+slowapi>=0.1.9
+
+# main.py
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# 사용자별 Rate Limiting
+@app.post("/generate/text")
+@limiter.limit("10/minute")  # 분당 10회
+async def generate_text(request: Request, ...):
+    pass
+
+@app.post("/generate/image")
+@limiter.limit("5/minute")  # 분당 5회 (비용이 높음)
+async def generate_image(request: Request, ...):
+    pass
+```
+
+##### 6.2. 사용자별 쿼터 시스템
+
+**데이터베이스 스키마 추가:**
+```sql
+-- 사용자 쿼터 테이블
+CREATE TABLE user_quotas (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id),
+  daily_text_quota INTEGER DEFAULT 100,
+  daily_image_quota INTEGER DEFAULT 20,
+  monthly_cost_cap FLOAT DEFAULT 50.0,  -- USD
+  daily_text_used INTEGER DEFAULT 0,
+  daily_image_used INTEGER DEFAULT 0,
+  monthly_cost_used FLOAT DEFAULT 0.0,
+  last_daily_reset TIMESTAMP DEFAULT NOW(),
+  last_monthly_reset TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 인덱스
+CREATE INDEX idx_user_quotas_user_id ON user_quotas(user_id);
+```
+
+**쿼터 체크 로직:**
+```python
+async def check_quota(user_id: int, job_type: str, db: Session):
+    quota = db.query(UserQuota).filter_by(user_id=user_id).first()
+
+    # 일일 리셋 체크
+    if (datetime.now() - quota.last_daily_reset).days >= 1:
+        quota.daily_text_used = 0
+        quota.daily_image_used = 0
+        quota.last_daily_reset = datetime.now()
+
+    # 월간 리셋 체크
+    if (datetime.now() - quota.last_monthly_reset).days >= 30:
+        quota.monthly_cost_used = 0.0
+        quota.last_monthly_reset = datetime.now()
+
+    # 쿼터 체크
+    if job_type == "text":
+        if quota.daily_text_used >= quota.daily_text_quota:
+            raise HTTPException(429, "Daily text quota exceeded")
+        quota.daily_text_used += 1
+
+    if job_type == "image":
+        if quota.daily_image_used >= quota.daily_image_quota:
+            raise HTTPException(429, "Daily image quota exceeded")
+        quota.daily_image_used += 1
+
+    db.commit()
+    return quota
+
+@app.post("/generate/text")
+async def generate_text(request: TextRequest, db: Session = Depends(get_db)):
+    # 쿼터 체크
+    quota = await check_quota(request.user_id, "text", db)
+
+    # 월간 비용 체크
+    if quota.monthly_cost_used >= quota.monthly_cost_cap:
+        raise HTTPException(402, "Monthly cost cap exceeded")
+
+    # 생성 로직...
+```
+
+##### 6.3. 프롬프트 캐싱
+
+**해시 기반 캐싱 (동일 프롬프트):**
+```python
+import hashlib
+from redis import Redis
+
+redis_client = Redis(host='localhost', port=6379, decode_responses=True)
+
+def get_prompt_hash(prompt: str, model: str) -> str:
+    """프롬프트 + 모델의 해시 생성"""
+    content = f"{model}:{prompt}"
+    return hashlib.sha256(content.encode()).hexdigest()
+
+@app.post("/generate/text")
+async def generate_text(request: TextRequest, db: Session = Depends(get_db)):
+    # 1. 해시 기반 캐시 확인
+    cache_key = get_prompt_hash(request.prompt, request.model or "gpt-3.5-turbo")
+    cached = redis_client.get(f"prompt:hash:{cache_key}")
+
+    if cached:
+        logger.info(f"Cache HIT (hash): {cache_key[:8]}...")
+        return json.loads(cached)
+
+    # 2. OpenAI API 호출
+    response = await openai.ChatCompletion.create(...)
+
+    # 3. 캐싱 (24시간)
+    redis_client.setex(
+        f"prompt:hash:{cache_key}",
+        86400,  # 24 hours
+        json.dumps(response)
+    )
+
+    return response
+```
+
+**시맨틱 기반 캐싱 (유사 프롬프트):**
+```python
+from openai import OpenAI
+
+client = OpenAI()
+
+async def semantic_cache_search(prompt: str, threshold: float = 0.95) -> Optional[dict]:
+    """Vector DB에서 유사 프롬프트 검색"""
+    # 1. 프롬프트 임베딩
+    embedding_response = client.embeddings.create(
+        model="text-embedding-ada-002",
+        input=prompt
+    )
+    query_embedding = embedding_response.data[0].embedding
+
+    # 2. ChromaDB에서 유사도 검색
+    from client import get_chroma_client
+    chroma = get_chroma_client()
+
+    results = chroma.prompt_cache_collection.query(
+        query_embeddings=[query_embedding],
+        n_results=1
+    )
+
+    # 3. 임계값 체크
+    if results['distances'][0][0] <= (1 - threshold):  # 코사인 유사도 95% 이상
+        cached_result = results['metadatas'][0][0]['result']
+        logger.info(f"Cache HIT (semantic): similarity={1-results['distances'][0][0]:.3f}")
+        return json.loads(cached_result)
+
+    return None
+
+@app.post("/generate/text")
+async def generate_text(request: TextRequest, db: Session = Depends(get_db)):
+    # 1. 해시 캐시 체크
+    # ... (위와 동일)
+
+    # 2. 시맨틱 캐시 체크
+    semantic_result = await semantic_cache_search(request.prompt, threshold=0.95)
+    if semantic_result:
+        return semantic_result
+
+    # 3. OpenAI API 호출
+    response = await openai.ChatCompletion.create(...)
+
+    # 4. 시맨틱 캐시에 저장
+    embedding_response = client.embeddings.create(
+        model="text-embedding-ada-002",
+        input=request.prompt
+    )
+
+    chroma.prompt_cache_collection.add(
+        embeddings=[embedding_response.data[0].embedding],
+        documents=[request.prompt],
+        metadatas=[{
+            "result": json.dumps(response),
+            "model": request.model,
+            "timestamp": datetime.now().isoformat()
+        }],
+        ids=[cache_key]
+    )
+
+    return response
+```
+
+##### 6.4. 비동기 작업 큐
+
+**Celery + Redis 통합:**
+```python
+# requirements.txt
+celery>=5.3.0
+redis>=5.0.0
+
+# celery_app.py
+from celery import Celery
+
+celery_app = Celery(
+    'artify',
+    broker='redis://localhost:6379/0',
+    backend='redis://localhost:6379/1'
+)
+
+celery_app.conf.update(
+    task_serializer='json',
+    result_serializer='json',
+    accept_content=['json'],
+    timezone='UTC',
+    enable_utc=True,
+    task_time_limit=300,  # 5분 타임아웃
+    task_soft_time_limit=240,  # 4분 경고
+)
+
+@celery_app.task(bind=True, max_retries=3)
+def generate_image_task(self, job_id: int, prompt: str, model: str, user_id: int):
+    """비동기 이미지 생성 작업"""
+    try:
+        # 작업 상태 업데이트
+        update_job_status(job_id, "processing")
+
+        # OpenAI DALL-E 호출
+        response = openai.Image.create(
+            model=model,
+            prompt=prompt,
+            n=1,
+            size="1024x1024"
+        )
+
+        # 결과 저장
+        image_url = response.data[0].url
+        update_job_result(job_id, image_url, "completed")
+
+        return {"status": "completed", "image_url": image_url}
+
+    except SoftTimeLimitExceeded:
+        # 소프트 타임아웃 (재시도)
+        update_job_status(job_id, "timeout_retry")
+        raise self.retry(countdown=60)  # 1분 후 재시도
+
+    except Exception as exc:
+        # 에러 처리
+        update_job_status(job_id, "failed", error=str(exc))
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        return {"status": "failed", "error": str(exc)}
+
+# main.py
+@app.post("/generate/image/async")
+async def generate_image_async(request: ImageRequest, db: Session = Depends(get_db)):
+    # 1. 쿼터 체크
+    await check_quota(request.user_id, "image", db)
+
+    # 2. gen_jobs 생성
+    job = GenerationJob(
+        user_id=request.user_id,
+        job_type="image",
+        model=request.model or "dall-e-3",
+        prompt=request.prompt,
+        status="pending"
+    )
+    db.add(job)
+    db.commit()
+
+    # 3. Celery 작업 큐에 추가
+    task = generate_image_task.apply_async(
+        args=[job.id, request.prompt, request.model, request.user_id],
+        task_id=f"img_{job.id}"
+    )
+
+    return {
+        "job_id": job.id,
+        "task_id": task.id,
+        "status": "pending",
+        "poll_url": f"/jobs/{job.id}/status"
+    }
+```
+
+**작업 상태 폴링 엔드포인트:**
+```python
+@app.get("/jobs/{job_id}/status")
+async def get_job_status(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(GenerationJob).filter_by(id=job_id).first()
+
+    if not job:
+        raise HTTPException(404, "Job not found")
+
+    return {
+        "job_id": job.id,
+        "status": job.status,  # pending, processing, completed, failed, cancelled
+        "result": job.result if job.status == "completed" else None,
+        "error": job.error_message if job.status == "failed" else None,
+        "created_at": job.created_at,
+        "completed_at": job.completed_at
+    }
+
+@app.post("/jobs/{job_id}/cancel")
+async def cancel_job(job_id: int, db: Session = Depends(get_db)):
+    """작업 취소"""
+    job = db.query(GenerationJob).filter_by(id=job_id).first()
+
+    if not job:
+        raise HTTPException(404, "Job not found")
+
+    if job.status in ["completed", "failed", "cancelled"]:
+        raise HTTPException(400, f"Cannot cancel job with status: {job.status}")
+
+    # Celery 작업 취소
+    celery_app.control.revoke(f"img_{job.id}", terminate=True)
+
+    # DB 업데이트
+    job.status = "cancelled"
+    job.completed_at = datetime.now()
+    db.commit()
+
+    return {"job_id": job.id, "status": "cancelled"}
+```
+
+##### 6.5. 비용 로깅 및 일일 캡
+
+**비용 계산 및 로깅:**
+```python
+PRICING = {
+    "gpt-3.5-turbo": {"input": 0.0015, "output": 0.002},  # per 1K tokens
+    "gpt-4": {"input": 0.03, "output": 0.06},
+    "dall-e-3": {"1024x1024": 0.040, "1024x1792": 0.080, "1792x1024": 0.080}
+}
+
+def calculate_text_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """텍스트 생성 비용 계산"""
+    pricing = PRICING.get(model, PRICING["gpt-3.5-turbo"])
+    cost = (prompt_tokens / 1000 * pricing["input"]) + \
+           (completion_tokens / 1000 * pricing["output"])
+    return round(cost, 6)
+
+def calculate_image_cost(model: str, size: str = "1024x1024") -> float:
+    """이미지 생성 비용 계산"""
+    return PRICING.get(model, {}).get(size, 0.040)
+
+@app.post("/generate/text")
+async def generate_text(request: TextRequest, db: Session = Depends(get_db)):
+    # OpenAI API 호출
+    response = await openai.ChatCompletion.create(...)
+
+    # 비용 계산
+    prompt_tokens = response.usage.prompt_tokens
+    completion_tokens = response.usage.completion_tokens
+    cost = calculate_text_cost(request.model, prompt_tokens, completion_tokens)
+
+    # gen_jobs에 로깅
+    job = GenerationJob(
+        user_id=request.user_id,
+        job_type="text",
+        model=request.model,
+        prompt=request.prompt,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=prompt_tokens + completion_tokens,
+        estimated_cost=cost,
+        status="completed"
+    )
+    db.add(job)
+
+    # 사용자 쿼터 업데이트
+    quota = db.query(UserQuota).filter_by(user_id=request.user_id).first()
+    quota.monthly_cost_used += cost
+
+    db.commit()
+
+    # 월간 캡 체크 (다음 요청에서 차단)
+    if quota.monthly_cost_used >= quota.monthly_cost_cap:
+        logger.warning(f"User {request.user_id} reached monthly cap: ${quota.monthly_cost_used:.2f}")
+
+    return {
+        "result": response.choices[0].message.content,
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+            "estimated_cost_usd": cost
+        },
+        "quota": {
+            "monthly_used": quota.monthly_cost_used,
+            "monthly_cap": quota.monthly_cost_cap,
+            "remaining": quota.monthly_cost_cap - quota.monthly_cost_used
+        }
+    }
+```
+
+**비용 대시보드 엔드포인트:**
+```python
+@app.get("/users/{user_id}/costs/daily")
+async def get_daily_costs(user_id: int, db: Session = Depends(get_db)):
+    """일일 비용 통계"""
+    today = datetime.now().date()
+
+    costs = db.query(
+        func.sum(GenerationJob.estimated_cost).label('total_cost'),
+        func.count(GenerationJob.id).label('job_count'),
+        GenerationJob.job_type
+    ).filter(
+        GenerationJob.user_id == user_id,
+        func.date(GenerationJob.created_at) == today
+    ).group_by(GenerationJob.job_type).all()
+
+    return {
+        "date": today.isoformat(),
+        "breakdown": [
+            {"type": c.job_type, "cost": float(c.total_cost or 0), "count": c.job_count}
+            for c in costs
+        ],
+        "total": sum(float(c.total_cost or 0) for c in costs)
+    }
+
+@app.get("/users/{user_id}/costs/monthly")
+async def get_monthly_costs(user_id: int, db: Session = Depends(get_db)):
+    """월간 비용 통계"""
+    # 지난 30일
+    start_date = datetime.now() - timedelta(days=30)
+
+    daily_costs = db.query(
+        func.date(GenerationJob.created_at).label('date'),
+        func.sum(GenerationJob.estimated_cost).label('cost')
+    ).filter(
+        GenerationJob.user_id == user_id,
+        GenerationJob.created_at >= start_date
+    ).group_by(func.date(GenerationJob.created_at)).all()
+
+    quota = db.query(UserQuota).filter_by(user_id=user_id).first()
+
+    return {
+        "period": {"start": start_date.date().isoformat(), "end": datetime.now().date().isoformat()},
+        "daily": [{"date": str(d.date), "cost": float(d.cost)} for d in daily_costs],
+        "total": quota.monthly_cost_used,
+        "cap": quota.monthly_cost_cap,
+        "remaining": quota.monthly_cost_cap - quota.monthly_cost_used
+    }
+```
+
+#### 7. Vector DB의 의미 기반 활용
+
+**현재 상태:**
+- ✅ ChromaDB 클라이언트 완성 (351 lines)
+- ✅ 3개 컬렉션 정의 (copy_texts, images, templates)
+- ❌ 구체적 유즈케이스 미정의
+- ❌ Content Backend 연동 없음
+- ❌ RAG 활용 전략 부재
+
+**권장 유즈케이스:**
+
+##### 7.1. 유즈케이스 A: 브랜드 보이스/가이드라인 RAG
+
+**목적:** AI 생성 시 브랜드 가이드라인을 컨텍스트로 주입하여 일관된 톤앤매너 유지
+
+**구현:**
+
+```python
+# content-vector/client.py에 추가
+def add_brand_guideline(self, brand_id: int, guideline_text: str, metadata: dict):
+    """브랜드 가이드라인 저장"""
+    self.brand_guidelines_collection.add(
+        documents=[guideline_text],
+        metadatas=[{
+            "brand_id": brand_id,
+            "category": metadata.get("category", "general"),  # tone, style, values, etc.
+            "created_at": datetime.now().isoformat(),
+            **metadata
+        }],
+        ids=[f"brand_{brand_id}_{metadata.get('category', 'general')}"]
+    )
+
+def get_brand_context(self, brand_id: int, query: str, n_results: int = 3) -> str:
+    """브랜드 관련 가이드라인 검색 및 컨텍스트 생성"""
+    results = self.brand_guidelines_collection.query(
+        query_texts=[query],
+        where={"brand_id": brand_id},
+        n_results=n_results
+    )
+
+    if not results['documents'][0]:
+        return ""
+
+    # 검색된 가이드라인을 컨텍스트로 조합
+    context = "\n\n".join([
+        f"[{results['metadatas'][0][i]['category']}]\n{doc}"
+        for i, doc in enumerate(results['documents'][0])
+    ])
+
+    return context
+
+# content-backend/main.py에서 활용
+from content_vector.client import get_chroma_client
+
+@app.post("/generate/text/with-brand")
+async def generate_text_with_brand(request: BrandTextRequest, db: Session = Depends(get_db)):
+    """브랜드 가이드라인 기반 텍스트 생성"""
+
+    # 1. Vector DB에서 관련 브랜드 가이드라인 검색
+    chroma = get_chroma_client()
+    brand_context = chroma.get_brand_context(
+        brand_id=request.brand_id,
+        query=request.prompt,
+        n_results=3
+    )
+
+    # 2. 프롬프트에 컨텍스트 주입
+    enhanced_prompt = f"""다음 브랜드 가이드라인을 반드시 준수하여 작성하세요:
+
+{brand_context}
+
+---
+
+사용자 요청: {request.prompt}
+
+위 가이드라인의 톤앤매너, 스타일, 가치관을 반영하여 응답하세요."""
+
+    # 3. OpenAI API 호출
+    response = await openai.ChatCompletion.create(
+        model=request.model or "gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "당신은 브랜드 가이드라인을 정확히 따르는 마케팅 카피라이터입니다."},
+            {"role": "user", "content": enhanced_prompt}
+        ],
+        temperature=0.7
+    )
+
+    return {
+        "result": response.choices[0].message.content,
+        "brand_context_used": brand_context,
+        "usage": response.usage
+    }
+```
+
+**예시:**
+```python
+# 브랜드 가이드라인 등록
+chroma.add_brand_guideline(
+    brand_id=1,
+    guideline_text="우리 브랜드는 친근하고 유머러스한 톤을 사용합니다. '~해요' 체를 사용하며, 이모지를 적절히 활용합니다.",
+    metadata={"category": "tone"}
+)
+
+chroma.add_brand_guideline(
+    brand_id=1,
+    guideline_text="환경 보호와 지속가능성을 핵심 가치로 삼습니다. 모든 메시지에 이를 반영해야 합니다.",
+    metadata={"category": "values"}
+)
+
+# 생성 시 자동 적용
+# "여름 세일 광고" → 가이드라인 검색 → 친근한 톤 + 환경 메시지 반영
+```
+
+##### 7.2. 유즈케이스 B: 고성과 크리에이티브 유사 검색
+
+**목적:** 과거 성과가 좋았던 콘텐츠와 유사한 크리에이티브를 검색하여 재활용/추천
+
+**구현:**
+
+```python
+# content-vector/client.py
+def add_creative_with_performance(self, creative_id: int, text: str, metadata: dict):
+    """성과 데이터 포함 크리에이티브 저장"""
+    self.copy_texts_collection.add(
+        documents=[text],
+        metadatas=[{
+            "creative_id": creative_id,
+            "campaign_id": metadata.get("campaign_id"),
+            "performance_score": metadata.get("performance_score", 0),  # CTR, conversion 등
+            "impressions": metadata.get("impressions", 0),
+            "clicks": metadata.get("clicks", 0),
+            "conversions": metadata.get("conversions", 0),
+            "created_at": datetime.now().isoformat(),
+        }],
+        ids=[f"creative_{creative_id}"]
+    )
+
+def search_high_performing_similar(self, query_text: str, min_score: float = 0.05, n_results: int = 5):
+    """고성과 유사 크리에이티브 검색"""
+    results = self.copy_texts_collection.query(
+        query_texts=[query_text],
+        where={"performance_score": {"$gte": min_score}},  # 최소 성과 점수 필터
+        n_results=n_results
+    )
+
+    return [
+        {
+            "creative_id": results['metadatas'][0][i]['creative_id'],
+            "text": results['documents'][0][i],
+            "similarity": 1 - results['distances'][0][i],  # 코사인 유사도
+            "performance_score": results['metadatas'][0][i]['performance_score'],
+            "metrics": {
+                "impressions": results['metadatas'][0][i]['impressions'],
+                "clicks": results['metadatas'][0][i]['clicks'],
+                "conversions": results['metadatas'][0][i]['conversions'],
+            }
+        }
+        for i in range(len(results['documents'][0]))
+    ]
+
+# content-backend/main.py
+@app.get("/creatives/recommend")
+async def recommend_similar_creatives(
+    query: str,
+    min_performance: float = 0.05,
+    n_results: int = 5,
+    db: Session = Depends(get_db)
+):
+    """유사한 고성과 크리에이티브 추천"""
+
+    chroma = get_chroma_client()
+    recommendations = chroma.search_high_performing_similar(
+        query_text=query,
+        min_score=min_performance,
+        n_results=n_results
+    )
+
+    return {
+        "query": query,
+        "recommendations": recommendations,
+        "count": len(recommendations)
+    }
+```
+
+**자동 성과 업데이트:**
+```python
+@app.post("/creatives/{creative_id}/update-performance")
+async def update_creative_performance(creative_id: int, db: Session = Depends(get_db)):
+    """메트릭 기반 성과 점수 업데이트"""
+
+    # 1. DB에서 메트릭 조회
+    creative = db.query(Creative).filter_by(id=creative_id).first()
+    metrics = db.query(Metric).filter_by(campaign_id=creative.campaign_id).all()
+
+    # 2. 성과 점수 계산 (CTR, conversion rate 등)
+    impressions = sum(m.metric_value for m in metrics if m.metric_name == "impressions")
+    clicks = sum(m.metric_value for m in metrics if m.metric_name == "clicks")
+    conversions = sum(m.metric_value for m in metrics if m.metric_name == "conversions")
+
+    ctr = clicks / impressions if impressions > 0 else 0
+    cvr = conversions / clicks if clicks > 0 else 0
+    performance_score = (ctr * 0.5) + (cvr * 0.5)  # 가중치 적용
+
+    # 3. Vector DB 업데이트
+    chroma = get_chroma_client()
+    chroma.copy_texts_collection.update(
+        ids=[f"creative_{creative_id}"],
+        metadatas=[{
+            "performance_score": performance_score,
+            "impressions": int(impressions),
+            "clicks": int(clicks),
+            "conversions": int(conversions),
+            "last_updated": datetime.now().isoformat()
+        }]
+    )
+
+    return {
+        "creative_id": creative_id,
+        "performance_score": performance_score,
+        "metrics": {"impressions": impressions, "clicks": clicks, "conversions": conversions}
+    }
+```
+
+##### 7.3. 유즈케이스 C: 프롬프트 시맨틱 디듑 (비용 절감)
+
+**목적:** 의미상 중복된 프롬프트를 감지하여 캐시된 결과 재사용, API 호출 비용 절감
+
+**구현 (섹션 6.3과 연계):**
+
+```python
+# content-vector/client.py
+def add_prompt_cache(self, prompt: str, model: str, result: dict, cost: float):
+    """프롬프트 캐시에 저장 (임베딩 자동 생성)"""
+    self.prompt_cache_collection.add(
+        documents=[prompt],
+        metadatas=[{
+            "model": model,
+            "result": json.dumps(result),
+            "cost_saved": cost,
+            "hit_count": 0,
+            "created_at": datetime.now().isoformat()
+        }],
+        ids=[hashlib.sha256(f"{model}:{prompt}".encode()).hexdigest()]
+    )
+
+def search_semantic_cache(self, prompt: str, model: str, threshold: float = 0.95):
+    """시맨틱 유사도 기반 캐시 검색"""
+    results = self.prompt_cache_collection.query(
+        query_texts=[prompt],
+        where={"model": model},
+        n_results=1
+    )
+
+    if not results['documents'][0]:
+        return None
+
+    similarity = 1 - results['distances'][0][0]
+
+    # 임계값 체크
+    if similarity >= threshold:
+        # 히트 카운트 증가
+        cache_id = results['ids'][0][0]
+        metadata = results['metadatas'][0][0]
+        metadata['hit_count'] += 1
+
+        self.prompt_cache_collection.update(
+            ids=[cache_id],
+            metadatas=[metadata]
+        )
+
+        return {
+            "result": json.loads(metadata['result']),
+            "similarity": similarity,
+            "cost_saved": metadata['cost_saved'],
+            "hit_count": metadata['hit_count']
+        }
+
+    return None
+
+# content-backend/main.py (섹션 6.3 통합)
+@app.post("/generate/text")
+async def generate_text(request: TextRequest, db: Session = Depends(get_db)):
+    chroma = get_chroma_client()
+
+    # 1. 시맨틱 캐시 체크 (95% 유사도)
+    cached = chroma.search_semantic_cache(
+        prompt=request.prompt,
+        model=request.model or "gpt-3.5-turbo",
+        threshold=0.95
+    )
+
+    if cached:
+        logger.info(f"Semantic cache HIT: {cached['similarity']:.2%} similar, saved ${cached['cost_saved']:.4f}")
+        return {
+            "result": cached['result'],
+            "cached": True,
+            "similarity": cached['similarity'],
+            "cost_saved_usd": cached['cost_saved']
+        }
+
+    # 2. OpenAI API 호출
+    response = await openai.ChatCompletion.create(...)
+    cost = calculate_text_cost(...)
+
+    # 3. 시맨틱 캐시에 저장
+    chroma.add_prompt_cache(
+        prompt=request.prompt,
+        model=request.model,
+        result=response.choices[0].message,
+        cost=cost
+    )
+
+    return {"result": response, "cached": False, "cost_usd": cost}
+```
+
+**비용 절감 대시보드:**
+```python
+@app.get("/analytics/cache-savings")
+async def get_cache_savings(user_id: int, db: Session = Depends(get_db)):
+    """캐시로 절감한 비용 통계"""
+
+    # 1. 해시 캐시 히트
+    hash_cache_hits = redis_client.get(f"user:{user_id}:cache:hash:hits") or 0
+
+    # 2. 시맨틱 캐시 히트
+    chroma = get_chroma_client()
+    semantic_results = chroma.prompt_cache_collection.get(
+        where={"hit_count": {"$gt": 0}}
+    )
+
+    total_semantic_hits = sum(m['hit_count'] for m in semantic_results['metadatas'])
+    total_saved = sum(m['cost_saved'] * m['hit_count'] for m in semantic_results['metadatas'])
+
+    return {
+        "cache_stats": {
+            "hash_hits": int(hash_cache_hits),
+            "semantic_hits": total_semantic_hits,
+            "total_hits": int(hash_cache_hits) + total_semantic_hits
+        },
+        "cost_savings": {
+            "total_saved_usd": round(total_saved, 4),
+            "average_per_hit": round(total_saved / total_semantic_hits, 6) if total_semantic_hits > 0 else 0
+        }
+    }
+```
+
+**전략 요약:**
+
+| 유즈케이스 | Vector DB 역할 | RDB 역할 | 효과 |
+|-----------|---------------|----------|------|
+| A. 브랜드 RAG | 가이드라인 임베딩 저장 및 검색 | 브랜드 메타데이터 (ID, 이름) | 일관된 브랜드 보이스 |
+| B. 고성과 검색 | 크리에이티브 텍스트 임베딩 | 성과 메트릭 (CTR, CVR) | 데이터 기반 재활용 |
+| C. 시맨틱 디듑 | 프롬프트 임베딩 및 유사도 검색 | 비용 로그 (gen_jobs) | 30-50% 비용 절감 |
+
 ## 🐛 알려진 이슈
 
-### 중요도: 높음
-- **Alembic 마이그레이션 부재**: 스키마 변경 추적 불가
-- **백업 전략 미구축**: 데이터 손실 위험
-- **캐시 계층 없음**: 정적 데이터 매번 DB 조회
+### 중요도: 매우 높음 (비용/안정성)
+- **Content Backend Rate Limiting 부재**: API 남용 및 비용 폭탄 위험
+- **사용자별 쿼터 시스템 없음**: 무제한 AI 생성 가능 (비용 통제 불가)
+- **비동기 작업 큐 없음**: 이미지 생성 시 동기 처리로 타임아웃 위험
+- **일일/월간 비용 캡 없음**: 사용자당 지출 한도 미설정
 
-### 중요도: 중간
-- **Vector DB 미연동**: RAG 추천 시스템 사용 불가
-- **데이터베이스 통합 미결정**: 2개 DB 운영 중
+### 중요도: 높음 (운영 안정성)
+- **Alembic 마이그레이션 부재**: 스키마 변경 추적 불가, 롤백 불가
+- **백업 전략 미구축**: 데이터 손실 위험, 재해 복구 불가
+- **프롬프트 캐싱 없음**: 동일/유사 요청 중복 비용 발생 (30-50% 절감 기회 상실)
+- **Vector DB 유즈케이스 미구현**: ChromaDB 클라이언트는 완성됐으나 실제 활용 전략 부재
+
+### 중요도: 중간 (기능 개선)
+- **캐시 계층 없음**: 정적 데이터(템플릿, 세그먼트) 매번 DB 조회
+- **데이터베이스 통합 미결정**: Backend DB와 Content Backend DB 분리 운영 (조인 불가)
+- **비용 대시보드 부재**: 사용자별 일일/월간 비용 추적 UI 없음
 
 ## 🚀 향후 로드맵
 
-### Phase 1: 데이터 아키텍처 개선 (우선순위: 높음)
-1. Alembic 마이그레이션 도구 도입
-2. 자동 백업 설정 (Supabase PITR + 로컬 백업)
-3. Redis 캐시 계층 추가
-4. 정적/동적 데이터 분리 구현
+### Phase 1: 비용·안전장치 구축 (우선순위: 매우 높음) 🚨
+**타임라인**: 1-2주
 
-### Phase 2: Vector DB 통합 (우선순위: 중간)
-1. Content Backend에 RAG 엔드포인트 추가
-2. ChromaDB 연동
-3. 유사 콘텐츠 추천 시스템 구현
+1. **Content Backend Rate Limiting** (slowapi 통합)
+   - 텍스트 생성: 10 req/min
+   - 이미지 생성: 5 req/min
+   - IP/사용자별 제한
 
-### Phase 3: 성능 최적화 (우선순위: 낮음)
-1. CDN 통합 (이미지 캐싱)
-2. 쿼리 최적화
+2. **사용자별 쿼터 시스템**
+   - user_quotas 테이블 생성
+   - 일일: 텍스트 100회, 이미지 20회
+   - 월간: $50 USD 캡
+   - 자동 리셋 로직
+
+3. **프롬프트 캐싱 (2-tier)**
+   - Redis 해시 캐싱 (동일 프롬프트)
+   - ChromaDB 시맨틱 캐싱 (95% 유사도)
+   - 예상 비용 절감: 30-50%
+
+4. **비동기 작업 큐 (Celery + Redis)**
+   - 이미지 생성 비동기 처리
+   - 작업 상태 폴링 엔드포인트
+   - 타임아웃/재시도/취소 지원
+
+5. **비용 로깅 및 대시보드**
+   - gen_jobs 비용 계산 로직
+   - 일일/월간 비용 통계 API
+   - Frontend 비용 대시보드 UI
+
+### Phase 2: Vector DB 의미 기반 활용 (우선순위: 높음)
+**타임라인**: 2-3주
+
+1. **유즈케이스 A: 브랜드 보이스 RAG**
+   - brand_guidelines_collection 추가
+   - /generate/text/with-brand 엔드포인트
+   - 가이드라인 관리 UI
+
+2. **유즈케이스 B: 고성과 크리에이티브 검색**
+   - 성과 데이터 Vector DB 동기화
+   - /creatives/recommend 엔드포인트
+   - 자동 성과 점수 업데이트 (CTR, CVR)
+
+3. **유즈케이스 C: 시맨틱 디듑 비용 절감**
+   - prompt_cache_collection 통합
+   - 캐시 히트율 모니터링
+   - 절감 비용 대시보드
+
+### Phase 3: 데이터 아키텍처 개선 (우선순위: 중간)
+**타임라인**: 3-4주
+
+1. **Alembic 마이그레이션 도구 도입**
+   - Content Backend Alembic 초기화
+   - 첫 마이그레이션 생성
+   - 롤백 절차 수립
+
+2. **자동 백업 설정**
+   - Supabase PITR 활성화 (7일 보관)
+   - 로컬 PostgreSQL 일일 백업 cron
+   - 월 1회 복원 테스트
+
+3. **Redis 캐시 계층 추가**
+   - 템플릿: 24시간 TTL
+   - 세그먼트: 1시간 TTL
+   - 캠페인 설정: 10분 TTL
+
+4. **데이터베이스 통합 전략 결정**
+   - 옵션 A: Supabase 완전 통합 (권장)
+   - 옵션 B: 도메인 분리 유지
+   - 마이그레이션 계획 수립
+
+### Phase 4: 성능 최적화 (우선순위: 낮음)
+**타임라인**: 4-6주
+
+1. CDN 통합 (Cloudflare/Cloudinary)
+2. 데이터베이스 쿼리 최적화
 3. 연결 풀 튜닝
+4. 프론트엔드 번들 최적화
+5. 이미지 레이지 로딩
+
+---
+
+**권장 우선순위:**
+1. ⚡ **Phase 1 (비용·안전장치)** - 즉시 시작 (비용 폭탄 방지)
+2. 🎯 **Phase 2 (Vector DB 활용)** - 2주 후 시작 (핵심 차별화 기능)
+3. 🔧 **Phase 3 (아키텍처 개선)** - 병렬 진행 가능
+4. 🚀 **Phase 4 (성능 최적화)** - 트래픽 증가 시 진행
 
 ## 📄 라이선스
 
