@@ -29,6 +29,9 @@ from exceptions import register_exception_handlers, ArtifyException, QuotaExceed
 from campaigns_api import router as campaigns_router
 from analytics_api import router as analytics_router
 from auth_api import router as auth_router
+from templates_api import router as templates_router
+from batch_generation_api import router as batch_router
+from internationalization_api import router as i18n_router
 
 load_dotenv()
 
@@ -87,16 +90,36 @@ For issues and feature requests, please contact the development team.
             "description": "Health check and system status endpoints"
         },
         {
+            "name": "authentication",
+            "description": "JWT authentication and authorization endpoints"
+        },
+        {
             "name": "ai-generation",
             "description": "AI content generation endpoints (text and images)"
+        },
+        {
+            "name": "campaigns",
+            "description": "Campaign and creative management"
         },
         {
             "name": "segments",
             "description": "User segment management"
         },
         {
+            "name": "templates",
+            "description": "Prompt templates, creative templates, and channel presets"
+        },
+        {
+            "name": "batch-generation",
+            "description": "Batch generation jobs with queue system"
+        },
+        {
+            "name": "internationalization",
+            "description": "Multi-language support and social media integration"
+        },
+        {
             "name": "analytics",
-            "description": "Usage analytics and cost tracking"
+            "description": "Usage analytics, event tracking, and cost tracking"
         },
         {
             "name": "vector-db",
@@ -120,10 +143,13 @@ For issues and feature requests, please contact the development team.
 # Register exception handlers
 register_exception_handlers(app)
 
-# Include routers for campaigns, analytics, and authentication
+# Include routers for campaigns, analytics, authentication, templates, batch generation, and i18n
 app.include_router(auth_router)
 app.include_router(campaigns_router)
 app.include_router(analytics_router)
+app.include_router(templates_router)
+app.include_router(batch_router)
+app.include_router(i18n_router)
 
 # Rate Limiter Configuration
 limiter = Limiter(key_func=get_remote_address)

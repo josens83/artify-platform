@@ -60,6 +60,11 @@ class Segment(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     criteria = Column(Text, nullable=True)  # JSON string
+    # Prompt template fields for auto-injection
+    tone = Column(String(100), nullable=True)  # 'professional', 'casual', 'friendly', etc.
+    keywords = Column(Text, nullable=True)  # Comma-separated keywords
+    reference_urls = Column(Text, nullable=True)  # JSON array of reference URLs
+    prompt_template = Column(Text, nullable=True)  # Custom prompt template with {variables}
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -196,6 +201,103 @@ class Event(Base):
     # Relationships
     campaign = relationship("Campaign", back_populates="events")
     creative = relationship("Creative", back_populates="events")
+
+
+class PromptTemplate(Base):
+    """Reusable prompt templates for content generation"""
+    __tablename__ = "prompt_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    template = Column(Text, nullable=False)  # Template with {variables}
+    category = Column(String(50), nullable=True)  # 'social', 'email', 'display', etc.
+    language = Column(String(10), default='en')  # 'en', 'ko', etc.
+    variables = Column(JSON, nullable=True)  # List of required variables
+    is_public = Column(Boolean, default=True)
+    user_id = Column(Integer, nullable=True, index=True)
+    usage_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CreativeTemplate(Base):
+    """Layout/font/palette templates for creatives"""
+    __tablename__ = "creative_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    preview_url = Column(Text, nullable=True)  # Template preview image
+    category = Column(String(50), nullable=True)  # 'minimal', 'bold', 'elegant', etc.
+    # Layout configuration
+    layout_config = Column(JSON, nullable=False)  # {text_slots: [], image_slots: [], dimensions: {}}
+    # Style configuration
+    font_family = Column(String(100), nullable=True)  # 'Roboto', 'Arial', etc.
+    font_sizes = Column(JSON, nullable=True)  # {heading: 48, body: 16, etc.}
+    color_palette = Column(JSON, nullable=False)  # {primary: '#000', secondary: '#fff', etc.}
+    # Metadata
+    channel = Column(String(50), nullable=True)  # Target channel
+    size = Column(String(50), nullable=True)  # '1080x1080', '1920x1080', etc.
+    is_public = Column(Boolean, default=True)
+    user_id = Column(Integer, nullable=True, index=True)
+    usage_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class BatchGenerationJob(Base):
+    """Batch generation jobs for segments"""
+    __tablename__ = "batch_generation_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey('campaigns.id'), nullable=False, index=True)
+    segment_id = Column(Integer, ForeignKey('segments.id'), nullable=True, index=True)
+    user_id = Column(Integer, nullable=True, index=True)
+    # Job configuration
+    content_type = Column(String(50), nullable=False)  # 'text', 'image', 'both'
+    count = Column(Integer, nullable=False)  # Number of creatives to generate
+    prompt_template_id = Column(Integer, ForeignKey('prompt_templates.id'), nullable=True)
+    creative_template_id = Column(Integer, ForeignKey('creative_templates.id'), nullable=True)
+    parameters = Column(JSON, nullable=True)  # Additional generation parameters
+    # Job status
+    status = Column(String(50), default='pending', index=True)  # 'pending', 'processing', 'completed', 'failed'
+    progress = Column(Integer, default=0)  # 0-100 percentage
+    total_items = Column(Integer, default=0)
+    completed_items = Column(Integer, default=0)
+    failed_items = Column(Integer, default=0)
+    error_message = Column(Text, nullable=True)
+    # Results
+    creative_ids = Column(JSON, nullable=True)  # List of generated creative IDs
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    campaign = relationship("Campaign")
+
+
+class ChannelPreset(Base):
+    """Channel-specific presets for size, format, and best practices"""
+    __tablename__ = "channel_presets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    channel = Column(String(50), nullable=False, index=True)  # 'instagram', 'facebook', 'twitter', etc.
+    type = Column(String(50), nullable=False)  # 'feed', 'story', 'reel', 'post', etc.
+    # Size configuration
+    width = Column(Integer, nullable=False)
+    height = Column(Integer, nullable=False)
+    aspect_ratio = Column(String(20), nullable=False)  # '1:1', '16:9', '9:16', etc.
+    # Recommendations
+    recommended_text_length = Column(Integer, nullable=True)  # Max characters
+    recommended_hashtags = Column(Integer, nullable=True)  # Number of hashtags
+    best_practices = Column(JSON, nullable=True)  # List of tips
+    # Metadata
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 # Database dependency
