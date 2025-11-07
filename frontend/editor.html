@@ -5770,5 +5770,37 @@
             }
         });
     </script>
+
+    <!-- Fabric.js CDN for Canvas Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+
+    <!-- Editor JavaScript -->
+    <script src="js/state.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/panels/panel-generate.js"></script>
+    <script src="js/panels/panel-segments.js"></script>
+    <script src="js/panels/panel-analytics.js"></script>
+    <script src="js/panels/panel-history.js"></script>
+
+    <script>
+        // Initialize Editor
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+        const mode = urlParams.get('mode');
+
+        // Wait for Fabric.js to load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Editor page loaded');
+            console.log('Fabric.js loaded:', typeof fabric !== 'undefined');
+
+            if (typeof EditorPage !== 'undefined') {
+                EditorPage.init(projectId);
+            } else {
+                console.error('EditorPage not found');
+            }
+        });
+    </script>
 </body>
 </html>

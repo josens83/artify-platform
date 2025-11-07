@@ -4,72 +4,11 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+const { initDatabase, db } = require('./database');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-// 간단한 in-memory 데이터베이스
-const db = {
-  users: new Map(),
-  projects: new Map(),
-  userIdCounter: 1,
-  projectIdCounter: 1,
-  
-  createUser(username, email, password) {
-    const id = this.userIdCounter++;
-    const user = { id, username, email, password, createdAt: new Date() };
-    this.users.set(id, user);
-    this.users.set('email:' + email, user);
-    this.users.set('username:' + username, user);
-    return user;
-  },
-  
-  getUserByEmail(email) {
-    return this.users.get('email:' + email);
-  },
-  
-  getUserByUsername(username) {
-    return this.users.get('username:' + username);
-  },
-  
-  getUserById(id) {
-    return this.users.get(id);
-  },
-  
-  createProject(userId, name, data) {
-    const id = this.projectIdCounter++;
-    const project = {
-      id, userId, name,
-      data: typeof data === 'string' ? data : JSON.stringify(data),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.projects.set(id, project);
-    return project;
-  },
-  
-  getProjectsByUserId(userId) {
-    return Array.from(this.projects.values()).filter(p => p.userId === userId);
-  },
-  
-  getProjectById(id) {
-    return this.projects.get(id);
-  },
-  
-  updateProject(id, data) {
-    const project = this.projects.get(id);
-    if (project) {
-      project.data = typeof data === 'string' ? data : JSON.stringify(data);
-      project.updatedAt = new Date();
-      this.projects.set(id, project);
-    }
-    return project;
-  },
-  
-  deleteProject(id) {
-    return this.projects.delete(id);
-  }
-};
 
 // CORS Middleware - 모든 Vercel 도메인 허용
 const corsOptions = {
@@ -123,26 +62,40 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'artify-backend',
-    version: '1.1.0',
-    timestamp: new Date().toISOString(),
-    cors: {
-      enabled: true,
-      allowedOrigins: [
-        'https://artify-ruddy.vercel.app',
-        '*.vercel.app',
-        'localhost'
-      ]
-    },
-    database: {
-      type: 'in-memory',
-      users: db.users.size / 3, // 각 유저는 3개 키로 저장됨
-      projects: db.projects.size
-    }
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    const stats = await db.getStats();
+    res.json({
+      status: 'healthy',
+      service: 'artify-backend',
+      version: '2.0.0',
+      timestamp: new Date().toISOString(),
+      cors: {
+        enabled: true,
+        allowedOrigins: [
+          'https://artify-ruddy.vercel.app',
+          '*.vercel.app',
+          'localhost'
+        ]
+      },
+      database: {
+        type: 'PostgreSQL',
+        connected: true,
+        users: stats.users,
+        projects: stats.projects
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      service: 'artify-backend',
+      database: {
+        type: 'PostgreSQL',
+        connected: false,
+        error: error.message
+      }
+    });
+  }
 });
 
 // Auth routes
@@ -152,17 +105,29 @@ app.post('/api/register', async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
-    if (db.getUserByEmail(email)) {
+
+    // Check if user already exists
+    const existingEmail = await db.getUserByEmail(email);
+    if (existingEmail) {
       return res.status(400).json({ error: 'Email already exists' });
     }
-    if (db.getUserByUsername(username)) {
+
+    const existingUsername = await db.getUserByUsername(username);
+    if (existingUsername) {
       return res.status(400).json({ error: 'Username already exists' });
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = db.createUser(username, email, hashedPassword);
+    const user = await db.createUser(username, email, hashedPassword);
     const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ message: 'User registered successfully', token, user: { id: user.id, username: user.username, email: user.email }});
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: { id: user.id, username: user.username, email: user.email }
+    });
   } catch (error) {
+    console.error('Register error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -170,99 +135,190 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
-    const user = db.getUserByEmail(email);
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const user = await db.getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
     const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
     const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ message: 'Login successful', token, user: { id: user.id, username: user.username, email: user.email }});
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: { id: user.id, username: user.username, email: user.email }
+    });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Project routes
-app.get('/api/projects', authenticateToken, (req, res) => {
+app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
-    const projects = db.getProjectsByUserId(req.user.id);
-    const projectList = projects.map(p => ({ id: p.id, name: p.name, createdAt: p.createdAt, updatedAt: p.updatedAt }));
-    res.json({ projects: projectList });
+    const projects = await db.getProjectsByUserId(req.user.id);
+    res.json({ projects });
   } catch (error) {
+    console.error('Get projects error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.post('/api/projects', authenticateToken, (req, res) => {
+app.post('/api/projects', authenticateToken, async (req, res) => {
   try {
     const { name, data } = req.body;
-    if (!name) return res.status(400).json({ error: 'Project name is required' });
-    const project = db.createProject(req.user.id, name, data || {});
-    res.status(201).json({ message: 'Project created successfully', project: { id: project.id, name: project.name, createdAt: project.createdAt, updatedAt: project.updatedAt }});
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/api/projects/:id', authenticateToken, (req, res) => {
-  try {
-    const projectId = parseInt(req.params.id);
-    const project = db.getProjectById(projectId);
-    if (!project) return res.status(404).json({ error: 'Project not found' });
-    if (project.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
-    res.json({ id: project.id, name: project.name, data: project.data, createdAt: project.createdAt, updatedAt: project.updatedAt });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.put('/api/projects/:id', authenticateToken, (req, res) => {
-  try {
-    const projectId = parseInt(req.params.id);
-    const { name, data } = req.body;
-    const project = db.getProjectById(projectId);
-    if (!project) return res.status(404).json({ error: 'Project not found' });
-    if (project.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
-    if (name) project.name = name;
-    if (data) {
-      const updatedProject = db.updateProject(projectId, data);
-      project.data = updatedProject.data;
-      project.updatedAt = updatedProject.updatedAt;
+    if (!name) {
+      return res.status(400).json({ error: 'Project name is required' });
     }
-    res.json({ message: 'Project updated successfully', project: { id: project.id, name: project.name, updatedAt: project.updatedAt }});
+
+    const project = await db.createProject(req.user.id, name, data || {});
+
+    res.status(201).json({
+      message: 'Project created successfully',
+      project: {
+        id: project.id,
+        name: project.name,
+        created_at: project.created_at,
+        updated_at: project.updated_at
+      }
+    });
   } catch (error) {
+    console.error('Create project error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.delete('/api/projects/:id', authenticateToken, (req, res) => {
+app.get('/api/projects/:id', authenticateToken, async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
-    const project = db.getProjectById(projectId);
-    if (!project) return res.status(404).json({ error: 'Project not found' });
-    if (project.userId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
-    db.deleteProject(projectId);
+    const project = await db.getProjectById(projectId);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({
+      id: project.id,
+      name: project.name,
+      data: typeof project.data === 'string' ? JSON.parse(project.data) : project.data,
+      createdAt: project.created_at,
+      updatedAt: project.updated_at
+    });
+  } catch (error) {
+    console.error('Get project error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const { name, data } = req.body;
+
+    const project = await db.getProjectById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    let updatedProject;
+    if (name && data) {
+      updatedProject = await db.updateProject(projectId, data);
+      await db.updateProjectName(projectId, name);
+    } else if (name) {
+      updatedProject = await db.updateProjectName(projectId, name);
+    } else if (data) {
+      updatedProject = await db.updateProject(projectId, data);
+    }
+
+    res.json({
+      message: 'Project updated successfully',
+      project: {
+        id: updatedProject.id,
+        name: updatedProject.name,
+        updatedAt: updatedProject.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Update project error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+
+    const project = await db.getProjectById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await db.deleteProject(projectId);
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
+    console.error('Delete project error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.listen(PORT, () => {
-  console.log('='.repeat(50));
-  console.log('🚀 Artify Backend Server Started');
-  console.log('='.repeat(50));
-  console.log('Port:', PORT);
-  console.log('Environment:', process.env.NODE_ENV || 'development');
-  console.log('JWT Secret:', JWT_SECRET ? 'Configured ✓' : 'Using default (not secure!)');
-  console.log('');
-  console.log('CORS Configuration:');
-  console.log('- Allowed Origins:');
-  console.log('  • https://artify-ruddy.vercel.app');
-  console.log('  • *.vercel.app (all Vercel deployments)');
-  console.log('  • localhost (development)');
-  console.log('');
-  console.log('In-memory database initialized');
-  console.log('Ready to accept connections!');
-  console.log('='.repeat(50));
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Check if DATABASE_URL is set
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ DATABASE_URL is not set in environment variables');
+      console.error('Please set DATABASE_URL in .env file');
+      console.error('Example: DATABASE_URL=postgresql://username:password@localhost:5432/artify_db');
+      process.exit(1);
+    }
+
+    // Initialize database tables
+    await initDatabase();
+
+    // Start Express server
+    app.listen(PORT, () => {
+      console.log('='.repeat(50));
+      console.log('🚀 Artify Backend Server Started');
+      console.log('='.repeat(50));
+      console.log('Port:', PORT);
+      console.log('Environment:', process.env.NODE_ENV || 'development');
+      console.log('JWT Secret:', JWT_SECRET !== 'your-secret-key' ? 'Configured ✓' : 'Using default (not secure!)');
+      console.log('');
+      console.log('CORS Configuration:');
+      console.log('- Allowed Origins:');
+      console.log('  • https://artify-ruddy.vercel.app');
+      console.log('  • *.vercel.app (all Vercel deployments)');
+      console.log('  • localhost (development)');
+      console.log('');
+      console.log('Database: PostgreSQL ✓');
+      console.log('Ready to accept connections!');
+      console.log('='.repeat(50));
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

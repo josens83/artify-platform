@@ -415,7 +415,46 @@ const EditorPage = {
     },
 
     uploadImage() {
-        UI.toast('이미지 업로드 기능은 준비 중입니다', 'info');
+        if (!this.canvas) return;
+
+        // Create file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                fabric.Image.fromURL(event.target.result, (img) => {
+                    // Scale image to fit canvas
+                    const maxWidth = this.canvas.width * 0.5;
+                    const maxHeight = this.canvas.height * 0.5;
+
+                    if (img.width > maxWidth || img.height > maxHeight) {
+                        const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+                        img.scale(scale);
+                    }
+
+                    img.set({
+                        left: 100,
+                        top: 100
+                    });
+
+                    this.canvas.add(img);
+                    this.canvas.setActiveObject(img);
+                    this.canvas.renderAll();
+                    this.saveToHistory();
+                    UI.toast('이미지가 추가되었습니다', 'success');
+                });
+            };
+
+            reader.readAsDataURL(file);
+        };
+
+        input.click();
     },
 
     applyTemplate(type) {
