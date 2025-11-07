@@ -33,7 +33,7 @@ class EventTrackRequest(BaseModel):
     landing_url: Optional[str] = None
     channel: Optional[str] = None
     segment_id: Optional[int] = None
-    metadata: Optional[dict] = None
+    meta_data: Optional[dict] = None
 
 
 class CampaignAnalytics(BaseModel):
@@ -95,7 +95,7 @@ async def track_event(
             landing_url=event.landing_url,
             channel=event.channel,
             segment_id=event.segment_id,
-            metadata=event.metadata
+            meta_data=event.meta_data
         )
 
         db.add(new_event)

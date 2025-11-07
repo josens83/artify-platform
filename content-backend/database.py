@@ -144,7 +144,7 @@ class Campaign(Base):
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
     budget = Column(Float, nullable=True)  # Campaign budget
-    metadata = Column(JSON, nullable=True)  # Additional campaign settings
+    meta_data = Column(JSON, nullable=True)  # Additional campaign settings
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -170,7 +170,7 @@ class Creative(Base):
     variant = Column(String(50), nullable=True)  # A/B test variant (e.g., 'A', 'B')
     status = Column(String(50), default='draft')  # 'draft', 'approved', 'rejected'
     performance_score = Column(Float, nullable=True)  # Calculated performance metric
-    metadata = Column(JSON, nullable=True)  # Additional creative metadata
+    meta_data = Column(JSON, nullable=True)  # Additional creative metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -195,7 +195,7 @@ class Event(Base):
     landing_url = Column(Text, nullable=True)
     channel = Column(String(50), nullable=True)  # Track channel at event level
     segment_id = Column(Integer, nullable=True, index=True)  # User segment
-    metadata = Column(JSON, nullable=True)  # Additional event data
+    meta_data = Column(JSON, nullable=True)  # Additional event data
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     # Relationships

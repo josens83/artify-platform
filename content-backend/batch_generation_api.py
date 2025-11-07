@@ -202,7 +202,7 @@ async def process_batch_job(job_id: int, db_session_factory):
                     thumbnail_url=thumbnail_url,
                     prompt=prompt,
                     status='draft',
-                    metadata={
+                    meta_data={
                         "batch_job_id": job_id,
                         "segment_id": job.segment_id,
                         "template_id": job.creative_template_id,

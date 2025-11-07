@@ -32,7 +32,7 @@ class CampaignCreate(BaseModel):
     budget: Optional[float] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    metadata: Optional[dict] = None
+    meta_data: Optional[dict] = None
 
 
 class CampaignUpdate(BaseModel):
@@ -44,7 +44,7 @@ class CampaignUpdate(BaseModel):
     budget: Optional[float] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    metadata: Optional[dict] = None
+    meta_data: Optional[dict] = None
 
 
 class CampaignResponse(BaseModel):
@@ -60,7 +60,7 @@ class CampaignResponse(BaseModel):
     start_date: Optional[datetime]
     end_date: Optional[datetime]
     budget: Optional[float]
-    metadata: Optional[dict]
+    meta_data: Optional[dict]
     created_at: datetime
     updated_at: datetime
 
@@ -79,7 +79,7 @@ class CreativeCreate(BaseModel):
     model: Optional[str] = None
     size: Optional[str] = None
     variant: Optional[str] = None
-    metadata: Optional[dict] = None
+    meta_data: Optional[dict] = None
 
 
 class CreativeResponse(BaseModel):
@@ -97,7 +97,7 @@ class CreativeResponse(BaseModel):
     variant: Optional[str]
     status: str
     performance_score: Optional[float]
-    metadata: Optional[dict]
+    meta_data: Optional[dict]
     created_at: datetime
     updated_at: datetime
 
@@ -116,7 +116,7 @@ class EventTrackRequest(BaseModel):
     landing_url: Optional[str] = None
     channel: Optional[str] = None
     segment_id: Optional[int] = None
-    metadata: Optional[dict] = None
+    meta_data: Optional[dict] = None
 
 
 # ==========================================
@@ -148,7 +148,7 @@ async def create_campaign(
             budget=campaign.budget,
             start_date=campaign.start_date,
             end_date=campaign.end_date,
-            metadata=campaign.metadata,
+            meta_data=campaign.meta_data,
             status='draft'
         )
 
@@ -313,7 +313,7 @@ async def create_creative(
             model=creative.model,
             size=creative.size or campaign.size,
             variant=creative.variant,
-            metadata=creative.metadata,
+            meta_data=creative.meta_data,
             status='draft'
         )
 
