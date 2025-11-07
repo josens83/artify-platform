@@ -6,6 +6,10 @@ const EditorPage = {
     historyStack: [],
     historyStep: -1,
     isLoadingState: false,
+    autoSaveTimer: null,
+    autoSaveInterval: 5000, // 5 seconds
+    hasUnsavedChanges: false,
+    lastSavedState: null,
 
     async init(projectId) {
         console.log('Initializing editor with project:', projectId);
@@ -28,6 +32,9 @@ const EditorPage = {
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode') || 'design';
         this.openPanel(mode);
+
+        // Start auto-save
+        this.startAutoSave();
     },
 
     render() {
@@ -157,6 +164,7 @@ const EditorPage = {
         // Back button
         document.getElementById('btn-back')?.addEventListener('click', () => {
             if (confirm('저장하지 않은 변경사항이 있을 수 있습니다. 나가시겠습니까?')) {
+                this.stopAutoSave();
                 router.navigate('/');
             }
         });
@@ -164,6 +172,10 @@ const EditorPage = {
         // Project title auto-save
         const titleInput = document.getElementById('project-title');
         if (titleInput) {
+            titleInput.addEventListener('input', () => {
+                this.markAsChanged();
+            });
+
             titleInput.addEventListener('blur', () => {
                 this.updateProjectTitle(titleInput.value);
             });
@@ -187,20 +199,23 @@ const EditorPage = {
             backgroundColor: '#ffffff'
         });
 
-        // Canvas event listeners for history
+        // Canvas event listeners for history and auto-save
         this.canvas.on('object:modified', () => {
             this.saveToHistory();
+            this.markAsChanged();
         });
 
         this.canvas.on('object:added', () => {
             if (!this.isLoadingState) {
                 this.saveToHistory();
+                this.markAsChanged();
             }
         });
 
         this.canvas.on('object:removed', () => {
             if (!this.isLoadingState) {
                 this.saveToHistory();
+                this.markAsChanged();
             }
         });
 
@@ -970,6 +985,7 @@ const EditorPage = {
         if (!this.project) return;
 
         UI.showLoading('저장 중...');
+        this.updateSaveIndicator('saving');
 
         try {
             const projectData = {
@@ -990,9 +1006,16 @@ const EditorPage = {
 
             this.project = result;
             state.set('currentProject', result);
+
+            // Update auto-save state
+            this.lastSavedState = JSON.stringify(this.canvas.toJSON());
+            this.hasUnsavedChanges = false;
+            this.updateSaveIndicator('saved');
+
             UI.toast('저장되었습니다', 'success');
         } catch (error) {
             console.error('Failed to save project:', error);
+            this.updateSaveIndicator('unsaved');
             UI.toast('저장 실패', 'error');
         } finally {
             UI.hideLoading();
@@ -1008,17 +1031,150 @@ const EditorPage = {
     exportProject() {
         if (!this.canvas) return;
 
+        // Show export format modal
+        const modalHTML = `
+            <div style="margin-bottom: 20px;">
+                <p style="margin-bottom: 16px; color: #6b7280;">내보내기 형식을 선택하세요:</p>
+                <div style="display: grid; gap: 12px;">
+                    <button class="btn btn-primary" onclick="EditorPage.exportAs('png')" style="width: 100%; padding: 12px;">
+                        🖼️ PNG 이미지
+                    </button>
+                    <button class="btn btn-primary" onclick="EditorPage.exportAs('jpg')" style="width: 100%; padding: 12px;">
+                        📷 JPG 이미지
+                    </button>
+                    <button class="btn btn-primary" onclick="EditorPage.exportAs('pdf')" style="width: 100%; padding: 12px;">
+                        📄 PDF 문서
+                    </button>
+                    <button class="btn btn-primary" onclick="EditorPage.exportAs('json')" style="width: 100%; padding: 12px;">
+                        💾 JSON 데이터
+                    </button>
+                </div>
+            </div>
+        `;
+
+        UI.modal('프로젝트 내보내기', modalHTML, [
+            { label: '취소', action: 'cancel' }
+        ]);
+    },
+
+    exportAs(format) {
+        if (!this.canvas) return;
+
+        const projectName = this.project?.name || 'export';
+        UI.hideModal();
+        UI.showLoading('내보내는 중...');
+
+        try {
+            switch(format) {
+                case 'png':
+                    this.exportAsPNG(projectName);
+                    break;
+                case 'jpg':
+                    this.exportAsJPG(projectName);
+                    break;
+                case 'pdf':
+                    this.exportAsPDF(projectName);
+                    break;
+                case 'json':
+                    this.exportAsJSON(projectName);
+                    break;
+            }
+
+            UI.toast(`${format.toUpperCase()} 내보내기 완료`, 'success');
+        } catch (error) {
+            console.error('Export failed:', error);
+            UI.toast('내보내기 실패', 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    exportAsPNG(projectName) {
         const dataURL = this.canvas.toDataURL({
             format: 'png',
-            quality: 1
+            quality: 1,
+            multiplier: 2 // Higher resolution
         });
 
         const link = document.createElement('a');
-        link.download = `${this.project?.name || 'export'}.png`;
+        link.download = `${projectName}.png`;
         link.href = dataURL;
         link.click();
+    },
 
-        UI.toast('내보내기 완료', 'success');
+    exportAsJPG(projectName) {
+        const dataURL = this.canvas.toDataURL({
+            format: 'jpeg',
+            quality: 0.9,
+            multiplier: 2
+        });
+
+        const link = document.createElement('a');
+        link.download = `${projectName}.jpg`;
+        link.href = dataURL;
+        link.click();
+    },
+
+    exportAsPDF(projectName) {
+        // Access jsPDF from window
+        const { jsPDF } = window.jspdf;
+
+        if (!jsPDF) {
+            throw new Error('jsPDF library not loaded');
+        }
+
+        const canvasWidth = this.canvas.width;
+        const canvasHeight = this.canvas.height;
+
+        // Calculate PDF dimensions (A4 or custom based on canvas aspect ratio)
+        const aspectRatio = canvasWidth / canvasHeight;
+        let pdfWidth, pdfHeight;
+
+        if (aspectRatio > 1) {
+            // Landscape
+            pdfWidth = 297; // A4 landscape width in mm
+            pdfHeight = pdfWidth / aspectRatio;
+        } else {
+            // Portrait
+            pdfHeight = 297; // A4 height in mm
+            pdfWidth = pdfHeight * aspectRatio;
+        }
+
+        const pdf = new jsPDF({
+            orientation: aspectRatio > 1 ? 'landscape' : 'portrait',
+            unit: 'mm',
+            format: [pdfWidth, pdfHeight]
+        });
+
+        const imgData = this.canvas.toDataURL({
+            format: 'png',
+            quality: 1,
+            multiplier: 2
+        });
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${projectName}.pdf`);
+    },
+
+    exportAsJSON(projectName) {
+        const exportData = {
+            version: '1.0',
+            name: projectName,
+            canvas: this.canvas.toJSON(),
+            settings: this.project?.data?.settings || {},
+            exportedAt: new Date().toISOString()
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.download = `${projectName}.json`;
+        link.href = url;
+        link.click();
+
+        URL.revokeObjectURL(url);
     },
 
     // History Management
@@ -1295,6 +1451,108 @@ const EditorPage = {
             this.canvas.renderAll();
             this.saveToHistory();
             UI.toast('삭제되었습니다', 'success');
+        }
+    },
+
+    // Auto-save functionality
+    startAutoSave() {
+        console.log('Starting auto-save with interval:', this.autoSaveInterval);
+
+        // Clear any existing timer
+        if (this.autoSaveTimer) {
+            clearInterval(this.autoSaveTimer);
+        }
+
+        // Set up auto-save interval
+        this.autoSaveTimer = setInterval(() => {
+            this.performAutoSave();
+        }, this.autoSaveInterval);
+
+        // Save initial state
+        this.lastSavedState = this.canvas ? JSON.stringify(this.canvas.toJSON()) : null;
+    },
+
+    stopAutoSave() {
+        if (this.autoSaveTimer) {
+            clearInterval(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+            console.log('Auto-save stopped');
+        }
+    },
+
+    markAsChanged() {
+        this.hasUnsavedChanges = true;
+        this.updateSaveIndicator('unsaved');
+    },
+
+    updateSaveIndicator(status) {
+        const saveButton = document.querySelector('.editor-header-right .btn-secondary');
+        if (!saveButton) return;
+
+        switch(status) {
+            case 'saving':
+                saveButton.innerHTML = '💾 저장 중...';
+                saveButton.disabled = true;
+                break;
+            case 'saved':
+                saveButton.innerHTML = '💾 저장됨';
+                saveButton.disabled = false;
+                setTimeout(() => {
+                    saveButton.innerHTML = '💾 저장';
+                }, 2000);
+                break;
+            case 'unsaved':
+                saveButton.innerHTML = '💾 저장 *';
+                saveButton.disabled = false;
+                break;
+            default:
+                saveButton.innerHTML = '💾 저장';
+                saveButton.disabled = false;
+        }
+    },
+
+    async performAutoSave() {
+        // Only auto-save if there are unsaved changes
+        if (!this.hasUnsavedChanges || !this.canvas || !this.project) {
+            return;
+        }
+
+        // Check if canvas state has actually changed
+        const currentState = JSON.stringify(this.canvas.toJSON());
+        if (currentState === this.lastSavedState) {
+            this.hasUnsavedChanges = false;
+            return;
+        }
+
+        console.log('Auto-saving project...');
+        this.updateSaveIndicator('saving');
+
+        try {
+            const projectData = {
+                name: document.getElementById('project-title')?.value || this.project.name,
+                data: {
+                    canvas: this.canvas.toJSON(),
+                    settings: this.project.data?.settings || {}
+                }
+            };
+
+            let result;
+            if (this.project.id) {
+                result = await api.updateProject(this.project.id, projectData);
+            } else {
+                result = await api.createProject(projectData);
+                this.project.id = result.id;
+            }
+
+            this.project = result;
+            this.lastSavedState = currentState;
+            this.hasUnsavedChanges = false;
+            this.updateSaveIndicator('saved');
+            console.log('Auto-save completed');
+        } catch (error) {
+            console.error('Auto-save failed:', error);
+            // Don't show toast for auto-save failures to avoid interrupting user
+            this.updateSaveIndicator('unsaved');
         }
     },
 
