@@ -20,6 +20,7 @@ from slowapi.errors import RateLimitExceeded
 
 from database import get_db, init_db, Segment, GeneratedContent, Metric, GenerationJob, UserQuota
 from vector_client import get_vector_client
+from cache import get_cache, TTL_SEGMENTS, TTL_BRAND_GUIDELINES, TTL_VECTOR_STATS, make_cache_key
 
 load_dotenv()
 
@@ -246,7 +247,8 @@ async def root():
             "Brand Guidelines RAG (Retrieval Augmented Generation)",
             "High-Performance Content Recommendations",
             "Prompt Caching System (95% similarity threshold)",
-            "Cost Savings Analytics Dashboard"
+            "Cost Savings Analytics Dashboard",
+            "Redis Cache Layer (Segments, Brand Guidelines, Vector Stats)"
         ],
         "endpoints": {
             "generation": [
@@ -680,8 +682,33 @@ async def generate_image(
 
 @app.get("/segments", response_model=List[SegmentResponse])
 async def get_segments(db: Session = Depends(get_db)):
-    """Get all segments"""
+    """Get all segments with Redis caching"""
+    cache = get_cache()
+    cache_key = "segments:all"
+
+    # 캐시 확인
+    cached = cache.get(cache_key)
+    if cached:
+        logger.info("Cache HIT: segments")
+        return cached
+
+    # DB 조회
     segments = db.query(Segment).all()
+
+    # 캐시 저장 (1시간)
+    segments_dict = [
+        {
+            "id": s.id,
+            "name": s.name,
+            "description": s.description,
+            "criteria": s.criteria,
+            "created_at": s.created_at.isoformat(),
+            "updated_at": s.updated_at.isoformat()
+        }
+        for s in segments
+    ]
+    cache.set(cache_key, segments_dict, TTL_SEGMENTS)
+
     return segments
 
 
@@ -700,6 +727,12 @@ async def create_segment(
         db.add(new_segment)
         db.commit()
         db.refresh(new_segment)
+
+        # 캐시 무효화
+        cache = get_cache()
+        cache.delete("segments:all")
+        logger.info("Cache invalidated: segments:all")
+
         return new_segment
 
     except Exception as e:
@@ -725,6 +758,12 @@ async def delete_segment(segment_id: int, db: Session = Depends(get_db)):
 
     db.delete(segment)
     db.commit()
+
+    # 캐시 무효화
+    cache = get_cache()
+    cache.delete("segments:all")
+    logger.info("Cache invalidated: segments:all")
+
     return {"success": True, "message": "Segment deleted successfully"}
 
 
@@ -734,14 +773,29 @@ async def delete_segment(segment_id: int, db: Session = Depends(get_db)):
 
 @app.get("/vector/stats")
 async def get_vector_stats():
-    """Get Vector DB statistics"""
+    """Get Vector DB statistics with caching"""
+    cache = get_cache()
+    cache_key = "vector:stats"
+
+    # 캐시 확인 (5분)
+    cached = cache.get(cache_key)
+    if cached:
+        logger.info("Cache HIT: vector stats")
+        return cached
+
     try:
         vector_client = get_vector_client()
         stats = vector_client.get_collection_stats()
-        return {
+
+        response = {
             "success": True,
             "stats": stats
         }
+
+        # 캐시 저장 (5분)
+        cache.set(cache_key, response, TTL_VECTOR_STATS)
+
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -974,6 +1028,11 @@ async def add_brand_guideline(
             metadata=request.metadata
         )
 
+        # 캐시 무효화 (해당 브랜드의 모든 가이드라인 캐시)
+        cache = get_cache()
+        cache.delete_pattern(f"brand:{brand_id}:guidelines:*")
+        logger.info(f"Cache invalidated: brand:{brand_id}:guidelines:*")
+
         return {
             "success": True,
             "brand_id": brand_id,
@@ -992,7 +1051,7 @@ async def get_brand_guidelines(
     category: Optional[str] = None
 ):
     """
-    Get brand guidelines for a brand
+    Get brand guidelines for a brand with caching
 
     Path Parameters:
     - brand_id: Brand identifier
@@ -1000,6 +1059,15 @@ async def get_brand_guidelines(
     Query Parameters:
     - category: Filter by category (optional)
     """
+    cache = get_cache()
+    cache_key = make_cache_key("brand", brand_id, "guidelines", category or "all")
+
+    # 캐시 확인 (1시간)
+    cached = cache.get(cache_key)
+    if cached:
+        logger.info(f"Cache HIT: brand guidelines {brand_id}")
+        return cached
+
     try:
         vector_client = get_vector_client()
 
@@ -1010,13 +1078,18 @@ async def get_brand_guidelines(
             n_results=50  # Get all guidelines
         )
 
-        return {
+        response = {
             "success": True,
             "brand_id": brand_id,
             "category": category,
             "count": len(results),
             "guidelines": results
         }
+
+        # 캐시 저장 (1시간)
+        cache.set(cache_key, response, TTL_BRAND_GUIDELINES)
+
+        return response
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1496,6 +1569,28 @@ async def get_cost_history(
             }
             for job in jobs
         ]
+    }
+
+
+@app.get("/cache/stats")
+async def get_cache_stats():
+    """Get Redis cache statistics"""
+    cache = get_cache()
+    stats = cache.get_stats()
+    return {
+        "success": True,
+        "cache": stats
+    }
+
+
+@app.post("/cache/flush")
+async def flush_cache():
+    """Flush all Redis cache (admin only - use with caution)"""
+    cache = get_cache()
+    result = cache.flush_all()
+    return {
+        "success": result,
+        "message": "All cache flushed" if result else "Cache flush failed"
     }
 
 
