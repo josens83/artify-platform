@@ -2,19 +2,23 @@
 Artify Content Backend - FastAPI
 Provides AI generation, segments management, and analytics
 """
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional, List
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-from database import get_db, init_db, Segment, GeneratedContent, Metric, GenerationJob
+from database import get_db, init_db, Segment, GeneratedContent, Metric, GenerationJob, UserQuota
 
 load_dotenv()
 
@@ -24,6 +28,11 @@ app = FastAPI(
     description="AI-powered content generation and analytics",
     version="2.0.0"
 )
+
+# Rate Limiter Configuration
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Configuration
 app.add_middleware(
@@ -90,11 +99,77 @@ def calculate_image_cost(model: str, size: str) -> float:
 
 
 # ==========================================
+# Quota Management Functions
+# ==========================================
+
+async def get_or_create_quota(user_id: int, db: Session) -> UserQuota:
+    """Get or create user quota"""
+    quota = db.query(UserQuota).filter_by(user_id=user_id).first()
+    if not quota:
+        quota = UserQuota(user_id=user_id)
+        db.add(quota)
+        db.commit()
+        db.refresh(quota)
+    return quota
+
+
+async def check_quota(user_id: int, job_type: str, db: Session, estimated_cost: float = 0.0):
+    """Check and update user quota before generation"""
+    quota = await get_or_create_quota(user_id, db)
+
+    # Daily reset check
+    if (datetime.utcnow() - quota.last_daily_reset).days >= 1:
+        quota.daily_text_used = 0
+        quota.daily_image_used = 0
+        quota.last_daily_reset = datetime.utcnow()
+
+    # Monthly reset check
+    if (datetime.utcnow() - quota.last_monthly_reset).days >= 30:
+        quota.monthly_cost_used = 0.0
+        quota.last_monthly_reset = datetime.utcnow()
+
+    # Check daily quota limits
+    if job_type == "text":
+        if quota.daily_text_used >= quota.daily_text_quota:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily text generation quota exceeded. Limit: {quota.daily_text_quota}"
+            )
+        quota.daily_text_used += 1
+
+    if job_type == "image":
+        if quota.daily_image_used >= quota.daily_image_quota:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily image generation quota exceeded. Limit: {quota.daily_image_quota}"
+            )
+        quota.daily_image_used += 1
+
+    # Check monthly cost cap
+    if quota.monthly_cost_used >= quota.monthly_cost_cap:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Monthly cost cap exceeded. Cap: ${quota.monthly_cost_cap}"
+        )
+
+    db.commit()
+    return quota
+
+
+async def update_quota_cost(user_id: int, cost: float, db: Session):
+    """Update user quota with actual generation cost"""
+    quota = await get_or_create_quota(user_id, db)
+    quota.monthly_cost_used += cost
+    db.commit()
+
+
+# ==========================================
 # Pydantic Models (Request/Response)
 # ==========================================
 
 class TextGenerationRequest(BaseModel):
     prompt: str
+    user_id: int = 1  # Default to user 1 for now (should come from auth)
     segment_id: Optional[int] = None
     tone: Optional[str] = "전문적"
     keywords: Optional[List[str]] = []
@@ -104,6 +179,7 @@ class TextGenerationRequest(BaseModel):
 
 class ImageGenerationRequest(BaseModel):
     prompt: str
+    user_id: int = 1  # Default to user 1 for now (should come from auth)
     size: Optional[str] = "1024x1024"
     quality: Optional[str] = "standard"
 
@@ -140,13 +216,37 @@ async def root():
         "message": "Artify Content API",
         "version": "2.0.0",
         "status": "running",
-        "endpoints": [
-            "/health",
-            "/generate/text",
-            "/generate/image",
-            "/segments",
-            "/metrics/simulate"
-        ]
+        "features": [
+            "AI Text Generation (GPT-3.5-turbo)",
+            "AI Image Generation (DALL-E 3)",
+            "Rate Limiting (10/min text, 5/min images)",
+            "User Quotas (Daily & Monthly)",
+            "Cost Tracking & Dashboard"
+        ],
+        "endpoints": {
+            "generation": [
+                "/generate/text",
+                "/generate/image"
+            ],
+            "segments": [
+                "/segments",
+                "/segments/{id}"
+            ],
+            "analytics": [
+                "/metrics/simulate",
+                "/metrics/history/{project_id}"
+            ],
+            "cost_management": [
+                "/users/{user_id}/quota",
+                "/users/{user_id}/costs/daily",
+                "/users/{user_id}/costs/monthly",
+                "/costs/summary",
+                "/costs/history"
+            ],
+            "health": [
+                "/health"
+            ]
+        }
     }
 
 
@@ -166,7 +266,9 @@ async def health_check():
 # ==========================================
 
 @app.post("/generate/text")
+@limiter.limit("10/minute")
 async def generate_text(
+    req: Request,
     request: TextGenerationRequest,
     db: Session = Depends(get_db)
 ):
@@ -179,7 +281,11 @@ async def generate_text(
             detail="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
         )
 
+    # Check user quota before generation
+    await check_quota(request.user_id, "text", db)
+
     job = GenerationJob(
+        user_id=request.user_id,
         job_type="text",
         model="gpt-3.5-turbo",
         prompt=request.prompt,
@@ -235,6 +341,9 @@ async def generate_text(
         job.completed_at = datetime.utcnow()
         db.commit()
 
+        # Update user quota with actual cost
+        await update_quota_cost(request.user_id, estimated_cost, db)
+
         # Save to database
         content_record = GeneratedContent(
             content_type="text",
@@ -269,7 +378,9 @@ async def generate_text(
 
 
 @app.post("/generate/image")
+@limiter.limit("5/minute")
 async def generate_image(
+    req: Request,
     request: ImageGenerationRequest,
     db: Session = Depends(get_db)
 ):
@@ -285,7 +396,11 @@ async def generate_image(
     # Calculate cost upfront for images
     estimated_cost = calculate_image_cost("dall-e-3", request.size)
 
+    # Check user quota before generation
+    await check_quota(request.user_id, "image", db, estimated_cost)
+
     job = GenerationJob(
+        user_id=request.user_id,
         job_type="image",
         model="dall-e-3",
         prompt=request.prompt,
@@ -311,6 +426,9 @@ async def generate_image(
         job.status = "completed"
         job.completed_at = datetime.utcnow()
         db.commit()
+
+        # Update user quota with actual cost
+        await update_quota_cost(request.user_id, estimated_cost, db)
 
         # Save to database
         content_record = GeneratedContent(
@@ -489,6 +607,134 @@ async def startup_event():
 # ==========================================
 # Cost Tracking & Statistics Endpoints
 # ==========================================
+
+@app.get("/users/{user_id}/quota")
+async def get_user_quota(user_id: int, db: Session = Depends(get_db)):
+    """Get user quota information"""
+    quota = await get_or_create_quota(user_id, db)
+
+    return {
+        "user_id": user_id,
+        "daily_limits": {
+            "text_quota": quota.daily_text_quota,
+            "text_used": quota.daily_text_used,
+            "text_remaining": quota.daily_text_quota - quota.daily_text_used,
+            "image_quota": quota.daily_image_quota,
+            "image_used": quota.daily_image_used,
+            "image_remaining": quota.daily_image_quota - quota.daily_image_used,
+            "last_reset": quota.last_daily_reset.isoformat()
+        },
+        "monthly_limits": {
+            "cost_cap_usd": quota.monthly_cost_cap,
+            "cost_used_usd": round(quota.monthly_cost_used, 4),
+            "cost_remaining_usd": round(quota.monthly_cost_cap - quota.monthly_cost_used, 4),
+            "usage_percentage": round((quota.monthly_cost_used / quota.monthly_cost_cap) * 100, 2),
+            "last_reset": quota.last_monthly_reset.isoformat()
+        }
+    }
+
+
+@app.get("/users/{user_id}/costs/daily")
+async def get_daily_costs(user_id: int, db: Session = Depends(get_db)):
+    """Get daily cost breakdown for a user"""
+    # Get today's date range
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Query jobs from today
+    jobs = db.query(GenerationJob).filter(
+        GenerationJob.user_id == user_id,
+        GenerationJob.created_at >= today_start,
+        GenerationJob.status == "completed"
+    ).all()
+
+    text_jobs = [j for j in jobs if j.job_type == "text"]
+    image_jobs = [j for j in jobs if j.job_type == "image"]
+
+    total_cost = sum(j.estimated_cost or 0 for j in jobs)
+    text_cost = sum(j.estimated_cost or 0 for j in text_jobs)
+    image_cost = sum(j.estimated_cost or 0 for j in image_jobs)
+    total_tokens = sum(j.total_tokens or 0 for j in text_jobs)
+
+    return {
+        "user_id": user_id,
+        "date": today_start.date().isoformat(),
+        "total_cost_usd": round(total_cost, 4),
+        "total_jobs": len(jobs),
+        "breakdown": {
+            "text": {
+                "jobs": len(text_jobs),
+                "cost_usd": round(text_cost, 4),
+                "total_tokens": total_tokens
+            },
+            "image": {
+                "jobs": len(image_jobs),
+                "cost_usd": round(image_cost, 4)
+            }
+        }
+    }
+
+
+@app.get("/users/{user_id}/costs/monthly")
+async def get_monthly_costs(user_id: int, db: Session = Depends(get_db)):
+    """Get monthly cost breakdown for a user"""
+    # Get this month's date range
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Query jobs from this month
+    jobs = db.query(GenerationJob).filter(
+        GenerationJob.user_id == user_id,
+        GenerationJob.created_at >= month_start,
+        GenerationJob.status == "completed"
+    ).all()
+
+    # Group by day
+    daily_costs = {}
+    for job in jobs:
+        day = job.created_at.date().isoformat()
+        if day not in daily_costs:
+            daily_costs[day] = {"cost": 0, "jobs": 0}
+        daily_costs[day]["cost"] += job.estimated_cost or 0
+        daily_costs[day]["jobs"] += 1
+
+    text_jobs = [j for j in jobs if j.job_type == "text"]
+    image_jobs = [j for j in jobs if j.job_type == "image"]
+
+    total_cost = sum(j.estimated_cost or 0 for j in jobs)
+    text_cost = sum(j.estimated_cost or 0 for j in text_jobs)
+    image_cost = sum(j.estimated_cost or 0 for j in image_jobs)
+    total_tokens = sum(j.total_tokens or 0 for j in text_jobs)
+
+    # Get quota for cost cap
+    quota = await get_or_create_quota(user_id, db)
+
+    return {
+        "user_id": user_id,
+        "month": month_start.strftime("%Y-%m"),
+        "total_cost_usd": round(total_cost, 4),
+        "cost_cap_usd": quota.monthly_cost_cap,
+        "remaining_budget_usd": round(quota.monthly_cost_cap - total_cost, 4),
+        "total_jobs": len(jobs),
+        "daily_breakdown": {
+            day: {
+                "cost_usd": round(data["cost"], 4),
+                "jobs": data["jobs"]
+            }
+            for day, data in sorted(daily_costs.items())
+        },
+        "type_breakdown": {
+            "text": {
+                "jobs": len(text_jobs),
+                "cost_usd": round(text_cost, 4),
+                "total_tokens": total_tokens
+            },
+            "image": {
+                "jobs": len(image_jobs),
+                "cost_usd": round(image_cost, 4)
+            }
+        }
+    }
+
 
 @app.get("/costs/summary")
 async def get_cost_summary(

@@ -76,6 +76,22 @@ class GenerationJob(Base):
     completed_at = Column(DateTime, nullable=True)
 
 
+class UserQuota(Base):
+    """User quota tracking for cost and usage limits"""
+    __tablename__ = "user_quotas"
+
+    user_id = Column(Integer, primary_key=True, index=True)
+    daily_text_quota = Column(Integer, default=100)
+    daily_image_quota = Column(Integer, default=20)
+    monthly_cost_cap = Column(Float, default=50.0)  # USD
+    daily_text_used = Column(Integer, default=0)
+    daily_image_used = Column(Integer, default=0)
+    monthly_cost_used = Column(Float, default=0.0)
+    last_daily_reset = Column(DateTime, default=datetime.utcnow)
+    last_monthly_reset = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Database dependency
 def get_db():
     """Get database session"""
