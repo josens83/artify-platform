@@ -1,4 +1,5 @@
 import streamlit as st
+import requests
 
 # 페이지 설정
 st.set_page_config(
@@ -7,6 +8,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# 세션 상태 초기화
+if 'segments' not in st.session_state:
+    st.session_state.segments = []
+if 'generated_content' not in st.session_state:
+    st.session_state.generated_content = []
 
 # 커스텀 CSS
 st.markdown("""
@@ -27,19 +34,16 @@ st.markdown("---")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.info("### 🎯 Segments")
-    st.write("타겟 세그먼트를 관리하고 분석합니다.")
-    st.write("기능 준비 중입니다.")
+    if st.button("🎯 세그먼트 관리", use_container_width=True, key="segments_btn"):
+        st.switch_page("pages/1_🎯_Segments.py")
 
 with col2:
-    st.success("### ✨ Generate")
-    st.write("AI 기반 콘텐츠를 생성합니다.")
-    st.write("기능 준비 중입니다.")
+    if st.button("✨ 콘텐츠 생성", use_container_width=True, key="generate_btn"):
+        st.switch_page("pages/2_✨_Generate.py")
 
 with col3:
-    st.warning("### 📊 Dashboard")
-    st.write("콘텐츠 성과를 분석합니다.")
-    st.write("기능 준비 중입니다.")
+    if st.button("📊 대시보드", use_container_width=True, key="dashboard_btn"):
+        st.switch_page("pages/3_📊_Dashboard.py")
 
 st.markdown("---")
 
@@ -48,6 +52,25 @@ with st.expander("ℹ️ System Information"):
     st.write("**Backend API:** http://localhost:8001/api")
     st.write("**Vector DB:** http://localhost:6333")
     st.write("**Version:** 1.0.0")
+
+# API 연결 상태 체크
+with st.expander("🔧 API 연결 상태"):
+    api_url = "https://artify-content-api.onrender.com"
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Backend API 체크"):
+            try:
+                response = requests.get(f"{api_url}/health", timeout=5)
+                if response.status_code == 200:
+                    st.success(f"✅ 연결 성공: {response.json()}")
+                else:
+                    st.error(f"❌ API 오류: {response.status_code}")
+            except Exception as e:
+                st.error(f"❌ 연결 실패: {e}")
+
+    with col2:
+        st.code(api_url)
 
 # 샘플 데이터 표시
 st.subheader("📊 샘플 데이터")
