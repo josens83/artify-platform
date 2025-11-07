@@ -37,28 +37,45 @@ Artify는 AI를 활용하여 마케팅 캠페인을 위한 비주얼 콘텐츠�
 ```
 artify-platform/
 ├── frontend/              # Vanilla JavaScript SPA
-│   ├── index.html
-│   ├── editor.html
-│   ├── css/
+│   ├── index.html         # 메인 페이지
+│   ├── editor.html        # 에디터 페이지
+│   ├── css/               # 스타일시트
 │   └── js/
-│       ├── state.js      # 상태 관리
-│       ├── api.js        # API 클라이언트
-│       ├── router.js     # 라우팅
-│       ├── home.js       # 홈 페이지
-│       ├── editor.js     # 에디터 (1500+ lines)
-│       └── panels/       # 패널 컴포넌트
+│       ├── state.js       # 상태 관리 (LocalStorage 동기화)
+│       ├── api.js         # API 클라이언트
+│       ├── router.js      # Hash 기반 라우팅
+│       ├── ui-kit.js      # UI 컴포넌트
+│       ├── home.js        # 홈 페이지 로직
+│       ├── editor.js      # 에디터 핵심 로직 (1500+ lines)
+│       └── panels/        # 패널 컴포넌트
+│           ├── panel-generate.js    # AI 생성 패널
+│           ├── panel-segments.js    # 세그먼트 관리
+│           ├── panel-analytics.js   # 분석 대시보드
+│           └── panel-history.js     # 히스토리 패널
 │
 ├── backend/               # Node.js Express + PostgreSQL
-│   ├── server.js         # Express 서버
-│   ├── database.js       # PostgreSQL ORM
-│   └── package.json
+│   ├── server.js          # Express 서버 (JWT, Rate Limiting, Swagger)
+│   ├── database.js        # PostgreSQL 연결 및 ORM
+│   ├── package.json       # 의존성 관리
+│   └── README.md          # Backend API 문서
 │
-├── content-backend/       # FastAPI + PostgreSQL
-│   ├── main.py           # FastAPI 앱
-│   ├── database.py       # SQLAlchemy 모델
-│   └── requirements.txt
+├── content-backend/       # FastAPI + Supabase + OpenAI
+│   ├── main.py            # FastAPI 앱 (AI 생성, 분석)
+│   ├── database.py        # SQLAlchemy 모델 (7 tables)
+│   ├── requirements.txt   # Python 의존성
+│   └── README.md          # Content Backend API 문서
 │
-└── README.md             # 이 파일
+├── content-vector/        # ChromaDB Vector Database (RAG)
+│   ├── client.py          # ChromaDB 클라이언트 (351 lines)
+│   ├── config.py          # 설정 관리
+│   ├── requirements.txt   # ChromaDB, OpenAI
+│   ├── .env.example       # 환경 변수 예제
+│   └── Dockerfile         # Docker 컨테이너화
+│
+├── content-db/            # Database 스키마 및 마이그레이션
+│   └── [DB 관련 파일]
+│
+└── README.md              # 메인 문서 (이 파일)
 ```
 
 ## 🚀 빠른 시작
@@ -235,7 +252,54 @@ npx http-server -p 5173
 
 브라우저에서 http://localhost:5173 접속
 
-### 7. 전체 시스템 실행
+### 7. Vector Database 설치 및 실행 (선택사항)
+
+ChromaDB 기반 RAG 시스템은 콘텐츠 추천에 사용됩니다:
+
+```bash
+cd content-vector
+
+# 가상환경 생성
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 의존성 설치
+pip install -r requirements.txt
+
+# 환경 변수 설정
+cp .env.example .env
+# .env 파일에서 OPENAI_API_KEY 설정
+```
+
+**환경 변수 (.env):**
+```env
+CHROMA_PERSIST_DIR=./chroma_data
+OPENAI_API_KEY=sk-...
+EMBEDDING_MODEL=text-embedding-ada-002
+```
+
+**Python에서 사용:**
+```python
+from client import get_chroma_client
+
+# ChromaDB 클라이언트 초기화
+chroma = get_chroma_client()
+
+# 콘텐츠 추가
+chroma.add_creative(
+    creative_id=1,
+    text="커피숍 마케팅 슬로건",
+    metadata={"campaign_id": 1, "type": "text"}
+)
+
+# 유사 콘텐츠 검색
+results = chroma.search_similar(
+    query_text="커피 관련 광고",
+    n_results=5
+)
+```
+
+### 8. 전체 시스템 실행
 
 각각의 터미널에서:
 
@@ -248,6 +312,9 @@ cd content-backend && uvicorn main:app --reload
 
 # Terminal 3: Frontend
 cd frontend && python -m http.server 5173
+
+# Terminal 4 (선택): Vector DB (Python 스크립트로 사용)
+# ChromaDB는 content-backend와 연동되어 사용됨
 ```
 
 ## 📚 API 문서
@@ -288,8 +355,255 @@ Swagger UI는 추가 예정입니다.
 - Python 3.8+
 - FastAPI
 - SQLAlchemy (ORM)
-- OpenAI API
-- PostgreSQL
+- OpenAI API (GPT-3.5-turbo, DALL-E 3)
+- Supabase PostgreSQL
+
+**Vector Database (RAG System)**
+- ChromaDB 0.5+ (Vector Database)
+- OpenAI Embeddings (text-embedding-ada-002)
+- DuckDB + Parquet (Storage Backend)
+- Pydantic 2.7+ (설정 관리)
+
+## 🎯 상세 시스템 아키텍처
+
+### 전체 아키텍처 다이어그램
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         사용자 (브라우저)                         │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   Frontend SPA   │
+                    │  (Vanilla JS)    │
+                    │  Port: 5173      │
+                    └────────┬─────────┘
+                             │
+            ┌────────────────┼────────────────┐
+            │                │                │
+    ┌───────▼───────┐ ┌─────▼──────┐ ┌──────▼──────┐
+    │   Backend     │ │  Content   │ │   Vector    │
+    │   (Node.js)   │ │  Backend   │ │  Database   │
+    │ Port: 3001    │ │  (FastAPI) │ │ (ChromaDB)  │
+    └───────┬───────┘ │ Port: 8000 │ └──────┬──────┘
+            │         └─────┬──────┘        │
+            │               │               │
+    ┌───────▼────────┐ ┌───▼────────┐ ┌───▼────────┐
+    │  PostgreSQL    │ │  Supabase  │ │  OpenAI    │
+    │   (artify_db)  │ │  (7 tables)│ │  Embedding │
+    │ Users,Projects │ │ Campaigns  │ │    API     │
+    └────────────────┘ │ Creatives  │ └────────────┘
+                       │ Gen Jobs   │
+                       │ Metrics    │
+                       └────┬───────┘
+                            │
+                    ┌───────▼────────┐
+                    │   OpenAI API   │
+                    │  GPT-3.5-turbo │
+                    │   DALL-E 3     │
+                    └────────────────┘
+```
+
+### 데이터 흐름 (Data Flow)
+
+#### 1. 사용자 인증 흐름
+```
+User → Frontend → Backend (JWT) → PostgreSQL
+                     ↓
+                 Access Token
+                     ↓
+                 Frontend (저장)
+```
+
+#### 2. AI 콘텐츠 생성 흐름
+```
+User → Frontend → Content Backend → OpenAI API
+                        ↓              ↓
+                   Supabase DB    (생성 결과)
+                  (gen_jobs)           ↓
+                        ↓         Vector DB
+                   Cost Tracking  (임베딩 저장)
+                        ↓              ↓
+                   Frontend ←──────────┘
+                  (결과 표시)
+```
+
+#### 3. 프로젝트 저장 흐름 (Auto-save)
+```
+Canvas Editor → EditorPage.markAsChanged()
+       ↓
+  5초 간격 체크
+       ↓
+  변경사항 감지 → EditorPage.performAutoSave()
+       ↓
+  Backend API → PostgreSQL (projects.data JSONB)
+       ↓
+  저장 완료 표시
+```
+
+#### 4. 유사 콘텐츠 추천 흐름 (RAG)
+```
+User Query → Content Backend → Vector DB
+                ↓                 ↓
+          OpenAI Embedding  → 유사도 검색
+                ↓                 ↓
+          Top-K 결과 ←────────────┘
+                ↓
+           Frontend
+```
+
+### 주요 컴포넌트 상세
+
+#### Frontend (Vanilla JavaScript SPA)
+
+**핵심 모듈:**
+- **state.js** (상태 관리)
+  - Observer 패턴 구현
+  - LocalStorage 동기화
+  - 전역 상태 관리
+
+- **editor.js** (1,500+ lines)
+  - Fabric.js 캔버스 제어
+  - Undo/Redo (50-state 히스토리)
+  - Auto-save (5초 간격)
+  - Layer 관리
+  - Template 시스템
+
+- **api.js** (API 클라이언트)
+  - Fetch API 래퍼
+  - JWT 토큰 관리
+  - 에러 핸들링
+
+**주요 기능:**
+```javascript
+// Auto-save 구현
+EditorPage = {
+  autoSaveTimer: null,
+  autoSaveInterval: 5000,
+  hasUnsavedChanges: false,
+
+  startAutoSave() {
+    setInterval(() => this.performAutoSave(), 5000);
+  },
+
+  performAutoSave() {
+    if (this.hasUnsavedChanges) {
+      // Backend API 호출
+    }
+  }
+}
+```
+
+#### Backend (Node.js Express)
+
+**아키텍처:**
+```
+server.js
+  ├── Middleware
+  │   ├── CORS (Vercel 도메인 화이트리스트)
+  │   ├── Rate Limiter (3 tiers)
+  │   └── JWT Auth
+  ├── Routes
+  │   ├── /api/health
+  │   ├── /api/register
+  │   ├── /api/login
+  │   └── /api/projects (CRUD)
+  └── Database Layer (database.js)
+      └── PostgreSQL Pool
+```
+
+**Rate Limiting 전략:**
+1. **General**: 100 req/15분 (전체 API)
+2. **Auth**: 5 req/15분 (로그인/회원가입)
+3. **Projects**: 30 req/1분 (프로젝트 CRUD)
+
+**Swagger 통합:**
+- OpenAPI 3.0 스펙
+- URL: http://localhost:3001/api-docs
+
+#### Content Backend (FastAPI)
+
+**아키텍처:**
+```
+main.py
+  ├── CORS Middleware
+  ├── Routes
+  │   ├── /generate/text (GPT-3.5-turbo)
+  │   ├── /generate/image (DALL-E 3)
+  │   ├── /segments (CRUD)
+  │   ├── /analytics/*
+  │   └── /costs/* (비용 추적)
+  └── Database Layer (database.py)
+      ├── SQLAlchemy ORM
+      └── Supabase PostgreSQL
+```
+
+**비용 추적 시스템:**
+```python
+# gen_jobs 테이블에 모든 AI 작업 로깅
+job = GenerationJob(
+  job_type="text",
+  model="gpt-3.5-turbo",
+  prompt_tokens=45,
+  completion_tokens=32,
+  estimated_cost=0.0001065  # USD
+)
+db.add(job)
+db.commit()
+```
+
+**자동 문서화:**
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+#### Vector Database (ChromaDB)
+
+**아키텍처:**
+```
+client.py (351 lines)
+  ├── ChromaDBClient
+  │   ├── Collections
+  │   │   ├── copy_texts (텍스트 콘텐츠)
+  │   │   ├── images (이미지 메타데이터)
+  │   │   └── templates (템플릿)
+  │   ├── Methods
+  │   │   ├── add_creative()
+  │   │   ├── search_similar()
+  │   │   ├── delete_creative()
+  │   │   ├── batch_add_creatives()
+  │   │   └── get_collection_info()
+  │   └── Embedding
+  │       └── OpenAI text-embedding-ada-002
+  └── Storage: DuckDB + Parquet
+```
+
+**사용 예시:**
+```python
+# 콘텐츠 추가 및 임베딩 생성
+chroma.add_creative(
+  creative_id=1,
+  text="여름 세일 광고 문구",
+  metadata={
+    "campaign_id": 1,
+    "type": "text",
+    "tone": "친근한"
+  }
+)
+
+# RAG 기반 유사 콘텐츠 검색
+results = chroma.search_similar(
+  query_text="여름 프로모션",
+  n_results=5
+)
+# → Top 5 유사 콘텐츠 반환
+```
+
+**현재 상태:**
+- ✅ 코드 완성 (351 lines)
+- ✅ ChromaDB 연결 로직 구현
+- ✅ OpenAI 임베딩 통합
+- ⏳ Content Backend 연동 대기 중
+- ⏳ RAG 기반 추천 시스템 구현 예정
 
 ### 데이터베이스 스키마
 
