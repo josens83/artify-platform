@@ -43,6 +43,8 @@ class GeneratedContent(Base):
     prompt = Column(Text, nullable=False)
     result = Column(Text, nullable=False)  # Generated content or image URL
     model = Column(String(100), nullable=True)
+    cache_key = Column(String(255), nullable=True, index=True)  # Cache identifier for prompt cache
+    is_cached_result = Column(Boolean, default=False)  # True if this was returned from cache
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

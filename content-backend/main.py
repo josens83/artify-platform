@@ -207,6 +207,25 @@ class MetricsRequest(BaseModel):
     projectId: int
 
 
+class BrandGuidelineRequest(BaseModel):
+    guideline_text: str
+    category: Optional[str] = "general"
+    metadata: Optional[dict] = {}
+
+
+class BrandTextRequest(BaseModel):
+    brand_id: int
+    prompt: str
+    user_id: int = 1
+    category: Optional[str] = None  # Filter guidelines by category
+    n_guidelines: int = 3  # Number of guidelines to use as context
+    segment_id: Optional[int] = None
+    tone: Optional[str] = "전문적"
+    keywords: Optional[List[str]] = []
+    max_tokens: Optional[int] = 500
+    temperature: Optional[float] = 0.7
+
+
 # ==========================================
 # Health & Root Endpoints
 # ==========================================
@@ -223,12 +242,17 @@ async def root():
             "Rate Limiting (10/min text, 5/min images)",
             "User Quotas (Daily & Monthly)",
             "Cost Tracking & Dashboard",
-            "Vector DB Semantic Search (ChromaDB)"
+            "Vector DB Semantic Search (ChromaDB)",
+            "Brand Guidelines RAG (Retrieval Augmented Generation)",
+            "High-Performance Content Recommendations",
+            "Prompt Caching System (95% similarity threshold)",
+            "Cost Savings Analytics Dashboard"
         ],
         "endpoints": {
             "generation": [
                 "/generate/text",
-                "/generate/image"
+                "/generate/image",
+                "/generate/text/with-brand"
             ],
             "segments": [
                 "/segments",
@@ -237,18 +261,25 @@ async def root():
             "vector_search": [
                 "/vector/stats",
                 "/creatives/similar/text?query={query}&n_results=5",
-                "/creatives/similar/image?query={query}&n_results=5"
+                "/creatives/similar/image?query={query}&n_results=5",
+                "/creatives/recommend?query={query}&min_performance=0.05"
+            ],
+            "brand_guidelines": [
+                "/brands/{brand_id}/guidelines",
+                "/brands/{brand_id}/guidelines?category={category}"
             ],
             "analytics": [
                 "/metrics/simulate",
-                "/metrics/history/{project_id}"
+                "/metrics/history/{project_id}",
+                "/creatives/{content_id}/update-performance"
             ],
             "cost_management": [
                 "/users/{user_id}/quota",
                 "/users/{user_id}/costs/daily",
                 "/users/{user_id}/costs/monthly",
                 "/costs/summary",
-                "/costs/history"
+                "/costs/history",
+                "/analytics/cache-savings"
             ],
             "health": [
                 "/health"
@@ -290,6 +321,57 @@ async def generate_text(
 
     # Check user quota before generation
     await check_quota(request.user_id, "text", db)
+
+    # Check cache first
+    try:
+        vector_client = get_vector_client()
+        cache_hit = vector_client.search_prompt_cache(
+            query=request.prompt,
+            job_type="text",
+            model="gpt-3.5-turbo",
+            similarity_threshold=0.95  # 95% similarity
+        )
+
+        if cache_hit:
+            # Cache hit! Return cached result without calling OpenAI
+            cached_text = cache_hit["cached_result"]
+
+            # Save to database with cache flag
+            content_record = GeneratedContent(
+                content_type="text",
+                prompt=request.prompt,
+                result=cached_text,
+                model="gpt-3.5-turbo",
+                cache_key=cache_hit["cache_id"],
+                is_cached_result=True
+            )
+            db.add(content_record)
+            db.commit()
+            db.refresh(content_record)
+
+            return {
+                "success": True,
+                "text": cached_text,
+                "prompt": request.prompt,
+                "model": "gpt-3.5-turbo",
+                "cached": True,
+                "cache_info": {
+                    "cache_id": cache_hit["cache_id"],
+                    "similarity": cache_hit["similarity"],
+                    "hit_count": cache_hit["hit_count"],
+                    "cached_at": cache_hit["cached_at"]
+                },
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "estimated_cost_usd": 0.0,
+                    "cost_saved": True
+                }
+            }
+    except Exception as e:
+        # Cache check failed, continue with normal generation
+        print(f"⚠️  Warning: Cache check failed: {e}")
 
     job = GenerationJob(
         user_id=request.user_id,
@@ -377,6 +459,25 @@ async def generate_text(
                     "keywords": ",".join(request.keywords) if request.keywords else None
                 }
             )
+
+            # Also add to prompt cache for future reuse
+            try:
+                cache_id = vector_client.add_prompt_cache(
+                    prompt=request.prompt,
+                    result=generated_text,
+                    model="gpt-3.5-turbo",
+                    job_type="text",
+                    metadata={
+                        "user_id": request.user_id,
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "cost_usd": estimated_cost
+                    }
+                )
+                print(f"✅ Added to prompt cache: {cache_id}")
+            except Exception as cache_error:
+                print(f"⚠️  Warning: Failed to add to prompt cache: {cache_error}")
+
         except Exception as e:
             # Vector DB 저장 실패해도 메인 플로우는 계속 진행
             print(f"⚠️  Warning: Failed to save to Vector DB: {e}")
@@ -425,6 +526,54 @@ async def generate_image(
 
     # Check user quota before generation
     await check_quota(request.user_id, "image", db, estimated_cost)
+
+    # Check cache first
+    try:
+        vector_client = get_vector_client()
+        cache_hit = vector_client.search_prompt_cache(
+            query=request.prompt,
+            job_type="image",
+            model="dall-e-3",
+            similarity_threshold=0.95  # 95% similarity
+        )
+
+        if cache_hit:
+            # Cache hit! Return cached result without calling OpenAI
+            cached_url = cache_hit["cached_result"]
+
+            # Save to database with cache flag
+            content_record = GeneratedContent(
+                content_type="image",
+                prompt=request.prompt,
+                result=cached_url,
+                model="dall-e-3",
+                cache_key=cache_hit["cache_id"],
+                is_cached_result=True
+            )
+            db.add(content_record)
+            db.commit()
+            db.refresh(content_record)
+
+            return {
+                "success": True,
+                "imageUrl": cached_url,
+                "prompt": request.prompt,
+                "model": "dall-e-3",
+                "cached": True,
+                "cache_info": {
+                    "cache_id": cache_hit["cache_id"],
+                    "similarity": cache_hit["similarity"],
+                    "hit_count": cache_hit["hit_count"],
+                    "cached_at": cache_hit["cached_at"]
+                },
+                "usage": {
+                    "estimated_cost_usd": 0.0,
+                    "cost_saved": estimated_cost
+                }
+            }
+    except Exception as e:
+        # Cache check failed, continue with normal generation
+        print(f"⚠️  Warning: Cache check failed: {e}")
 
     job = GenerationJob(
         user_id=request.user_id,
@@ -482,6 +631,25 @@ async def generate_image(
                     "quality": request.quality
                 }
             )
+
+            # Also add to prompt cache for future reuse
+            try:
+                cache_id = vector_client.add_prompt_cache(
+                    prompt=request.prompt,
+                    result=image_url,
+                    model="dall-e-3",
+                    job_type="image",
+                    metadata={
+                        "user_id": request.user_id,
+                        "size": request.size,
+                        "quality": request.quality,
+                        "cost_usd": estimated_cost
+                    }
+                )
+                print(f"✅ Added to prompt cache: {cache_id}")
+            except Exception as cache_error:
+                print(f"⚠️  Warning: Failed to add to prompt cache: {cache_error}")
+
         except Exception as e:
             # Vector DB 저장 실패해도 메인 플로우는 계속 진행
             print(f"⚠️  Warning: Failed to save to Vector DB: {e}")
@@ -663,6 +831,371 @@ async def search_similar_images(
         }
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/creatives/recommend")
+async def recommend_high_performing(
+    query: str,
+    min_performance: float = 0.05,
+    n_results: int = 5
+):
+    """
+    Recommend high-performing similar content
+
+    Query Parameters:
+    - query: Search query
+    - min_performance: Minimum performance score (0-1, default: 0.05 = 5%)
+    - n_results: Number of results (default: 5)
+    """
+    try:
+        vector_client = get_vector_client()
+
+        # 고성과 콘텐츠 검색
+        results = vector_client.search_high_performing_texts(
+            query=query,
+            min_score=min_performance,
+            n_results=n_results
+        )
+
+        return {
+            "success": True,
+            "query": query,
+            "min_performance_score": min_performance,
+            "count": len(results),
+            "recommendations": results
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/creatives/{content_id}/update-performance")
+async def update_content_performance(
+    content_id: int,
+    content_type: str,
+    project_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Update content performance based on simulated metrics
+
+    Path Parameters:
+    - content_id: Content ID
+
+    Query Parameters:
+    - content_type: 'text' or 'image'
+    - project_id: Project ID for metrics lookup (optional)
+    """
+    try:
+        # Validate content_type
+        if content_type not in ["text", "image"]:
+            raise HTTPException(400, "content_type must be 'text' or 'image'")
+
+        # 메트릭 시뮬레이션 (실제로는 metrics 테이블에서 조회)
+        if project_id:
+            metrics = db.query(Metric).filter(Metric.project_id == project_id).all()
+
+            impressions = sum(m.metric_value for m in metrics if m.metric_name == "views")
+            clicks = sum(m.metric_value for m in metrics if m.metric_name == "engagement") * impressions if impressions > 0 else 0
+            conversions = sum(m.metric_value for m in metrics if m.metric_name == "conversions")
+        else:
+            # 시뮬레이션 데이터
+            impressions = random.randint(1000, 10000)
+            clicks = int(impressions * random.uniform(0.01, 0.15))  # 1-15% CTR
+            conversions = int(clicks * random.uniform(0.01, 0.10))  # 1-10% CVR
+
+        # 성과 점수 계산
+        ctr = clicks / impressions if impressions > 0 else 0
+        cvr = conversions / clicks if clicks > 0 else 0
+        performance_score = (ctr * 0.6) + (cvr * 0.4)  # CTR 60%, CVR 40% 가중치
+
+        metrics_data = {
+            "impressions": impressions,
+            "clicks": clicks,
+            "conversions": conversions,
+            "ctr": round(ctr, 4),
+            "cvr": round(cvr, 4)
+        }
+
+        # Vector DB 업데이트
+        vector_client = get_vector_client()
+        success = vector_client.update_content_performance(
+            content_id=content_id,
+            content_type=content_type,
+            performance_score=performance_score,
+            metrics=metrics_data
+        )
+
+        if not success:
+            raise HTTPException(404, f"Content {content_id} not found in Vector DB")
+
+        return {
+            "success": True,
+            "content_id": content_id,
+            "content_type": content_type,
+            "performance_score": round(performance_score, 4),
+            "metrics": metrics_data
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================================
+# Brand Guidelines Management Endpoints
+# ==========================================
+
+@app.post("/brands/{brand_id}/guidelines")
+async def add_brand_guideline(
+    brand_id: int,
+    request: BrandGuidelineRequest
+):
+    """
+    Add a brand guideline to Vector DB
+
+    Path Parameters:
+    - brand_id: Brand identifier
+
+    Body:
+    - guideline_text: The brand guideline text
+    - category: Category (e.g., 'tone', 'voice', 'style', 'values')
+    - metadata: Additional metadata (optional)
+    """
+    try:
+        vector_client = get_vector_client()
+
+        doc_id = vector_client.add_brand_guideline(
+            brand_id=brand_id,
+            guideline_text=request.guideline_text,
+            category=request.category,
+            metadata=request.metadata
+        )
+
+        return {
+            "success": True,
+            "brand_id": brand_id,
+            "guideline_id": doc_id,
+            "category": request.category,
+            "message": "Brand guideline added successfully"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/brands/{brand_id}/guidelines")
+async def get_brand_guidelines(
+    brand_id: int,
+    category: Optional[str] = None
+):
+    """
+    Get brand guidelines for a brand
+
+    Path Parameters:
+    - brand_id: Brand identifier
+
+    Query Parameters:
+    - category: Filter by category (optional)
+    """
+    try:
+        vector_client = get_vector_client()
+
+        results = vector_client.search_brand_guidelines(
+            brand_id=brand_id,
+            query=None,
+            category=category,
+            n_results=50  # Get all guidelines
+        )
+
+        return {
+            "success": True,
+            "brand_id": brand_id,
+            "category": category,
+            "count": len(results),
+            "guidelines": results
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/generate/text/with-brand")
+@limiter.limit("10/minute")
+async def generate_text_with_brand(
+    req: Request,
+    request: BrandTextRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate AI text using brand guidelines as context (RAG)
+
+    This endpoint:
+    1. Retrieves relevant brand guidelines from Vector DB
+    2. Injects them as context into the prompt
+    3. Generates text using OpenAI GPT with brand context
+
+    Body:
+    - brand_id: Brand identifier
+    - prompt: User's generation prompt
+    - user_id: User ID (default: 1)
+    - category: Filter guidelines by category (optional)
+    - n_guidelines: Number of guidelines to use (default: 3)
+    - segment_id, tone, keywords, max_tokens, temperature: Same as /generate/text
+    """
+
+    # Check if OpenAI client is initialized
+    if not openai_client:
+        raise HTTPException(
+            status_code=503,
+            detail="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
+        )
+
+    # Check user quota before generation
+    await check_quota(request.user_id, "text", db)
+
+    try:
+        # 1. Retrieve brand context from Vector DB
+        vector_client = get_vector_client()
+        brand_context = vector_client.get_brand_context(
+            brand_id=request.brand_id,
+            query=request.prompt,
+            category=request.category,
+            n_results=request.n_guidelines
+        )
+
+        if not brand_context:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No brand guidelines found for brand_id={request.brand_id}"
+            )
+
+        # 2. Create generation job
+        job = GenerationJob(
+            user_id=request.user_id,
+            job_type="text",
+            model="gpt-3.5-turbo",
+            prompt=request.prompt,
+            status="pending"
+        )
+        db.add(job)
+        db.commit()
+
+        # 3. Build enhanced prompt with brand context
+        enhanced_prompt = request.prompt
+
+        if request.segment_id:
+            segment = db.query(Segment).filter(Segment.id == request.segment_id).first()
+            if segment:
+                enhanced_prompt += f"\n타겟 세그먼트: {segment.name}"
+
+        if request.tone:
+            enhanced_prompt += f"\n톤: {request.tone}"
+
+        if request.keywords and len(request.keywords) > 0:
+            keywords_str = ", ".join(request.keywords)
+            enhanced_prompt += f"\n필수 키워드: {keywords_str}"
+
+        # 4. Inject brand context into system message
+        system_message = f"""You are a helpful content creation assistant for marketing campaigns.
+Create engaging, persuasive content in Korean.
+
+IMPORTANT: Follow these brand guidelines strictly:
+
+{brand_context}
+
+Ensure the generated content aligns with the brand's voice, tone, style, and values as described above."""
+
+        # 5. Call OpenAI API with brand context
+        response = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": enhanced_prompt}
+            ],
+            max_tokens=request.max_tokens,
+            temperature=request.temperature
+        )
+
+        generated_text = response.choices[0].message.content
+
+        # 6. Extract token usage and calculate cost
+        usage = response.usage
+        prompt_tokens = usage.prompt_tokens
+        completion_tokens = usage.completion_tokens
+        total_tokens = usage.total_tokens
+
+        estimated_cost = calculate_text_cost("gpt-3.5-turbo", prompt_tokens, completion_tokens)
+
+        # 7. Update job with success
+        job.status = "completed"
+        job.prompt_tokens = prompt_tokens
+        job.completion_tokens = completion_tokens
+        job.total_tokens = total_tokens
+        job.estimated_cost = estimated_cost
+        job.completed_at = datetime.utcnow()
+        db.commit()
+
+        # 8. Update user quota with actual cost
+        await update_quota_cost(request.user_id, estimated_cost, db)
+
+        # 9. Save to PostgreSQL
+        content_record = GeneratedContent(
+            content_type="text",
+            prompt=request.prompt,
+            result=generated_text,
+            model="gpt-3.5-turbo"
+        )
+        db.add(content_record)
+        db.commit()
+        db.refresh(content_record)
+
+        # 10. Save to Vector DB for semantic search
+        try:
+            vector_client.add_text_content(
+                content_id=content_record.id,
+                text=generated_text,
+                prompt=request.prompt,
+                model="gpt-3.5-turbo",
+                metadata={
+                    "user_id": request.user_id,
+                    "brand_id": request.brand_id,
+                    "segment_id": request.segment_id,
+                    "tone": request.tone,
+                    "keywords": ",".join(request.keywords) if request.keywords else None
+                }
+            )
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to save to Vector DB: {e}")
+
+        return {
+            "success": True,
+            "text": generated_text,
+            "prompt": request.prompt,
+            "model": "gpt-3.5-turbo",
+            "brand_id": request.brand_id,
+            "brand_context_used": True,
+            "guidelines_applied": request.n_guidelines,
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "estimated_cost_usd": estimated_cost
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Update job with error
+        if 'job' in locals():
+            job.status = "failed"
+            job.error_message = str(e)
+            job.completed_at = datetime.utcnow()
+            db.commit()
+
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -964,6 +1497,108 @@ async def get_cost_history(
             for job in jobs
         ]
     }
+
+
+@app.get("/analytics/cache-savings")
+async def get_cache_savings(
+    user_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get cache performance and cost savings analytics
+
+    Query Parameters:
+    - user_id: Filter by user (optional)
+
+    Returns statistics on cache hits, misses, and total cost saved
+    """
+    try:
+        # Get all generated content
+        query = db.query(GeneratedContent)
+        if user_id:
+            # Note: GeneratedContent doesn't have user_id, would need to add it
+            pass
+
+        all_content = query.all()
+
+        # Separate cached vs non-cached
+        cached_content = [c for c in all_content if c.is_cached_result]
+        generated_content = [c for c in all_content if not c.is_cached_result]
+
+        # Count by type
+        cached_text = [c for c in cached_content if c.content_type == "text"]
+        cached_image = [c for c in cached_content if c.content_type == "image"]
+        generated_text = [c for c in generated_content if c.content_type == "text"]
+        generated_image = [c for c in generated_content if c.content_type == "image"]
+
+        # Calculate costs saved
+        # For text: avg tokens * pricing
+        # For image: fixed pricing per image
+        avg_text_tokens = 500  # Estimate
+        text_cost_per_generation = calculate_text_cost("gpt-3.5-turbo", avg_text_tokens // 2, avg_text_tokens // 2)
+        image_cost_per_generation = calculate_image_cost("dall-e-3", "1024x1024")
+
+        text_cost_saved = len(cached_text) * text_cost_per_generation
+        image_cost_saved = len(cached_image) * image_cost_per_generation
+        total_cost_saved = text_cost_saved + image_cost_saved
+
+        # Calculate hit rates
+        total_text = len(cached_text) + len(generated_text)
+        total_image = len(cached_image) + len(generated_image)
+        total_requests = len(all_content)
+
+        text_hit_rate = (len(cached_text) / total_text * 100) if total_text > 0 else 0
+        image_hit_rate = (len(cached_image) / total_image * 100) if total_image > 0 else 0
+        overall_hit_rate = (len(cached_content) / total_requests * 100) if total_requests > 0 else 0
+
+        # Get Vector DB cache stats
+        try:
+            vector_client = get_vector_client()
+            stats = vector_client.get_collection_stats()
+            cache_collection_size = stats.get("prompt_cache", {}).get("count", 0)
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to get Vector DB stats: {e}")
+            cache_collection_size = 0
+
+        return {
+            "success": True,
+            "cache_performance": {
+                "overall_hit_rate_percent": round(overall_hit_rate, 2),
+                "text_hit_rate_percent": round(text_hit_rate, 2),
+                "image_hit_rate_percent": round(image_hit_rate, 2),
+                "total_cache_hits": len(cached_content),
+                "total_cache_misses": len(generated_content),
+                "total_requests": total_requests
+            },
+            "cost_savings": {
+                "total_saved_usd": round(total_cost_saved, 4),
+                "text_saved_usd": round(text_cost_saved, 4),
+                "image_saved_usd": round(image_cost_saved, 4),
+                "text_cache_hits": len(cached_text),
+                "image_cache_hits": len(cached_image)
+            },
+            "breakdown": {
+                "text": {
+                    "cache_hits": len(cached_text),
+                    "cache_misses": len(generated_text),
+                    "total": total_text,
+                    "hit_rate_percent": round(text_hit_rate, 2)
+                },
+                "image": {
+                    "cache_hits": len(cached_image),
+                    "cache_misses": len(generated_image),
+                    "total": total_image,
+                    "hit_rate_percent": round(image_hit_rate, 2)
+                }
+            },
+            "cache_collection": {
+                "size": cache_collection_size,
+                "description": "Total unique prompts cached in Vector DB"
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
