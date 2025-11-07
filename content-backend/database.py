@@ -13,8 +13,38 @@ load_dotenv()
 # Database URL from environment
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Create engine
-engine = create_engine(DATABASE_URL, echo=True)
+# Create engine with slow query logging
+# echo=True logs all SQL (use only in development)
+# echo_pool=True logs connection pool events
+engine = create_engine(
+    DATABASE_URL,
+    echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+    pool_pre_ping=True,  # Verify connections before using
+    pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "10"))
+)
+
+# Slow query monitoring
+from sqlalchemy import event
+from logger import get_logger
+import time
+
+logger = get_logger("database")
+
+@event.listens_for(engine, "before_cursor_execute")
+def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    conn.info.setdefault('query_start_time', []).append(time.time())
+
+@event.listens_for(engine, "after_cursor_execute")
+def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    total_time = time.time() - conn.info['query_start_time'].pop()
+
+    # Log slow queries (> 1 second)
+    if total_time > 1.0:
+        logger.warning(
+            f"Slow query detected ({total_time:.2f}s): {statement[:200]}"
+        )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models

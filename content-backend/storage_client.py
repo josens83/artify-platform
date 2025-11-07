@@ -10,10 +10,21 @@ from datetime import timedelta
 from io import BytesIO
 from PIL import Image
 import requests
+import magic
 
 from logger import get_logger
 
 logger = get_logger("storage")
+
+# File upload security configuration
+ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+ALLOWED_VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.webm'}
+ALLOWED_MIME_TYPES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_IMAGE_SIZE = 5 * 1024 * 1024   # 5 MB
 
 
 class StorageClient:
@@ -44,26 +55,92 @@ class StorageClient:
             os.makedirs(self.local_storage_path, exist_ok=True)
             logger.warning("StorageClient using local storage (Supabase not configured)")
 
+    def validate_file(
+        self,
+        file_data: bytes,
+        file_name: str,
+        file_type: str = "image"
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Validate file before upload
+
+        Args:
+            file_data: File bytes
+            file_name: Original file name
+            file_type: Expected file type (image, video)
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        # Check file size
+        file_size = len(file_data)
+        max_size = MAX_IMAGE_SIZE if file_type == "image" else MAX_FILE_SIZE
+
+        if file_size > max_size:
+            return False, f"File size ({file_size / 1024 / 1024:.2f}MB) exceeds limit ({max_size / 1024 / 1024}MB)"
+
+        if file_size == 0:
+            return False, "File is empty"
+
+        # Check file extension
+        file_ext = os.path.splitext(file_name)[1].lower()
+        allowed_extensions = ALLOWED_IMAGE_EXTENSIONS if file_type == "image" else ALLOWED_VIDEO_EXTENSIONS
+
+        if file_ext not in allowed_extensions:
+            return False, f"File extension '{file_ext}' not allowed. Allowed: {allowed_extensions}"
+
+        # Detect actual MIME type using python-magic
+        try:
+            mime = magic.Magic(mime=True)
+            detected_mime = mime.from_buffer(file_data)
+
+            if detected_mime not in ALLOWED_MIME_TYPES:
+                return False, f"File type '{detected_mime}' not allowed"
+
+            # Verify MIME type matches expected type
+            if file_type == "image" and not detected_mime.startswith("image/"):
+                return False, f"Expected image file, got '{detected_mime}'"
+
+            if file_type == "video" and not detected_mime.startswith("video/"):
+                return False, f"Expected video file, got '{detected_mime}'"
+
+            logger.debug(f"File validation passed: {file_name} ({detected_mime}, {file_size} bytes)")
+            return True, None
+
+        except Exception as e:
+            logger.error(f"MIME type detection error: {str(e)}")
+            return False, f"Could not verify file type: {str(e)}"
+
     def upload_file(
         self,
         file_data: bytes,
         file_name: str,
         content_type: str = None,
-        folder: str = "creatives"
+        folder: str = "creatives",
+        validate: bool = True
     ) -> Tuple[bool, Optional[str], Optional[str]]:
         """
-        Upload file to storage
+        Upload file to storage with security validation
 
         Args:
             file_data: File bytes
             file_name: Original file name
             content_type: MIME type
             folder: Folder/prefix for organization
+            validate: Whether to validate file (default: True)
 
         Returns:
             Tuple of (success, file_url, error_message)
         """
         try:
+            # Validate file if enabled
+            if validate:
+                file_type = "image" if content_type and content_type.startswith("image") else "video"
+                is_valid, error_msg = self.validate_file(file_data, file_name, file_type)
+
+                if not is_valid:
+                    logger.warning(f"File validation failed: {error_msg}")
+                    return False, None, error_msg
             # Generate unique file name
             file_hash = hashlib.md5(file_data).hexdigest()[:12]
             file_ext = os.path.splitext(file_name)[1]

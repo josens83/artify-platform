@@ -28,6 +28,7 @@ from logger import get_logger, RequestLogger
 from exceptions import register_exception_handlers, ArtifyException, QuotaExceededError
 from campaigns_api import router as campaigns_router
 from analytics_api import router as analytics_router
+from auth_api import router as auth_router
 
 load_dotenv()
 
@@ -119,7 +120,8 @@ For issues and feature requests, please contact the development team.
 # Register exception handlers
 register_exception_handlers(app)
 
-# Include routers for campaigns and analytics
+# Include routers for campaigns, analytics, and authentication
+app.include_router(auth_router)
 app.include_router(campaigns_router)
 app.include_router(analytics_router)
 
@@ -154,21 +156,24 @@ async def log_requests(request: Request, call_next):
 
 
 # CORS Configuration
+# CORS Configuration - Production whitelist
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else [
+    "https://artify-ruddy.vercel.app",
+    "http://localhost:3001",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://artify-ruddy.vercel.app",
-        "http://localhost:3001",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000"
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit methods
     allow_headers=["*"],
+    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
-logger.info("CORS middleware configured")
+logger.info(f"CORS middleware configured with {len(CORS_ORIGINS)} origins")
 
 # OpenAI client
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
