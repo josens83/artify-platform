@@ -50,6 +50,9 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class TextGenerationRequest(BaseModel):
     prompt: str
+    segment_id: Optional[int] = None
+    tone: Optional[str] = "전문적"
+    keywords: Optional[List[str]] = []
     max_tokens: Optional[int] = 500
     temperature: Optional[float] = 0.7
 
@@ -124,12 +127,27 @@ async def generate_text(
 ):
     """Generate AI text using OpenAI GPT"""
     try:
+        # Build enhanced prompt with segment, tone, and keywords
+        enhanced_prompt = request.prompt
+
+        if request.segment_id:
+            segment = db.query(Segment).filter(Segment.id == request.segment_id).first()
+            if segment:
+                enhanced_prompt += f"\n타겟 세그먼트: {segment.name}"
+
+        if request.tone:
+            enhanced_prompt += f"\n톤: {request.tone}"
+
+        if request.keywords and len(request.keywords) > 0:
+            keywords_str = ", ".join(request.keywords)
+            enhanced_prompt += f"\n필수 키워드: {keywords_str}"
+
         # Call OpenAI API
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful content creation assistant."},
-                {"role": "user", "content": request.prompt}
+                {"role": "system", "content": "You are a helpful content creation assistant for marketing campaigns. Create engaging, persuasive content in Korean."},
+                {"role": "user", "content": enhanced_prompt}
             ],
             max_tokens=request.max_tokens,
             temperature=request.temperature

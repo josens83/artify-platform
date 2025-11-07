@@ -218,7 +218,7 @@ const PanelSegments = {
         jsonPreview.textContent = JSON.stringify(filters, null, 2);
     },
 
-    saveSegment() {
+    async saveSegment() {
         const name = document.getElementById('segment-name').value.trim();
         if (!name) {
             UI.toast('세그먼트 이름을 입력하세요', 'error');
@@ -235,50 +235,114 @@ const PanelSegments = {
             document.querySelectorAll('input[name="interests"]:checked')
         ).map(input => input.value);
 
-        const segment = {
-            id: this.editingSegment?.id || Date.now(),
-            name,
-            filters: {
-                age_range: [ageMin, ageMax],
+        const criteria = JSON.stringify({
+            age_range: [ageMin, ageMax],
+            gender,
+            interests,
+            location
+        });
+
+        try {
+            // Call FastAPI to create segment
+            const newSegment = await api.createSegment({
+                name,
+                description: `${ageMin}-${ageMax}세 ${this.getGenderLabel(gender)}`,
+                criteria
+            });
+
+            UI.toast('✅ 세그먼트가 저장되었습니다!', 'success');
+
+            // Also save to local state for immediate use
+            const segments = state.get('segments') || [];
+            segments.push({
+                id: newSegment.id,
+                name: newSegment.name,
+                ageMin,
+                ageMax,
                 gender,
                 interests,
                 location
-            },
-            createdAt: this.editingSegment?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+            });
+            state.set('segments', segments);
+            state.saveToStorage('segments');
 
-        // Get existing segments
-        const segments = state.get('segments') || [];
+            // Reset form and reload
+            this.resetForm();
+            await this.loadSegments();
 
-        if (this.editingSegment) {
-            // Update existing
-            const index = segments.findIndex(s => s.id === this.editingSegment.id);
-            if (index !== -1) {
-                segments[index] = segment;
-                UI.toast('세그먼트가 수정되었습니다', 'success');
-            }
-        } else {
-            // Add new
+        } catch (error) {
+            console.error('Save segment error:', error);
+            UI.toast(`저장 실패: ${error.message}`, 'error');
+
+            // Fallback to local save
+            const segment = {
+                id: Date.now(),
+                name,
+                ageMin,
+                ageMax,
+                gender,
+                interests,
+                location,
+                createdAt: new Date().toISOString()
+            };
+
+            const segments = state.get('segments') || [];
             segments.push(segment);
-            UI.toast('세그먼트가 추가되었습니다', 'success');
+            state.set('segments', segments);
+            state.saveToStorage('segments');
+
+            UI.toast('로컬에 저장되었습니다', 'info');
+            this.resetForm();
+            this.loadSegments();
         }
-
-        // Save to state
-        state.set('segments', segments);
-        state.saveToStorage('segments');
-
-        // Reset form
-        this.resetForm();
-        this.loadSegments();
     },
 
-    loadSegments() {
+    async loadSegments() {
         const container = document.getElementById('segments-list-container');
         if (!container) return;
 
-        const segments = state.get('segments') || [];
+        try {
+            // Load from FastAPI
+            container.innerHTML = '<div class="loading">세그먼트를 불러오는 중...</div>';
 
+            const apiSegments = await api.getSegments();
+
+            // Parse and save to local state
+            const segments = apiSegments.map(seg => {
+                const criteria = seg.criteria ? JSON.parse(seg.criteria) : {};
+                return {
+                    id: seg.id,
+                    name: seg.name,
+                    description: seg.description,
+                    ageMin: criteria.age_range ? criteria.age_range[0] : 20,
+                    ageMax: criteria.age_range ? criteria.age_range[1] : 35,
+                    gender: criteria.gender || 'all',
+                    interests: criteria.interests || [],
+                    location: criteria.location || ''
+                };
+            });
+
+            // Save to state for Generate panel to use
+            state.set('segments', segments);
+            state.saveToStorage('segments');
+
+            // Display segments
+            this.displaySegments(segments, container);
+
+        } catch (error) {
+            console.error('Load segments error:', error);
+
+            // Fallback to local state
+            const segments = state.get('segments') || [];
+            this.displaySegments(segments, container);
+
+            if (segments.length === 0) {
+                UI.toast('세그먼트를 불러올 수 없습니다. 로컬 데이터를 사용합니다.', 'warning');
+            }
+        }
+    },
+
+    displaySegments(segments, container) {
         if (segments.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -294,13 +358,6 @@ const PanelSegments = {
                         <div class="segment-actions">
                             <button
                                 class="btn-icon"
-                                onclick="PanelSegments.editSegment(${segment.id})"
-                                title="수정"
-                            >
-                                ✏️
-                            </button>
-                            <button
-                                class="btn-icon"
                                 onclick="PanelSegments.deleteSegment(${segment.id})"
                                 title="삭제"
                             >
@@ -309,12 +366,11 @@ const PanelSegments = {
                         </div>
                     </div>
                     <div class="segment-details">
-                        <div class="segment-badge">
-                            ${segment.ageMin}-${segment.ageMax}세
-                        </div>
-                        <div class="segment-badge">
-                            ${this.getGenderLabel(segment.gender)}
-                        </div>
+                        ${segment.description ? `
+                            <div class="segment-badge">
+                                ${segment.description}
+                            </div>
+                        ` : ''}
                         ${segment.interests && segment.interests.length > 0 ? `
                             <div class="segment-badge">
                                 ${segment.interests.length}개 관심사
@@ -379,17 +435,34 @@ const PanelSegments = {
         UI.toast('세그먼트를 수정할 수 있습니다', 'info');
     },
 
-    deleteSegment(id) {
+    async deleteSegment(id) {
         if (!confirm('이 세그먼트를 삭제하시겠습니까?')) return;
 
-        const segments = state.get('segments') || [];
-        const filtered = segments.filter(s => s.id !== id);
+        try {
+            // Call FastAPI to delete
+            await api.deleteSegment(id);
 
-        state.set('segments', filtered);
-        state.saveToStorage('segments');
+            // Remove from local state
+            const segments = state.get('segments') || [];
+            const filtered = segments.filter(s => s.id !== id);
+            state.set('segments', filtered);
+            state.saveToStorage('segments');
 
-        this.loadSegments();
-        UI.toast('세그먼트가 삭제되었습니다', 'success');
+            UI.toast('✅ 세그먼트가 삭제되었습니다', 'success');
+            await this.loadSegments();
+
+        } catch (error) {
+            console.error('Delete segment error:', error);
+
+            // Fallback to local delete
+            const segments = state.get('segments') || [];
+            const filtered = segments.filter(s => s.id !== id);
+            state.set('segments', filtered);
+            state.saveToStorage('segments');
+
+            UI.toast('로컬에서 삭제되었습니다', 'info');
+            this.loadSegments();
+        }
     },
 
     cancelEdit() {
