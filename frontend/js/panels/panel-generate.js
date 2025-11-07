@@ -235,14 +235,51 @@ const PanelGenerate = {
         UI.showLoading('AI가 콘텐츠를 생성 중입니다...');
 
         try {
-            // Simulate generation time
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Get segment ID if available
+            const segments = state.get('segments') || [];
+            const selectedSegment = segments.find(s => s.name === segment);
+            const segmentId = selectedSegment?.id || null;
 
-            // Generate content based on campaign
-            const content = this.generateContentByCampaign(campaign, segment, channel, tone, keywords);
+            // Build prompt for AI
+            const prompt = `${campaign} 캠페인을 위한 ${channel} 마케팅 콘텐츠를 생성해주세요.`;
+
+            // Parse keywords
+            const keywordArray = keywords ? keywords.split(',').map(k => k.trim()).filter(k => k) : [];
+
+            // Call FastAPI to generate text
+            const textResponse = await api.generateText(prompt, {
+                segment_id: segmentId,
+                tone: tone,
+                keywords: keywordArray,
+                max_tokens: lengthIdx === 0 ? 100 : lengthIdx === 1 ? 200 : 400
+            });
+
+            // Parse generated text into structured content
+            const content = {
+                headline: this.extractHeadline(textResponse.text, campaign),
+                body: textResponse.text,
+                cta: this.extractCTA(channel),
+                hashtags: `#${campaign.replace(/\s/g, '')} #${segment.replace(/\s/g, '')} #${channel}`
+            };
+
+            // Generate image prompt
+            const imagePrompt = `${campaign} 캠페인 이미지, ${imageStyle} 스타일, ${selectedColors.join(', ')} 색상`;
+
+            // Call FastAPI to generate image
+            let imageUrl = `https://via.placeholder.com/500x500/667eea/ffffff?text=${encodeURIComponent(imageStyle + ' Style')}`;
+
+            try {
+                const imageResponse = await api.generateImage(imagePrompt, {
+                    size: this.convertImageSize(imageSize),
+                    quality: "standard"
+                });
+                imageUrl = imageResponse.imageUrl;
+            } catch (imgError) {
+                console.warn('Image generation failed, using placeholder:', imgError);
+            }
 
             // Display results
-            this.displayResults(content, imageStyle, imageSize);
+            this.displayResults(content, imageStyle, imageSize, imageUrl);
 
             // Save to session
             this.saveToHistory({
@@ -256,6 +293,7 @@ const PanelGenerate = {
                 imageSize,
                 selectedColors,
                 ...content,
+                imageUrl,
                 timestamp: Date.now()
             });
 
@@ -263,12 +301,39 @@ const PanelGenerate = {
 
         } catch (error) {
             console.error('Generation error:', error);
-            UI.toast('콘텐츠 생성 실패', 'error');
+            UI.toast(`콘텐츠 생성 실패: ${error.message}`, 'error');
+
+            // Fallback to local generation
+            const content = this.generateContentByCampaign(campaign, segment, channel, tone, keywords);
+            this.displayResults(content, imageStyle, imageSize);
         } finally {
             UI.hideLoading();
             btn.disabled = false;
             btn.innerHTML = '🚀 AI 콘텐츠 생성하기';
         }
+    },
+
+    extractHeadline(text, campaign) {
+        // Extract first sentence or use campaign-based headline
+        const firstSentence = text.split(/[.!?]/)[0];
+        return firstSentence || `${campaign} - 특별한 기회를 놓치지 마세요!`;
+    },
+
+    extractCTA(channel) {
+        const ctas = {
+            'Instagram': '지금 확인하기 →',
+            'Facebook': '더 알아보기 →',
+            'Twitter': '트윗 보기 →',
+            'LinkedIn': '자세히 보기 →'
+        };
+        return ctas[channel] || '클릭하기 →';
+    },
+
+    convertImageSize(sizeLabel) {
+        if (sizeLabel.includes('1:1')) return '1024x1024';
+        if (sizeLabel.includes('16:9')) return '1792x1024';
+        if (sizeLabel.includes('9:16')) return '1024x1792';
+        return '1024x1024';
     },
 
     generateContentByCampaign(campaign, segment, channel, tone, keywords) {
@@ -300,7 +365,7 @@ const PanelGenerate = {
         return { headline, body, cta, hashtags };
     },
 
-    displayResults(content, imageStyle, imageSize) {
+    displayResults(content, imageStyle, imageSize, imageUrl = null) {
         const resultsDiv = document.getElementById('generated-results');
         const copyResult = document.getElementById('copy-result');
         const imageResult = document.getElementById('image-result');
@@ -317,10 +382,10 @@ const PanelGenerate = {
             </div>
         `;
 
-        // Display image placeholder
-        const imageUrl = `https://via.placeholder.com/500x500/667eea/ffffff?text=${encodeURIComponent(imageStyle + ' Style')}`;
+        // Display image (use provided URL or placeholder)
+        const finalImageUrl = imageUrl || `https://via.placeholder.com/500x500/667eea/ffffff?text=${encodeURIComponent(imageStyle + ' Style')}`;
         imageResult.innerHTML = `
-            <img src="${imageUrl}" alt="${imageStyle}" style="width: 100%; border-radius: 8px;" />
+            <img src="${finalImageUrl}" alt="${imageStyle}" style="width: 100%; border-radius: 8px;" />
         `;
 
         // Show results
@@ -328,6 +393,7 @@ const PanelGenerate = {
 
         // Store current result
         this.currentResult = content;
+        this.currentImageUrl = finalImageUrl;
     },
 
     copyText() {
