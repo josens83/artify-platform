@@ -197,15 +197,4 @@
     </div>
 </div>
 
-<script>
-// Load authentication modals dynamically
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize APP_CONFIG if not already defined
-    if (typeof window.APP_CONFIG === 'undefined') {
-        window.APP_CONFIG = {
-            BACKEND_URL: 'http://localhost:3000',
-            CONTENT_BACKEND_URL: 'https://artify-content-api.onrender.com'
-        };
-    }
-});
-</script>
+<!-- APP_CONFIG is now loaded from config.js in the main HTML file -->

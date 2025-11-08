@@ -1,26 +1,16 @@
 // API.js - API 통신 래퍼
-
-// 백엔드 URL 상수 정의
-const NODE_BACKEND = 'https://artify-backend-3y4r.onrender.com';
-const CONTENT_BACKEND = 'https://artify-content-api.onrender.com';
-
-// 환경 감지 (localhost면 개발 환경)
-const isProduction = window.location.hostname !== 'localhost' &&
-                     window.location.hostname !== '127.0.0.1';
+// Import configuration (will be loaded as ES module)
+import { APP_CONFIG } from './config.js';
 
 class API {
     constructor() {
-        // 환경에 따라 자동으로 백엔드 URL 설정
-        this.config = window.APP_CONFIG || {
-            BACKEND_URL: isProduction ? NODE_BACKEND : 'http://localhost:3001',
-            CONTENT_BACKEND_URL: isProduction ? CONTENT_BACKEND : 'http://localhost:8000'
-        };
-
+        // Use imported configuration
+        this.config = APP_CONFIG;
         this.token = localStorage.getItem('token');
 
         // 디버깅을 위한 로그
-        console.log('API Config:', {
-            environment: isProduction ? 'Production' : 'Development',
+        console.log('[API] Config loaded:', {
+            environment: this.config.ENVIRONMENT,
             nodeBackend: this.config.BACKEND_URL,
             contentBackend: this.config.CONTENT_BACKEND_URL
         });
@@ -125,28 +115,46 @@ class API {
     // ==========================================
 
     /**
+     * 사용 가능한 AI 모델 목록 가져오기
+     * @returns {Promise} 사용 가능한 AI 모델 목록
+     */
+    async getModels() {
+        return this.request(`${this.config.CONTENT_BACKEND_URL}/models`);
+    }
+
+    /**
      * AI 텍스트 생성
      * @param {string} prompt - 생성할 텍스트 프롬프트
-     * @param {object} options - 추가 옵션 (temperature, max_tokens 등)
+     * @param {object} options - 추가 옵션 (model, temperature, max_tokens 등)
      * @returns {Promise} 생성된 텍스트 응답
      */
     async generateText(prompt, options = {}) {
+        const payload = {
+            prompt,
+            model: options.model || 'gpt-3.5-turbo', // Default to GPT-3.5
+            ...options
+        };
         return this.request(`${this.config.CONTENT_BACKEND_URL}/generate/text`, {
             method: 'POST',
-            body: JSON.stringify({ prompt, ...options })
+            body: JSON.stringify(payload)
         });
     }
 
     /**
      * AI 이미지 생성
      * @param {string} prompt - 이미지 생성 프롬프트
-     * @param {object} options - 추가 옵션 (size, quality 등)
+     * @param {object} options - 추가 옵션 (model, size, quality 등)
      * @returns {Promise} 생성된 이미지 URL
      */
     async generateImage(prompt, options = {}) {
+        const payload = {
+            prompt,
+            model: options.model || 'dall-e-3', // Default to DALL-E 3
+            ...options
+        };
         return this.request(`${this.config.CONTENT_BACKEND_URL}/generate/image`, {
             method: 'POST',
-            body: JSON.stringify({ prompt, ...options })
+            body: JSON.stringify(payload)
         });
     }
 
@@ -209,3 +217,9 @@ class API {
 
 // Export singleton instance
 const api = new API();
+
+// Make api available globally for non-module scripts
+window.api = api;
+
+// Export for ES modules
+export default api;
