@@ -60,28 +60,28 @@ const HomePage = {
 
         const cards = [
             {
-                icon: '🎨',
-                title: '캠페인 생성',
-                description: '비주얼 캠페인을 디자인하고 편집하세요',
-                onClick: () => router.navigate('/editor', { mode: 'design' })
-            },
-            {
                 icon: '🎯',
                 title: '세그먼트 관리',
                 description: '타겟 고객 세그먼트를 생성하고 관리하세요',
-                onClick: () => this.openSegmentsModal()
+                onClick: () => window.location.href = 'segments.html'
             },
             {
                 icon: '✨',
                 title: 'AI 콘텐츠 생성',
                 description: 'AI로 텍스트와 이미지를 자동 생성하세요',
-                onClick: () => router.navigate('/editor', { mode: 'generate' })
+                onClick: () => window.location.href = 'generate.html'
             },
             {
                 icon: '📊',
                 title: '분석 대시보드',
                 description: '캠페인 성과를 분석하고 인사이트를 얻으세요',
-                onClick: () => router.navigate('/editor', { mode: 'analytics' })
+                onClick: () => window.location.href = 'analytics.html'
+            },
+            {
+                icon: '🎨',
+                title: '에디터',
+                description: '비주얼 캠페인을 디자인하고 편집하세요',
+                onClick: () => window.location.href = 'editor.html'
             }
         ];
 
