@@ -3,10 +3,15 @@
  * Manages target segments for personalized content generation
  */
 
+import { debounce, CacheManager, paginate } from './utils.js';
+
 const SegmentsPage = {
     segments: [],
     currentSegment: null,
     editMode: false,
+    cache: new CacheManager(600000), // 10 minutes cache
+    currentPage: 1,
+    pageSize: 20,
 
     /**
      * Initialize segments page
@@ -18,26 +23,39 @@ const SegmentsPage = {
     },
 
     /**
-     * Setup event listeners
+     * Setup event listeners with debouncing
      */
     setupEventListeners() {
-        // Search input
+        // Debounced search input (300ms delay)
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
+            const debouncedFilter = debounce((value) => {
+                this.filterSegments(value);
+            }, 300);
+
             searchInput.addEventListener('input', (e) => {
-                this.filterSegments(e.target.value);
+                debouncedFilter(e.target.value);
             });
         }
     },
 
     /**
-     * Load all segments from API
+     * Load all segments from API with caching
      */
     async loadSegments() {
         const container = document.getElementById('segmentsContainer');
 
         try {
             console.log('[SegmentsPage] Loading segments...');
+
+            // Check cache first
+            const cachedSegments = this.cache.get('segments');
+            if (cachedSegments) {
+                this.segments = cachedSegments;
+                console.log(`[SegmentsPage] Loaded ${this.segments.length} segments from cache`);
+                this.renderSegments();
+                return;
+            }
 
             // Import API dynamically
             const { default: api } = await import('./api.js');
@@ -47,6 +65,10 @@ const SegmentsPage = {
 
             if (response.success) {
                 this.segments = response.segments || [];
+
+                // Cache the results
+                this.cache.set('segments', this.segments);
+
                 console.log(`[SegmentsPage] Loaded ${this.segments.length} segments`);
                 this.renderSegments();
             } else {
@@ -68,7 +90,7 @@ const SegmentsPage = {
     },
 
     /**
-     * Render segments grid
+     * Render segments grid with pagination
      */
     renderSegments(segments = this.segments) {
         const container = document.getElementById('segmentsContainer');
@@ -89,13 +111,58 @@ const SegmentsPage = {
             return;
         }
 
+        // For large lists, use pagination
+        const shouldPaginate = segments.length > this.pageSize;
+        const displaySegments = shouldPaginate
+            ? paginate(segments, this.currentPage, this.pageSize).items
+            : segments;
+
         const html = `
             <div class="segments-grid">
-                ${segments.map(segment => this.renderSegmentCard(segment)).join('')}
+                ${displaySegments.map(segment => this.renderSegmentCard(segment)).join('')}
             </div>
+            ${shouldPaginate ? this.renderPagination(segments) : ''}
         `;
 
-        container.innerHTML = html;
+        // Use requestAnimationFrame for smooth rendering
+        requestAnimationFrame(() => {
+            container.innerHTML = html;
+        });
+    },
+
+    /**
+     * Render pagination controls
+     */
+    renderPagination(segments) {
+        const paginationData = paginate(segments, this.currentPage, this.pageSize);
+
+        return `
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+                <button
+                    onclick="SegmentsPage.changePage(${this.currentPage - 1})"
+                    ${this.currentPage === 1 ? 'disabled' : ''}
+                    style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
+                    이전
+                </button>
+                <span style="padding: 8px 16px; color: #667eea;">
+                    ${this.currentPage} / ${paginationData.totalPages}
+                </span>
+                <button
+                    onclick="SegmentsPage.changePage(${this.currentPage + 1})"
+                    ${!paginationData.hasMore ? 'disabled' : ''}
+                    style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
+                    다음
+                </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Change page
+     */
+    changePage(page) {
+        this.currentPage = page;
+        this.renderSegments();
     },
 
     /**
@@ -254,6 +321,9 @@ const SegmentsPage = {
                 if (response.success) {
                     UI.toast('세그먼트가 수정되었습니다', 'success');
                     this.hideModal();
+
+                    // Invalidate cache
+                    this.cache.clear();
                     await this.loadSegments();
                 } else {
                     throw new Error(response.error || 'Failed to update segment');
@@ -271,6 +341,9 @@ const SegmentsPage = {
                 if (response.success) {
                     UI.toast('세그먼트가 생성되었습니다', 'success');
                     this.hideModal();
+
+                    // Invalidate cache
+                    this.cache.clear();
                     await this.loadSegments();
                 } else {
                     throw new Error(response.error || 'Failed to create segment');
@@ -301,6 +374,9 @@ const SegmentsPage = {
 
             if (response.success) {
                 UI.toast('세그먼트가 삭제되었습니다', 'success');
+
+                // Invalidate cache
+                this.cache.clear();
                 await this.loadSegments();
             } else {
                 throw new Error(response.error || 'Failed to delete segment');

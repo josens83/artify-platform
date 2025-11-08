@@ -3,12 +3,17 @@
  * Text + Image generation with multi-model support
  */
 
+import { lazyLoadImages, paginate, CacheManager } from './utils.js';
+
 const GeneratePage = {
     segments: [],
     generatedResults: [],
     savedResults: [],
     currentSegmentId: null,
     currentSegment: null,
+    cache: new CacheManager(600000), // 10 minutes cache
+    resultsPage: 1,
+    resultsPageSize: 5,
 
     /**
      * Initialize generate page
@@ -144,15 +149,27 @@ const GeneratePage = {
     },
 
     /**
-     * Load segments for dropdown
+     * Load segments for dropdown with caching
      */
     async loadSegments() {
         try {
+            // Check cache first
+            const cachedSegments = this.cache.get('segments');
+            if (cachedSegments) {
+                this.segments = cachedSegments;
+                this.populateSegmentDropdown();
+                return;
+            }
+
             const { default: api } = await import('./api.js');
             const response = await api.request(`${api.config.CONTENT_BACKEND_URL}/segments`);
 
             if (response.success) {
                 this.segments = response.segments || [];
+
+                // Cache the results
+                this.cache.set('segments', this.segments);
+
                 this.populateSegmentDropdown();
             }
         } catch (error) {
@@ -348,7 +365,7 @@ const GeneratePage = {
     },
 
     /**
-     * Render all results
+     * Render all results with pagination
      */
     renderResults() {
         const panel = document.getElementById('resultsPanel');
@@ -366,13 +383,63 @@ const GeneratePage = {
             return;
         }
 
+        // Use pagination for better performance
+        const shouldPaginate = this.generatedResults.length > this.resultsPageSize;
+        const displayResults = shouldPaginate
+            ? paginate(this.generatedResults, this.resultsPage, this.resultsPageSize).items
+            : this.generatedResults;
+
         const html = `
             <div class="results-grid">
-                ${this.generatedResults.map(result => this.renderResultCard(result)).join('')}
+                ${displayResults.map(result => this.renderResultCard(result)).join('')}
             </div>
+            ${shouldPaginate ? this.renderResultsPagination() : ''}
         `;
 
-        panel.innerHTML = html;
+        // Use requestAnimationFrame for smooth rendering
+        requestAnimationFrame(() => {
+            panel.innerHTML = html;
+
+            // Initialize lazy loading for images
+            setTimeout(() => {
+                lazyLoadImages('img[data-src]');
+            }, 100);
+        });
+    },
+
+    /**
+     * Render pagination for results
+     */
+    renderResultsPagination() {
+        const paginationData = paginate(this.generatedResults, this.resultsPage, this.resultsPageSize);
+
+        return `
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; padding: 20px;">
+                <button
+                    onclick="GeneratePage.changeResultsPage(${this.resultsPage - 1})"
+                    ${this.resultsPage === 1 ? 'disabled' : ''}
+                    style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
+                    이전
+                </button>
+                <span style="padding: 8px 16px; color: #667eea;">
+                    ${this.resultsPage} / ${paginationData.totalPages}
+                </span>
+                <button
+                    onclick="GeneratePage.changeResultsPage(${this.resultsPage + 1})"
+                    ${!paginationData.hasMore ? 'disabled' : ''}
+                    style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
+                    다음
+                </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Change results page
+     */
+    changeResultsPage(page) {
+        this.resultsPage = page;
+        this.renderResults();
     },
 
     /**
@@ -410,7 +477,7 @@ const GeneratePage = {
 
                     ${hasImage ? `
                         <div class="image-content">
-                            <img src="${result.image.url}" alt="Generated image" />
+                            <img data-src="${result.image.url}" alt="Generated image" style="background: #f3f4f6; min-height: 200px;" />
                         </div>
                     ` : `
                         <div class="image-content">

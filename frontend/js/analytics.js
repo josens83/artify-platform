@@ -3,10 +3,14 @@
  * Displays campaign performance metrics and insights
  */
 
+import { loadScript, CacheManager, debounce } from './utils.js';
+
 const AnalyticsPage = {
     data: null,
     charts: {},
     currentTab: 'top',
+    chartJsLoaded: false,
+    cache: new CacheManager(300000), // 5 minutes cache
 
     /**
      * Initialize analytics page
@@ -17,7 +21,7 @@ const AnalyticsPage = {
     },
 
     /**
-     * Load analytics data from API
+     * Load analytics data from API with caching
      */
     async loadData() {
         const container = document.getElementById('analyticsContent');
@@ -25,6 +29,16 @@ const AnalyticsPage = {
 
         try {
             console.log(`[AnalyticsPage] Loading data for ${dateRange} days...`);
+
+            // Check cache first
+            const cacheKey = `analytics_${dateRange}`;
+            const cachedData = this.cache.get(cacheKey);
+            if (cachedData) {
+                this.data = cachedData;
+                console.log('[AnalyticsPage] Data loaded from cache');
+                this.render();
+                return;
+            }
 
             // Import API dynamically
             const { default: api } = await import('./api.js');
@@ -36,6 +50,10 @@ const AnalyticsPage = {
 
             if (response.success) {
                 this.data = response.data || this.getMockData();
+
+                // Cache the results
+                this.cache.set(cacheKey, this.data);
+
                 console.log('[AnalyticsPage] Data loaded:', this.data);
                 this.render();
             } else {
@@ -73,10 +91,27 @@ const AnalyticsPage = {
 
         container.innerHTML = html;
 
-        // Initialize charts after DOM is ready
-        setTimeout(() => {
-            this.initCharts();
-        }, 100);
+        // Initialize or update charts after DOM is ready
+        requestAnimationFrame(async () => {
+            await this.ensureChartJsLoaded();
+            this.updateCharts();
+        });
+    },
+
+    /**
+     * Ensure Chart.js is loaded (lazy loading)
+     */
+    async ensureChartJsLoaded() {
+        if (this.chartJsLoaded) return;
+
+        try {
+            console.log('[AnalyticsPage] Loading Chart.js...');
+            await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js');
+            this.chartJsLoaded = true;
+            console.log('[AnalyticsPage] Chart.js loaded');
+        } catch (error) {
+            console.error('[AnalyticsPage] Failed to load Chart.js:', error);
+        }
     },
 
     /**
@@ -269,12 +304,33 @@ const AnalyticsPage = {
     },
 
     /**
-     * Initialize charts using Chart.js
+     * Update charts - create if doesn't exist, update if exists
      */
-    initCharts() {
-        // Trend Chart
+    updateCharts() {
+        if (!window.Chart || !this.chartJsLoaded) {
+            console.warn('[AnalyticsPage] Chart.js not loaded, skipping chart update');
+            return;
+        }
+
+        this.updateTrendChart();
+        this.updateModelChart();
+        this.updateSegmentChart();
+    },
+
+    /**
+     * Update trend chart
+     */
+    updateTrendChart() {
         const trendCtx = document.getElementById('trendChart');
-        if (trendCtx && this.data.trends) {
+        if (!trendCtx || !this.data.trends) return;
+
+        if (this.charts.trend) {
+            // Update existing chart
+            this.charts.trend.data.labels = this.data.trends.labels || [];
+            this.charts.trend.data.datasets[0].data = this.data.trends.values || [];
+            this.charts.trend.update('none'); // Skip animation for faster update
+        } else {
+            // Create new chart
             this.charts.trend = new Chart(trendCtx, {
                 type: 'line',
                 data: {
@@ -291,6 +347,7 @@ const AnalyticsPage = {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: { duration: 500 },
                     plugins: {
                         legend: { display: false }
                     },
@@ -300,10 +357,22 @@ const AnalyticsPage = {
                 }
             });
         }
+    },
 
-        // Model Chart (Doughnut)
+    /**
+     * Update model chart
+     */
+    updateModelChart() {
         const modelCtx = document.getElementById('modelChart');
-        if (modelCtx && this.data.model_usage) {
+        if (!modelCtx || !this.data.model_usage) return;
+
+        if (this.charts.model) {
+            // Update existing chart
+            this.charts.model.data.labels = this.data.model_usage.labels || [];
+            this.charts.model.data.datasets[0].data = this.data.model_usage.values || [];
+            this.charts.model.update('none');
+        } else {
+            // Create new chart
             this.charts.model = new Chart(modelCtx, {
                 type: 'doughnut',
                 data: {
@@ -321,6 +390,7 @@ const AnalyticsPage = {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: { duration: 500 },
                     plugins: {
                         legend: {
                             position: 'bottom'
@@ -329,10 +399,22 @@ const AnalyticsPage = {
                 }
             });
         }
+    },
 
-        // Segment Chart (Bar)
+    /**
+     * Update segment chart
+     */
+    updateSegmentChart() {
         const segmentCtx = document.getElementById('segmentChart');
-        if (segmentCtx && this.data.segment_costs) {
+        if (!segmentCtx || !this.data.segment_costs) return;
+
+        if (this.charts.segment) {
+            // Update existing chart
+            this.charts.segment.data.labels = this.data.segment_costs.labels || [];
+            this.charts.segment.data.datasets[0].data = this.data.segment_costs.values || [];
+            this.charts.segment.update('none');
+        } else {
+            // Create new chart
             this.charts.segment = new Chart(segmentCtx, {
                 type: 'bar',
                 data: {
@@ -348,6 +430,7 @@ const AnalyticsPage = {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: { duration: 500 },
                     plugins: {
                         legend: { display: false }
                     },
@@ -357,6 +440,16 @@ const AnalyticsPage = {
                 }
             });
         }
+    },
+
+    /**
+     * Destroy all charts (cleanup)
+     */
+    destroyCharts() {
+        Object.values(this.charts).forEach(chart => {
+            if (chart) chart.destroy();
+        });
+        this.charts = {};
     },
 
     /**
