@@ -17,6 +17,8 @@ import time
 
 from dotenv import load_dotenv
 from openai import OpenAI
+import google.generativeai as genai
+import requests
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -204,15 +206,37 @@ logger.info(f"CORS middleware configured with {len(CORS_ORIGINS)} origins")
 # OpenAI client
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY or OPENAI_API_KEY == "":
-    logger.warning("OPENAI_API_KEY not set. AI generation will fail.")
+    logger.warning("OPENAI_API_KEY not set. OpenAI generation will fail.")
     openai_client = None
 else:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
     logger.info("OpenAI API client initialized")
 
+# Google Gemini client
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if not GOOGLE_API_KEY or GOOGLE_API_KEY == "":
+    logger.warning("GOOGLE_API_KEY not set. Gemini generation will be unavailable.")
+    gemini_client = None
+else:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    gemini_client = genai.GenerativeModel('gemini-pro')
+    logger.info("Google Gemini API client initialized")
+
+# Stability AI configuration
+STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
+if not STABILITY_API_KEY or STABILITY_API_KEY == "":
+    logger.warning("STABILITY_API_KEY not set. Stability AI generation will be unavailable.")
+    stability_enabled = False
+else:
+    stability_enabled = True
+    logger.info("Stability AI API configured")
+
 
 # Cost estimation (USD per token)
-# Reference: https://openai.com/pricing
+# References:
+# - OpenAI: https://openai.com/pricing
+# - Google AI: https://ai.google.dev/pricing
+# - Stability AI: https://platform.stability.ai/pricing
 PRICING = {
     "gpt-3.5-turbo": {
         "input": 0.0005 / 1000,  # $0.0005 per 1K input tokens
@@ -222,10 +246,19 @@ PRICING = {
         "input": 0.03 / 1000,
         "output": 0.06 / 1000
     },
+    "gemini-pro": {
+        "input": 0.00025 / 1000,  # $0.00025 per 1K input tokens (cheaper than GPT-3.5)
+        "output": 0.0005 / 1000   # $0.0005 per 1K output tokens
+    },
     "dall-e-3": {
         "1024x1024": 0.040,  # per image
         "1024x1792": 0.080,
         "1792x1024": 0.080
+    },
+    "stable-diffusion-xl": {
+        "1024x1024": 0.030,  # per image (cheaper than DALL-E)
+        "1536x640": 0.030,
+        "640x1536": 0.030
     }
 }
 
@@ -322,6 +355,7 @@ async def update_quota_cost(user_id: int, cost: float, db: Session):
 class TextGenerationRequest(BaseModel):
     prompt: str
     user_id: int = 1  # Default to user 1 for now (should come from auth)
+    model: Optional[str] = "gpt-3.5-turbo"  # "gpt-3.5-turbo" or "gemini-pro"
     segment_id: Optional[int] = None
     tone: Optional[str] = "전문적"
     keywords: Optional[List[str]] = []
@@ -332,8 +366,9 @@ class TextGenerationRequest(BaseModel):
 class ImageGenerationRequest(BaseModel):
     prompt: str
     user_id: int = 1  # Default to user 1 for now (should come from auth)
+    model: Optional[str] = "dall-e-3"  # "dall-e-3" or "stable-diffusion-xl"
     size: Optional[str] = "1024x1024"
-    quality: Optional[str] = "standard"
+    quality: Optional[str] = "standard"  # Only for DALL-E
 
 
 class SegmentCreate(BaseModel):
@@ -436,6 +471,87 @@ async def root():
             "health": [
                 "/health"
             ]
+        }
+    }
+
+
+@app.get("/models", tags=["ai-generation"])
+async def get_available_models():
+    """
+    Get list of available AI models for text and image generation
+
+    Returns:
+    - Available models with their capabilities, pricing, and availability status
+    """
+    models = {
+        "text_models": [
+            {
+                "id": "gpt-3.5-turbo",
+                "name": "OpenAI GPT-3.5 Turbo",
+                "provider": "OpenAI",
+                "type": "text",
+                "available": openai_client is not None,
+                "pricing": {
+                    "input_per_1k_tokens": "$0.0005",
+                    "output_per_1k_tokens": "$0.0015"
+                },
+                "features": ["Fast", "Reliable", "Korean support"],
+                "max_tokens": 4096
+            },
+            {
+                "id": "gemini-pro",
+                "name": "Google Gemini Pro",
+                "provider": "Google",
+                "type": "text",
+                "available": gemini_client is not None,
+                "pricing": {
+                    "input_per_1k_tokens": "$0.00025",
+                    "output_per_1k_tokens": "$0.0005"
+                },
+                "features": ["Cost-effective", "Fast", "Korean support"],
+                "max_tokens": 30720
+            }
+        ],
+        "image_models": [
+            {
+                "id": "dall-e-3",
+                "name": "DALL-E 3",
+                "provider": "OpenAI",
+                "type": "image",
+                "available": openai_client is not None,
+                "pricing": {
+                    "1024x1024": "$0.040",
+                    "1024x1792": "$0.080",
+                    "1792x1024": "$0.080"
+                },
+                "features": ["High quality", "Precise prompts", "HD option"],
+                "supported_sizes": ["1024x1024", "1024x1792", "1792x1024"]
+            },
+            {
+                "id": "stable-diffusion-xl",
+                "name": "Stable Diffusion XL",
+                "provider": "Stability AI",
+                "type": "image",
+                "available": stability_enabled,
+                "pricing": {
+                    "1024x1024": "$0.030",
+                    "1536x640": "$0.030",
+                    "640x1536": "$0.030"
+                },
+                "features": ["Cost-effective", "Fast", "Customizable"],
+                "supported_sizes": ["1024x1024", "1536x640", "640x1536"]
+            }
+        ]
+    }
+
+    return {
+        "success": True,
+        "models": models,
+        "summary": {
+            "total_text_models": len(models["text_models"]),
+            "total_image_models": len(models["image_models"]),
+            "available_text_models": sum(1 for m in models["text_models"] if m["available"]),
+            "available_image_models": sum(1 for m in models["image_models"] if m["available"])
         }
     }
 
@@ -588,7 +704,11 @@ async def generate_text(
     db: Session = Depends(get_db)
 ):
     """
-    Generate AI text using OpenAI GPT-3.5-turbo
+    Generate AI text using GPT-3.5-turbo or Gemini Pro
+
+    **Supported Models:**
+    - gpt-3.5-turbo (OpenAI)
+    - gemini-pro (Google)
 
     **Rate Limit:** 10 requests per minute
 
@@ -597,13 +717,28 @@ async def generate_text(
     - Token usage tracking
     - User quota enforcement
     - Automatic caching for duplicate prompts
+    - Multi-model support
     """
 
-    # Check if OpenAI client is initialized
-    if not openai_client:
+    # Validate model parameter
+    supported_models = ["gpt-3.5-turbo", "gemini-pro"]
+    if request.model not in supported_models:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported model: {request.model}. Supported models: {', '.join(supported_models)}"
+        )
+
+    # Check if requested model's client is initialized
+    if request.model == "gpt-3.5-turbo" and not openai_client:
         raise HTTPException(
             status_code=503,
             detail="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
+        )
+
+    if request.model == "gemini-pro" and not gemini_client:
+        raise HTTPException(
+            status_code=503,
+            detail="Google API key not configured. Please set GOOGLE_API_KEY environment variable."
         )
 
     # Check user quota before generation
@@ -615,12 +750,12 @@ async def generate_text(
         cache_hit = vector_client.search_prompt_cache(
             query=request.prompt,
             job_type="text",
-            model="gpt-3.5-turbo",
+            model=request.model,
             similarity_threshold=0.95  # 95% similarity
         )
 
         if cache_hit:
-            # Cache hit! Return cached result without calling OpenAI
+            # Cache hit! Return cached result without calling AI API
             cached_text = cache_hit["cached_result"]
 
             # Save to database with cache flag
@@ -628,7 +763,7 @@ async def generate_text(
                 content_type="text",
                 prompt=request.prompt,
                 result=cached_text,
-                model="gpt-3.5-turbo",
+                model=request.model,
                 cache_key=cache_hit["cache_id"],
                 is_cached_result=True
             )
@@ -640,7 +775,7 @@ async def generate_text(
                 "success": True,
                 "text": cached_text,
                 "prompt": request.prompt,
-                "model": "gpt-3.5-turbo",
+                "model": request.model,
                 "cached": True,
                 "cache_info": {
                     "cache_id": cache_hit["cache_id"],
@@ -663,7 +798,7 @@ async def generate_text(
     job = GenerationJob(
         user_id=request.user_id,
         job_type="text",
-        model="gpt-3.5-turbo",
+        model=request.model,
         prompt=request.prompt,
         status="pending"
     )
@@ -686,27 +821,50 @@ async def generate_text(
             keywords_str = ", ".join(request.keywords)
             enhanced_prompt += f"\n필수 키워드: {keywords_str}"
 
-        # Call OpenAI API
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful content creation assistant for marketing campaigns. Create engaging, persuasive content in Korean."},
-                {"role": "user", "content": enhanced_prompt}
-            ],
-            max_tokens=request.max_tokens,
-            temperature=request.temperature
-        )
+        # Call AI API based on selected model
+        generated_text = ""
+        prompt_tokens = 0
+        completion_tokens = 0
+        total_tokens = 0
 
-        generated_text = response.choices[0].message.content
+        if request.model == "gpt-3.5-turbo":
+            # OpenAI GPT-3.5 Turbo
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful content creation assistant for marketing campaigns. Create engaging, persuasive content in Korean."},
+                    {"role": "user", "content": enhanced_prompt}
+                ],
+                max_tokens=request.max_tokens,
+                temperature=request.temperature
+            )
 
-        # Extract token usage
-        usage = response.usage
-        prompt_tokens = usage.prompt_tokens
-        completion_tokens = usage.completion_tokens
-        total_tokens = usage.total_tokens
+            generated_text = response.choices[0].message.content
+            usage = response.usage
+            prompt_tokens = usage.prompt_tokens
+            completion_tokens = usage.completion_tokens
+            total_tokens = usage.total_tokens
+
+        elif request.model == "gemini-pro":
+            # Google Gemini Pro
+            response = gemini_client.generate_content(
+                enhanced_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=request.max_tokens,
+                    temperature=request.temperature
+                )
+            )
+
+            generated_text = response.text
+
+            # Gemini doesn't provide exact token counts in the same way
+            # Estimate tokens (rough approximation: ~4 characters per token)
+            prompt_tokens = len(enhanced_prompt) // 4
+            completion_tokens = len(generated_text) // 4
+            total_tokens = prompt_tokens + completion_tokens
 
         # Calculate cost
-        estimated_cost = calculate_text_cost("gpt-3.5-turbo", prompt_tokens, completion_tokens)
+        estimated_cost = calculate_text_cost(request.model, prompt_tokens, completion_tokens)
 
         # Update job with success
         job.status = "completed"
@@ -725,7 +883,7 @@ async def generate_text(
             content_type="text",
             prompt=request.prompt,
             result=generated_text,
-            model="gpt-3.5-turbo"
+            model=request.model
         )
         db.add(content_record)
         db.commit()
@@ -738,7 +896,7 @@ async def generate_text(
                 content_id=content_record.id,
                 text=generated_text,
                 prompt=request.prompt,
-                model="gpt-3.5-turbo",
+                model=request.model,
                 metadata={
                     "user_id": request.user_id,
                     "segment_id": request.segment_id,
@@ -752,7 +910,7 @@ async def generate_text(
                 cache_id = vector_client.add_prompt_cache(
                     prompt=request.prompt,
                     result=generated_text,
-                    model="gpt-3.5-turbo",
+                    model=request.model,
                     job_type="text",
                     metadata={
                         "user_id": request.user_id,
@@ -773,7 +931,7 @@ async def generate_text(
             "success": True,
             "text": generated_text,
             "prompt": request.prompt,
-            "model": "gpt-3.5-turbo",
+            "model": request.model,
             "usage": {
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
@@ -799,17 +957,39 @@ async def generate_image(
     request: ImageGenerationRequest,
     db: Session = Depends(get_db)
 ):
-    """Generate AI image using OpenAI DALL-E"""
+    """
+    Generate AI image using DALL-E 3 or Stable Diffusion XL
 
-    # Check if OpenAI client is initialized
-    if not openai_client:
+    **Supported Models:**
+    - dall-e-3 (OpenAI)
+    - stable-diffusion-xl (Stability AI)
+
+    **Rate Limit:** 5 requests per minute
+    """
+
+    # Validate model parameter
+    supported_models = ["dall-e-3", "stable-diffusion-xl"]
+    if request.model not in supported_models:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported model: {request.model}. Supported models: {', '.join(supported_models)}"
+        )
+
+    # Check if requested model's client is initialized
+    if request.model == "dall-e-3" and not openai_client:
         raise HTTPException(
             status_code=503,
             detail="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
         )
 
+    if request.model == "stable-diffusion-xl" and not stability_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Stability AI API key not configured. Please set STABILITY_API_KEY environment variable."
+        )
+
     # Calculate cost upfront for images
-    estimated_cost = calculate_image_cost("dall-e-3", request.size)
+    estimated_cost = calculate_image_cost(request.model, request.size)
 
     # Check user quota before generation
     await check_quota(request.user_id, "image", db, estimated_cost)
@@ -820,12 +1000,12 @@ async def generate_image(
         cache_hit = vector_client.search_prompt_cache(
             query=request.prompt,
             job_type="image",
-            model="dall-e-3",
+            model=request.model,
             similarity_threshold=0.95  # 95% similarity
         )
 
         if cache_hit:
-            # Cache hit! Return cached result without calling OpenAI
+            # Cache hit! Return cached result without calling AI API
             cached_url = cache_hit["cached_result"]
 
             # Save to database with cache flag
@@ -833,7 +1013,7 @@ async def generate_image(
                 content_type="image",
                 prompt=request.prompt,
                 result=cached_url,
-                model="dall-e-3",
+                model=request.model,
                 cache_key=cache_hit["cache_id"],
                 is_cached_result=True
             )
@@ -845,7 +1025,7 @@ async def generate_image(
                 "success": True,
                 "imageUrl": cached_url,
                 "prompt": request.prompt,
-                "model": "dall-e-3",
+                "model": request.model,
                 "cached": True,
                 "cache_info": {
                     "cache_id": cache_hit["cache_id"],
@@ -865,7 +1045,7 @@ async def generate_image(
     job = GenerationJob(
         user_id=request.user_id,
         job_type="image",
-        model="dall-e-3",
+        model=request.model,
         prompt=request.prompt,
         status="pending",
         estimated_cost=estimated_cost
@@ -874,16 +1054,64 @@ async def generate_image(
     db.commit()
 
     try:
-        # Call OpenAI DALL-E API
-        response = openai_client.images.generate(
-            model="dall-e-3",
-            prompt=request.prompt,
-            size=request.size,
-            quality=request.quality,
-            n=1
-        )
+        # Call AI API based on selected model
+        image_url = ""
 
-        image_url = response.data[0].url
+        if request.model == "dall-e-3":
+            # OpenAI DALL-E 3
+            response = openai_client.images.generate(
+                model="dall-e-3",
+                prompt=request.prompt,
+                size=request.size,
+                quality=request.quality,
+                n=1
+            )
+            image_url = response.data[0].url
+
+        elif request.model == "stable-diffusion-xl":
+            # Stability AI - Stable Diffusion XL
+            # Validate size for Stability AI
+            valid_sizes = ["1024x1024", "1536x640", "640x1536"]
+            size = request.size if request.size in valid_sizes else "1024x1024"
+
+            # Parse size
+            width, height = map(int, size.split("x"))
+
+            # Call Stability AI API
+            api_url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+
+            headers = {
+                "Authorization": f"Bearer {STABILITY_API_KEY}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+
+            payload = {
+                "text_prompts": [
+                    {
+                        "text": request.prompt,
+                        "weight": 1
+                    }
+                ],
+                "cfg_scale": 7,
+                "height": height,
+                "width": width,
+                "samples": 1,
+                "steps": 30
+            }
+
+            response = requests.post(api_url, headers=headers, json=payload)
+
+            if response.status_code != 200:
+                raise Exception(f"Stability AI API error: {response.text}")
+
+            response_data = response.json()
+
+            # Stability AI returns base64 encoded images
+            # In production, you'd upload this to a storage service and return the URL
+            # For now, we'll use a placeholder
+            image_base64 = response_data["artifacts"][0]["base64"]
+            image_url = f"data:image/png;base64,{image_base64}"
 
         # Update job with success
         job.status = "completed"
@@ -898,7 +1126,7 @@ async def generate_image(
             content_type="image",
             prompt=request.prompt,
             result=image_url,
-            model="dall-e-3"
+            model=request.model
         )
         db.add(content_record)
         db.commit()
@@ -911,11 +1139,11 @@ async def generate_image(
                 content_id=content_record.id,
                 prompt=request.prompt,
                 image_url=image_url,
-                model="dall-e-3",
+                model=request.model,
                 metadata={
                     "user_id": request.user_id,
                     "size": request.size,
-                    "quality": request.quality
+                    "quality": request.quality if request.model == "dall-e-3" else None
                 }
             )
 
@@ -924,12 +1152,12 @@ async def generate_image(
                 cache_id = vector_client.add_prompt_cache(
                     prompt=request.prompt,
                     result=image_url,
-                    model="dall-e-3",
+                    model=request.model,
                     job_type="image",
                     metadata={
                         "user_id": request.user_id,
                         "size": request.size,
-                        "quality": request.quality,
+                        "quality": request.quality if request.model == "dall-e-3" else None,
                         "cost_usd": estimated_cost
                     }
                 )
@@ -945,7 +1173,8 @@ async def generate_image(
             "success": True,
             "imageUrl": image_url,
             "prompt": request.prompt,
-            "model": "dall-e-3",
+            "model": request.model,
+            "size": request.size,
             "usage": {
                 "estimated_cost_usd": estimated_cost
             }

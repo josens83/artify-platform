@@ -917,35 +917,15 @@
         </div>
     </div>
 
-    <!-- Config -->
-    <script>
-        // Auto-detect environment and set API URLs
-        const isLocalhost = window.location.hostname === 'localhost' ||
-                           window.location.hostname === '127.0.0.1';
-
-        window.APP_CONFIG = {
-            // Backend API (Node.js Express)
-            BACKEND_URL: isLocalhost
-                ? 'http://localhost:3001'
-                : 'https://artify-backend-3y4r.onrender.com',
-
-            // Content Backend API (Python FastAPI)
-            CONTENT_BACKEND_URL: isLocalhost
-                ? 'http://localhost:8000'
-                : 'https://artify-content-api.onrender.com'
-        };
-
-        console.log('Environment:', isLocalhost ? 'Development' : 'Production');
-        console.log('Backend URL:', window.APP_CONFIG.BACKEND_URL);
-        console.log('Content Backend URL:', window.APP_CONFIG.CONTENT_BACKEND_URL);
-    </script>
-
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <!-- Core JavaScript Files -->
+    <!-- Load config first as ES module -->
+    <script type="module" src="js/config.js"></script>
     <script src="js/state.js"></script>
-    <script src="js/api.js"></script>
+    <!-- API.js is now an ES module that imports config.js -->
+    <script type="module" src="js/api.js"></script>
     <script src="js/ui-kit.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/router.js"></script>
