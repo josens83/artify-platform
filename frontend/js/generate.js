@@ -6,7 +6,9 @@
 const GeneratePage = {
     segments: [],
     generatedResults: [],
+    savedResults: [],
     currentSegmentId: null,
+    currentSegment: null,
 
     /**
      * Initialize generate page
@@ -14,7 +16,24 @@ const GeneratePage = {
     async init() {
         console.log('[GeneratePage] Initializing...');
         await this.loadSegments();
+        this.loadSavedResults();
         this.checkURLParams();
+        this.setupEventListeners();
+    },
+
+    /**
+     * Setup event listeners
+     */
+    setupEventListeners() {
+        // Segment selection change
+        const segmentSelect = document.getElementById('segment-select');
+        if (segmentSelect) {
+            segmentSelect.addEventListener('change', (e) => {
+                this.currentSegmentId = e.target.value;
+                this.updateSegmentInfo();
+                this.suggestKeywords();
+            });
+        }
     },
 
     /**
@@ -28,7 +47,100 @@ const GeneratePage = {
             console.log(`[GeneratePage] Pre-selected segment: ${segmentId}`);
             this.currentSegmentId = segmentId;
             document.getElementById('segment-select').value = segmentId;
+            this.updateSegmentInfo();
+            this.suggestKeywords();
         }
+    },
+
+    /**
+     * Update segment info card
+     */
+    updateSegmentInfo() {
+        if (!this.currentSegmentId) {
+            this.currentSegment = null;
+            return;
+        }
+
+        this.currentSegment = this.segments.find(s => s.id === parseInt(this.currentSegmentId));
+        if (!this.currentSegment) return;
+
+        console.log('[GeneratePage] Current segment:', this.currentSegment);
+    },
+
+    /**
+     * Suggest keywords based on segment
+     */
+    suggestKeywords() {
+        if (!this.currentSegment) return;
+
+        const criteria = this.currentSegment.criteria || {};
+        const keywords = [];
+
+        if (criteria.age_range) keywords.push(criteria.age_range);
+        if (criteria.gender) keywords.push(criteria.gender === 'male' ? '남성' : criteria.gender === 'female' ? '여성' : '');
+        if (criteria.interests) keywords.push(criteria.interests);
+        if (criteria.location) keywords.push(criteria.location);
+
+        const keywordsInput = document.getElementById('keywords');
+        if (keywordsInput && !keywordsInput.value.trim()) {
+            keywordsInput.value = keywords.filter(k => k).join(', ');
+        }
+    },
+
+    /**
+     * Load saved results from localStorage
+     */
+    loadSavedResults() {
+        try {
+            const saved = localStorage.getItem('artify_saved_results');
+            if (saved) {
+                this.savedResults = JSON.parse(saved);
+                console.log(`[GeneratePage] Loaded ${this.savedResults.length} saved results`);
+            }
+        } catch (error) {
+            console.error('[GeneratePage] Error loading saved results:', error);
+            this.savedResults = [];
+        }
+    },
+
+    /**
+     * Save results to localStorage
+     */
+    saveToLocalStorage() {
+        try {
+            localStorage.setItem('artify_saved_results', JSON.stringify(this.savedResults));
+            console.log('[GeneratePage] Saved to localStorage');
+        } catch (error) {
+            console.error('[GeneratePage] Error saving to localStorage:', error);
+        }
+    },
+
+    /**
+     * Save a result
+     */
+    saveResult(resultId) {
+        const result = this.generatedResults.find(r => r.id === resultId);
+        if (!result) return;
+
+        // Check if already saved
+        if (this.savedResults.find(r => r.id === resultId)) {
+            UI.toast('이미 저장된 결과입니다', 'info');
+            return;
+        }
+
+        this.savedResults.unshift({ ...result, saved: true });
+        this.saveToLocalStorage();
+        UI.toast('결과가 저장되었습니다', 'success');
+    },
+
+    /**
+     * Delete saved result
+     */
+    deleteSavedResult(resultId) {
+        this.savedResults = this.savedResults.filter(r => r.id !== resultId);
+        this.saveToLocalStorage();
+        this.renderResults();
+        UI.toast('저장된 결과가 삭제되었습니다', 'success');
     },
 
     /**
@@ -101,17 +213,27 @@ const GeneratePage = {
             }
 
             // Add to results
-            this.generatedResults.unshift({
+            const newResult = {
                 id: Date.now(),
                 text: results.text,
                 image: results.image,
+                segment: this.currentSegment ? {
+                    id: this.currentSegment.id,
+                    name: this.currentSegment.name
+                } : null,
                 timestamp: new Date().toISOString()
-            });
+            };
+
+            this.generatedResults.unshift(newResult);
+
+            // Auto-save to localStorage
+            this.savedResults.unshift({ ...newResult, saved: true });
+            this.saveToLocalStorage();
 
             // Render results
             this.renderResults();
 
-            UI.toast('콘텐츠가 생성되었습니다!', 'success');
+            UI.toast('콘텐츠가 생성되고 저장되었습니다!', 'success');
         } catch (error) {
             console.error('[GeneratePage] Generation error:', error);
             this.showError(error.message);
@@ -125,8 +247,17 @@ const GeneratePage = {
     async generateText() {
         const { default: api } = await import('./api.js');
 
+        let prompt = document.getElementById('text-prompt').value.trim();
+
+        // Enhance prompt with segment information
+        if (this.currentSegment) {
+            const segmentContext = this.buildSegmentContext();
+            prompt = `${segmentContext}\n\n${prompt}`;
+            console.log('[GeneratePage] Enhanced prompt with segment context');
+        }
+
         const payload = {
-            prompt: document.getElementById('text-prompt').value.trim(),
+            prompt: prompt,
             model: document.getElementById('text-model').value,
             tone: document.getElementById('tone').value,
             keywords: document.getElementById('keywords').value.split(',').map(k => k.trim()).filter(k => k),
@@ -153,6 +284,30 @@ const GeneratePage = {
             model: payload.model,
             usage: response.usage
         };
+    },
+
+    /**
+     * Build segment context for prompt enhancement
+     */
+    buildSegmentContext() {
+        if (!this.currentSegment) return '';
+
+        const criteria = this.currentSegment.criteria || {};
+        const parts = [`타겟 세그먼트: ${this.currentSegment.name}`];
+
+        if (this.currentSegment.description) {
+            parts.push(`설명: ${this.currentSegment.description}`);
+        }
+
+        if (criteria.age_range) parts.push(`연령대: ${criteria.age_range}`);
+        if (criteria.gender) {
+            const genderMap = { 'male': '남성', 'female': '여성', 'all': '전체' };
+            parts.push(`성별: ${genderMap[criteria.gender] || criteria.gender}`);
+        }
+        if (criteria.interests) parts.push(`관심사: ${criteria.interests}`);
+        if (criteria.location) parts.push(`지역: ${criteria.location}`);
+
+        return `[타겟 오디언스 정보]\n${parts.join('\n')}\n\n위 타겟 오디언스에 맞춘 콘텐츠를 작성해주세요.`;
     },
 
     /**
@@ -226,11 +381,19 @@ const GeneratePage = {
     renderResultCard(result) {
         const hasText = result.text && result.text.content;
         const hasImage = result.image && result.image.url;
+        const isSaved = result.saved || this.savedResults.find(r => r.id === result.id);
 
         return `
             <div class="result-card" data-result-id="${result.id}">
                 <div class="result-header">
-                    <h3 class="result-title">생성 결과</h3>
+                    <div>
+                        <h3 class="result-title">생성 결과</h3>
+                        ${result.segment ? `
+                            <div style="font-size: 12px; color: #667eea; margin-top: 4px;">
+                                🎯 ${this.escapeHtml(result.segment.name)}
+                            </div>
+                        ` : ''}
+                    </div>
                     <span class="result-model">
                         ${hasText ? result.text.model : ''}
                         ${hasText && hasImage ? '+' : ''}
@@ -268,12 +431,26 @@ const GeneratePage = {
                     <span class="meta-item">
                         🕒 ${this.formatTimestamp(result.timestamp)}
                     </span>
+                    ${isSaved ? `
+                        <span class="meta-item" style="color: #10b981;">
+                            ✓ 저장됨
+                        </span>
+                    ` : ''}
                 </div>
 
                 <div class="result-actions">
                     <button class="btn btn-primary" onclick="GeneratePage.openInEditor(${result.id})">
                         🎨 에디터에서 열기
                     </button>
+                    ${!isSaved ? `
+                        <button class="btn btn-secondary" onclick="GeneratePage.saveResult(${result.id})">
+                            💾 저장
+                        </button>
+                    ` : result.saved ? `
+                        <button class="btn btn-danger" onclick="GeneratePage.deleteSavedResult(${result.id})">
+                            🗑️ 삭제
+                        </button>
+                    ` : ''}
                     <button class="btn btn-secondary" onclick="GeneratePage.regenerate(${result.id})">
                         🔄 재생성
                     </button>
