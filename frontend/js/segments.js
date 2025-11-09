@@ -3,10 +3,17 @@
  * Manages target segments for personalized content generation
  */
 
+import { debounce, CacheManager, paginate, loadScript } from './utils.js';
+
 const SegmentsPage = {
     segments: [],
     currentSegment: null,
     editMode: false,
+    cache: new CacheManager(600000), // 10 minutes cache
+    currentPage: 1,
+    pageSize: 20,
+    chartJsLoaded: false,
+    segmentCharts: {},
 
     /**
      * Initialize segments page
@@ -18,26 +25,39 @@ const SegmentsPage = {
     },
 
     /**
-     * Setup event listeners
+     * Setup event listeners with debouncing
      */
     setupEventListeners() {
-        // Search input
+        // Debounced search input (300ms delay)
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
+            const debouncedFilter = debounce((value) => {
+                this.filterSegments(value);
+            }, 300);
+
             searchInput.addEventListener('input', (e) => {
-                this.filterSegments(e.target.value);
+                debouncedFilter(e.target.value);
             });
         }
     },
 
     /**
-     * Load all segments from API
+     * Load all segments from API with caching
      */
     async loadSegments() {
         const container = document.getElementById('segmentsContainer');
 
         try {
             console.log('[SegmentsPage] Loading segments...');
+
+            // Check cache first
+            const cachedSegments = this.cache.get('segments');
+            if (cachedSegments) {
+                this.segments = cachedSegments;
+                console.log(`[SegmentsPage] Loaded ${this.segments.length} segments from cache`);
+                this.renderSegments();
+                return;
+            }
 
             // Import API dynamically
             const { default: api } = await import('./api.js');
@@ -47,6 +67,10 @@ const SegmentsPage = {
 
             if (response.success) {
                 this.segments = response.segments || [];
+
+                // Cache the results
+                this.cache.set('segments', this.segments);
+
                 console.log(`[SegmentsPage] Loaded ${this.segments.length} segments`);
                 this.renderSegments();
             } else {
@@ -68,7 +92,7 @@ const SegmentsPage = {
     },
 
     /**
-     * Render segments grid
+     * Render segments grid with pagination
      */
     renderSegments(segments = this.segments) {
         const container = document.getElementById('segmentsContainer');
@@ -89,13 +113,171 @@ const SegmentsPage = {
             return;
         }
 
+        // For large lists, use pagination
+        const shouldPaginate = segments.length > this.pageSize;
+        const displaySegments = shouldPaginate
+            ? paginate(segments, this.currentPage, this.pageSize).items
+            : segments;
+
         const html = `
             <div class="segments-grid">
-                ${segments.map(segment => this.renderSegmentCard(segment)).join('')}
+                ${displaySegments.map(segment => this.renderSegmentCard(segment)).join('')}
             </div>
+            ${shouldPaginate ? this.renderPagination(segments) : ''}
         `;
 
-        container.innerHTML = html;
+        // Use requestAnimationFrame for smooth rendering
+        requestAnimationFrame(async () => {
+            container.innerHTML = html;
+
+            // Initialize segment charts
+            await this.initializeSegmentCharts(displaySegments);
+        });
+    },
+
+    /**
+     * Ensure Chart.js is loaded
+     */
+    async ensureChartJsLoaded() {
+        if (this.chartJsLoaded) return;
+
+        try {
+            console.log('[SegmentsPage] Loading Chart.js...');
+            await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js');
+            this.chartJsLoaded = true;
+            console.log('[SegmentsPage] Chart.js loaded');
+        } catch (error) {
+            console.error('[SegmentsPage] Failed to load Chart.js:', error);
+        }
+    },
+
+    /**
+     * Initialize charts for all segments
+     */
+    async initializeSegmentCharts(segments) {
+        if (!segments || segments.length === 0) return;
+
+        // Load Chart.js if not already loaded
+        await this.ensureChartJsLoaded();
+        if (!window.Chart) return;
+
+        // Create chart for each segment
+        segments.forEach(segment => {
+            this.createSegmentChart(segment);
+        });
+    },
+
+    /**
+     * Create mini chart for a segment
+     */
+    createSegmentChart(segment) {
+        const canvas = document.getElementById(`segment-chart-${segment.id}`);
+        if (!canvas) return;
+
+        // Destroy existing chart if any
+        if (this.segmentCharts[segment.id]) {
+            this.segmentCharts[segment.id].destroy();
+        }
+
+        // Generate mock stats (나중에 실제 DB 데이터로 교체)
+        const contentCount = segment.content_count || Math.floor(Math.random() * 50);
+        const avgCtr = segment.avg_ctr || (Math.random() * 5).toFixed(2);
+        const totalCost = segment.total_cost || (Math.random() * 10).toFixed(2);
+
+        this.segmentCharts[segment.id] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['생성량', 'CTR(%)', '비용($)'],
+                datasets: [{
+                    label: '통계',
+                    data: [contentCount, parseFloat(avgCtr), parseFloat(totalCost)],
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ],
+                    borderColor: [
+                        '#667eea',
+                        '#10b981',
+                        '#f59e0b'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed.y;
+                                if (label === '생성량') return `생성량: ${value}개`;
+                                if (label === 'CTR(%)') return `평균 CTR: ${value}%`;
+                                if (label === '비용($)') return `총 비용: $${value}`;
+                                return value;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 10
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    /**
+     * Render pagination controls
+     */
+    renderPagination(segments) {
+        const paginationData = paginate(segments, this.currentPage, this.pageSize);
+
+        return `
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+                <button
+                    onclick="SegmentsPage.changePage(${this.currentPage - 1})"
+                    ${this.currentPage === 1 ? 'disabled' : ''}
+                    style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
+                    이전
+                </button>
+                <span style="padding: 8px 16px; color: #667eea;">
+                    ${this.currentPage} / ${paginationData.totalPages}
+                </span>
+                <button
+                    onclick="SegmentsPage.changePage(${this.currentPage + 1})"
+                    ${!paginationData.hasMore ? 'disabled' : ''}
+                    style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
+                    다음
+                </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Change page
+     */
+    changePage(page) {
+        this.currentPage = page;
+        this.renderSegments();
     },
 
     /**
@@ -134,6 +316,10 @@ const SegmentsPage = {
                         <span class="stat-label">마지막 사용</span>
                         <span class="stat-value">${segment.last_used ? this.formatDate(segment.last_used) : '없음'}</span>
                     </div>
+                </div>
+
+                <div class="segment-chart-container" style="height: 150px; margin: 15px 0; padding: 10px; background: #f9fafb; border-radius: 8px;">
+                    <canvas id="segment-chart-${segment.id}"></canvas>
                 </div>
 
                 <div class="segment-actions">
@@ -254,6 +440,9 @@ const SegmentsPage = {
                 if (response.success) {
                     UI.toast('세그먼트가 수정되었습니다', 'success');
                     this.hideModal();
+
+                    // Invalidate cache
+                    this.cache.clear();
                     await this.loadSegments();
                 } else {
                     throw new Error(response.error || 'Failed to update segment');
@@ -271,6 +460,9 @@ const SegmentsPage = {
                 if (response.success) {
                     UI.toast('세그먼트가 생성되었습니다', 'success');
                     this.hideModal();
+
+                    // Invalidate cache
+                    this.cache.clear();
                     await this.loadSegments();
                 } else {
                     throw new Error(response.error || 'Failed to create segment');
@@ -301,6 +493,9 @@ const SegmentsPage = {
 
             if (response.success) {
                 UI.toast('세그먼트가 삭제되었습니다', 'success');
+
+                // Invalidate cache
+                this.cache.clear();
                 await this.loadSegments();
             } else {
                 throw new Error(response.error || 'Failed to delete segment');

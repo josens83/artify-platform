@@ -28,6 +28,9 @@ const EditorPage = {
             this.initCanvas();
         }
 
+        // Check for pending content from generate page
+        this.loadPendingContent();
+
         // Load initial panel based on URL params
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode') || 'design';
@@ -35,6 +38,108 @@ const EditorPage = {
 
         // Start auto-save
         this.startAutoSave();
+    },
+
+    /**
+     * Load pending content from generate page (sessionStorage)
+     */
+    loadPendingContent() {
+        const pendingContent = sessionStorage.getItem('artify_editor_content');
+        if (!pendingContent) return;
+
+        try {
+            const data = JSON.parse(pendingContent);
+            console.log('[EditorPage] Loading pending content:', data);
+
+            // Wait for canvas to be ready
+            const checkCanvas = setInterval(() => {
+                if (this.canvas) {
+                    clearInterval(checkCanvas);
+
+                    // Add image first (background)
+                    if (data.image) {
+                        this.addGeneratedImage(data.image, 100, 100);
+                    }
+
+                    // Add text on top
+                    if (data.text) {
+                        const yPosition = data.image ? 400 : 100;
+                        this.addGeneratedText(data.text, 100, yPosition);
+                    }
+
+                    // Show success message
+                    UI.toast(`AI 생성 콘텐츠가 자동으로 추가되었습니다${data.segment ? ` (${data.segment.name})` : ''}`, 'success');
+
+                    // Clear sessionStorage
+                    sessionStorage.removeItem('artify_editor_content');
+                }
+            }, 100);
+
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                clearInterval(checkCanvas);
+            }, 5000);
+
+        } catch (error) {
+            console.error('[EditorPage] Error loading pending content:', error);
+            sessionStorage.removeItem('artify_editor_content');
+        }
+    },
+
+    /**
+     * Add generated image to canvas
+     */
+    addGeneratedImage(imageUrl, x, y) {
+        if (!this.canvas) return;
+
+        fabric.Image.fromURL(imageUrl, (img) => {
+            // Scale to fit nicely
+            const maxWidth = this.canvas.width * 0.6;
+            const maxHeight = this.canvas.height * 0.5;
+
+            if (img.width > maxWidth || img.height > maxHeight) {
+                const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+                img.scale(scale);
+            }
+
+            img.set({
+                left: x,
+                top: y,
+                selectable: true
+            });
+
+            this.canvas.add(img);
+            this.canvas.renderAll();
+            console.log('[EditorPage] Generated image added');
+        }, { crossOrigin: 'anonymous' });
+    },
+
+    /**
+     * Add generated text to canvas
+     */
+    addGeneratedText(textContent, x, y) {
+        if (!this.canvas) return;
+
+        // Truncate long text
+        const maxLength = 200;
+        const displayText = textContent.length > maxLength
+            ? textContent.substring(0, maxLength) + '...'
+            : textContent;
+
+        const text = new fabric.IText(displayText, {
+            left: x,
+            top: y,
+            fontFamily: 'Arial',
+            fontSize: 18,
+            fill: '#000000',
+            width: this.canvas.width * 0.7,
+            selectable: true
+        });
+
+        this.canvas.add(text);
+        this.canvas.setActiveObject(text);
+        this.canvas.renderAll();
+        console.log('[EditorPage] Generated text added');
     },
 
     render() {
