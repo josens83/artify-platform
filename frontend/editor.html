@@ -825,6 +825,70 @@
             font-weight: 500;
         }
 
+        /* Keyboard Shortcuts */
+        .shortcuts-section {
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .shortcuts-section:last-child {
+            border-bottom: none;
+        }
+
+        .shortcuts-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .shortcuts-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .shortcut-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .shortcut-item:hover {
+            background: #e8eaff;
+        }
+
+        .shortcut-keys {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .shortcut-keys kbd {
+            background: white;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+            font-size: 12px;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+            color: #333;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        .shortcut-desc {
+            font-size: 14px;
+            color: #666;
+            text-align: right;
+        }
+
         /* Crop Mode */
         .crop-overlay {
             position: absolute;
@@ -1051,6 +1115,7 @@
                 <button class="header-btn" onclick="showVersionHistoryModal()" aria-label="버전 히스토리">🕐 버전</button>
                 <button class="header-btn" onclick="showCollaborateModal()" aria-label="협업">👥 협업</button>
                 <button class="header-btn" onclick="showTemplateModal()" aria-label="캔버스 크기 변경">📐 캔버스 크기</button>
+                <button class="header-btn" onclick="showKeyboardShortcutsModal()" aria-label="키보드 단축키" title="키보드 단축키 (?)">⌨️ 단축키</button>
                 <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
                 <button class="header-btn primary" onclick="saveProject()" aria-label="프로젝트 저장">💾 저장</button>
                 <div id="editor-auth-container" style="display: inline-block; margin-left: 10px;">
@@ -1888,6 +1953,164 @@
                 <!-- Info -->
                 <div style="margin-top: 16px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
                     💡 템플릿을 클릭하면 현재 캔버스에 적용됩니다
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-overlay" id="keyboardShortcutsModal">
+        <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 class="modal-title">⌨️ 키보드 단축키</h2>
+                <button class="modal-close" onclick="closeKeyboardShortcutsModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div style="display: grid; gap: 24px;">
+                    <!-- General Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">일반</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>S</kbd></span>
+                                <span class="shortcut-desc">프로젝트 저장</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>?</kbd></span>
+                                <span class="shortcut-desc">단축키 가이드 열기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>/</kbd></span>
+                                <span class="shortcut-desc">레이어 검색 포커스</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">편집</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Z</kbd></span>
+                                <span class="shortcut-desc">실행 취소</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Y</kbd></span>
+                                <span class="shortcut-desc">다시 실행</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Delete</kbd></span>
+                                <span class="shortcut-desc">선택한 요소 삭제</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>C</kbd></span>
+                                <span class="shortcut-desc">복사</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>V</kbd></span>
+                                <span class="shortcut-desc">붙여넣기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>D</kbd></span>
+                                <span class="shortcut-desc">복제</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd></span>
+                                <span class="shortcut-desc">제자리 복제</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selection Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">선택</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>A</kbd></span>
+                                <span class="shortcut-desc">모두 선택</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Click</kbd></span>
+                                <span class="shortcut-desc">다중 선택</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>G</kbd></span>
+                                <span class="shortcut-desc">그룹 만들기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd></span>
+                                <span class="shortcut-desc">그룹 해제</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Movement Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">이동 및 정렬</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></span>
+                                <span class="shortcut-desc">선택한 요소 이동 (1px)</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Arrow</kbd></span>
+                                <span class="shortcut-desc">선택한 요소 이동 (10px)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layers Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">레이어</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>]</kbd></span>
+                                <span class="shortcut-desc">레이어 위로 이동</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>[</kbd></span>
+                                <span class="shortcut-desc">레이어 아래로 이동</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>L</kbd></span>
+                                <span class="shortcut-desc">레이어 잠금 토글</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">보기</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>+</kbd></span>
+                                <span class="shortcut-desc">확대</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>-</kbd></span>
+                                <span class="shortcut-desc">축소</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>0</kbd></span>
+                                <span class="shortcut-desc">화면에 맞추기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Space</kbd> + <kbd>Drag</kbd></span>
+                                <span class="shortcut-desc">캔버스 이동 (패닝)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div style="margin-top: 24px; padding: 16px; background: #f8f9ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: #667eea;">💡 Tip</div>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #666; line-height: 1.8;">
+                        <li>대부분의 작업은 마우스 오른쪽 클릭으로도 수행할 수 있습니다</li>
+                        <li>텍스트 편집 중에는 단축키가 비활성화됩니다</li>
+                        <li>속성 패널에서 정밀한 값 조정이 가능합니다</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -3146,6 +3369,10 @@
                     searchInput.focus();
                     searchInput.select();
                 }
+            } else if (e.key === '?' && !isEditingText) {
+                // Show keyboard shortcuts guide
+                e.preventDefault();
+                showKeyboardShortcutsModal();
             }
         }
 
@@ -4613,12 +4840,20 @@
         document.addEventListener('click', function(e) {
             const exportModal = document.getElementById('exportModal');
             const templateModal = document.getElementById('templateModal');
+            const templateLibraryModal = document.getElementById('templateLibraryModal');
+            const keyboardShortcutsModal = document.getElementById('keyboardShortcutsModal');
 
             if (e.target === exportModal) {
                 closeExportModal();
             }
             if (e.target === templateModal) {
                 closeTemplateModal();
+            }
+            if (e.target === templateLibraryModal) {
+                closeTemplateLibraryModal();
+            }
+            if (e.target === keyboardShortcutsModal) {
+                closeKeyboardShortcutsModal();
             }
         });
 
@@ -4968,6 +5203,15 @@
                 toast.style.animation = 'slideOut 0.3s ease-out';
                 setTimeout(() => document.body.removeChild(toast), 300);
             }, 3000);
+        }
+
+        // Keyboard Shortcuts Modal Functions
+        function showKeyboardShortcutsModal() {
+            document.getElementById('keyboardShortcutsModal').classList.add('active');
+        }
+
+        function closeKeyboardShortcutsModal() {
+            document.getElementById('keyboardShortcutsModal').classList.remove('active');
         }
 
         // Crop Functions
