@@ -722,6 +722,109 @@
             margin-top: 10px;
         }
 
+        /* Template Library */
+        .template-filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .template-filter-btn:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .template-filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .template-library-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            height: 240px;
+        }
+
+        .template-library-card:hover {
+            border-color: #667eea;
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .template-preview {
+            width: 100%;
+            height: 150px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .template-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .template-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .template-library-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .template-library-desc {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .template-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #999;
+            margin-top: auto;
+        }
+
+        .template-category {
+            background: #e8eaff;
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
         /* Crop Mode */
         .crop-overlay {
             position: absolute;
@@ -1015,6 +1118,10 @@
             <div class="tool-item" onclick="document.getElementById('imageUpload').click()" role="button" aria-label="이미지 업로드" tabindex="0">
                 <div>🖼️</div>
                 <div class="tool-label">이미지</div>
+            </div>
+            <div class="tool-item" onclick="showTemplateLibraryModal()" role="button" aria-label="템플릿 라이브러리" tabindex="0">
+                <div>📋</div>
+                <div class="tool-label">템플릿</div>
             </div>
             <input type="file" id="imageUpload" accept="image/*" style="display:none" onchange="handleImageUpload(event)" aria-label="이미지 파일 선택">
         </div>
@@ -1745,6 +1852,42 @@
 
                 <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
                     💡 클릭하여 버전 복원 | 자동 저장 주기: 5분
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Library Modal -->
+    <div class="modal-overlay" id="templateLibraryModal">
+        <div class="modal-content" style="max-width: 900px; height: 80vh;">
+            <div class="modal-header">
+                <h2 class="modal-title">📋 템플릿 라이브러리</h2>
+                <button class="modal-close" onclick="closeTemplateLibraryModal()">×</button>
+            </div>
+
+            <div class="export-options" style="height: calc(100% - 60px); overflow: hidden; display: flex; flex-direction: column;">
+                <!-- Category Filters -->
+                <div style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="template-filter-btn active" onclick="filterTemplates('all')">전체</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('social')">소셜 미디어</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('banner')">배너</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('poster')">포스터</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('presentation')">프레젠테이션</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('minimal')">미니멀</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('bold')">볼드</button>
+                </div>
+
+                <!-- Templates Grid -->
+                <div id="templatesGrid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; padding: 4px;">
+                    <!-- Templates will be loaded here dynamically -->
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">
+                        템플릿을 불러오는 중...
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div style="margin-top: 16px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 템플릿을 클릭하면 현재 캔버스에 적용됩니다
                 </div>
             </div>
         </div>
@@ -4547,6 +4690,284 @@
 
             // Show success message
             alert(`캔버스 크기가 ${newWidth}x${newHeight}으로 변경되었습니다.`);
+        }
+
+        // Template Library Functions
+        let templatesCache = [];
+        let currentTemplateFilter = 'all';
+
+        async function showTemplateLibraryModal() {
+            document.getElementById('templateLibraryModal').classList.add('active');
+
+            // Load templates if not already loaded
+            if (templatesCache.length === 0) {
+                await loadTemplates();
+            } else {
+                renderTemplates();
+            }
+        }
+
+        function closeTemplateLibraryModal() {
+            document.getElementById('templateLibraryModal').classList.remove('active');
+        }
+
+        async function loadTemplates() {
+            const grid = document.getElementById('templatesGrid');
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">템플릿을 불러오는 중...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/templates/creatives?limit=50`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to load templates');
+                }
+
+                const templates = await response.json();
+                templatesCache = templates;
+
+                if (templates.length === 0) {
+                    grid.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+                            <div>아직 등록된 템플릿이 없습니다.</div>
+                            <div style="font-size: 14px; margin-top: 8px;">템플릿을 생성하여 시작하세요!</div>
+                        </div>
+                    `;
+                } else {
+                    renderTemplates();
+                }
+            } catch (error) {
+                console.error('Template loading error:', error);
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #ff6b6b;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                        <div>템플릿을 불러오는데 실패했습니다.</div>
+                        <div style="font-size: 14px; margin-top: 8px;">${error.message}</div>
+                        <button onclick="loadTemplates()" style="margin-top: 16px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">다시 시도</button>
+                    </div>
+                `;
+            }
+        }
+
+        function filterTemplates(category) {
+            currentTemplateFilter = category;
+
+            // Update filter button states
+            document.querySelectorAll('.template-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            renderTemplates();
+        }
+
+        function renderTemplates() {
+            const grid = document.getElementById('templatesGrid');
+
+            // Filter templates
+            let filtered = templatesCache;
+            if (currentTemplateFilter !== 'all') {
+                filtered = templatesCache.filter(t =>
+                    t.category === currentTemplateFilter ||
+                    t.channel === currentTemplateFilter
+                );
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                        <div>해당 카테고리에 템플릿이 없습니다.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render template cards
+            grid.innerHTML = filtered.map(template => `
+                <div class="template-library-card" onclick="applyTemplateToCanvas(${template.id})">
+                    <div class="template-preview">
+                        ${template.preview_url ? `<img src="${template.preview_url}" alt="${template.name}">` : getCategoryIcon(template.category)}
+                    </div>
+                    <div class="template-info">
+                        <div class="template-library-name" title="${template.name}">${template.name}</div>
+                        <div class="template-library-desc" title="${template.description || ''}">${template.description || '템플릿 설명 없음'}</div>
+                        <div class="template-meta">
+                            <span class="template-category">${template.category || 'general'}</span>
+                            <span>👁 ${template.usage_count || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                'social': '📱',
+                'banner': '🎨',
+                'poster': '🖼️',
+                'presentation': '💼',
+                'minimal': '⚪',
+                'bold': '🔥',
+                'elegant': '✨'
+            };
+            return `<div style="font-size: 64px;">${icons[category] || '📄'}</div>`;
+        }
+
+        async function applyTemplateToCanvas(templateId) {
+            try {
+                // Fetch template details
+                const response = await fetch(`${API_BASE_URL}/templates/creatives/${templateId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load template details');
+                }
+
+                const template = await response.json();
+
+                // Confirm if canvas has content
+                if (elements.length > 0) {
+                    const confirmed = confirm('템플릿을 적용하면 현재 캔버스 내용이 대체됩니다. 계속하시겠습니까?');
+                    if (!confirmed) return;
+                }
+
+                // Clear current elements
+                elements = [];
+                selectedElement = null;
+                selectedElements = [];
+
+                // Apply template dimensions if specified
+                if (template.layout_config && template.layout_config.dimensions) {
+                    const { width, height } = template.layout_config.dimensions;
+                    if (width && height) {
+                        canvas.width = width;
+                        canvas.height = height;
+                    }
+                }
+
+                // Apply template elements from layout_config
+                if (template.layout_config) {
+                    applyTemplateLayout(template);
+                }
+
+                // Increment usage count
+                try {
+                    await fetch(`${API_BASE_URL}/templates/creatives/${templateId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ usage_count: (template.usage_count || 0) + 1 })
+                    });
+                } catch (e) {
+                    console.warn('Failed to increment usage count:', e);
+                }
+
+                // Re-render
+                isDirty = true;
+                render();
+
+                closeTemplateLibraryModal();
+
+                // Show success message
+                showToast(`템플릿 "${template.name}"이 적용되었습니다!`, 'success');
+
+            } catch (error) {
+                console.error('Template application error:', error);
+                alert('템플릿을 적용하는데 실패했습니다: ' + error.message);
+            }
+        }
+
+        function applyTemplateLayout(template) {
+            // Apply text slots
+            if (template.layout_config.text_slots) {
+                template.layout_config.text_slots.forEach(slot => {
+                    const textElement = {
+                        id: Date.now() + Math.random(),
+                        type: 'text',
+                        x: slot.x || 50,
+                        y: slot.y || 50,
+                        width: slot.width || 200,
+                        height: slot.height || 50,
+                        text: slot.text || slot.id || 'Text',
+                        fontSize: template.font_sizes?.[slot.id] || 24,
+                        fontFamily: template.font_family || 'Arial',
+                        fill: template.color_palette?.primary || '#000000',
+                        textAlign: slot.align || 'left',
+                        bold: false,
+                        italic: false,
+                        underline: false,
+                        opacity: 1,
+                        rotation: 0,
+                        zIndex: elements.length
+                    };
+                    textElement.draw = function(context) { drawText(context, this); };
+                    elements.push(textElement);
+                });
+            }
+
+            // Apply image slots
+            if (template.layout_config.image_slots) {
+                template.layout_config.image_slots.forEach(slot => {
+                    const rectElement = {
+                        id: Date.now() + Math.random(),
+                        type: 'rect',
+                        x: slot.x || 50,
+                        y: slot.y || 50,
+                        width: slot.width || 200,
+                        height: slot.height || 200,
+                        fill: template.color_palette?.secondary || '#f0f0f0',
+                        stroke: template.color_palette?.primary || '#000000',
+                        strokeWidth: 2,
+                        opacity: 1,
+                        rotation: 0,
+                        zIndex: elements.length
+                    };
+                    rectElement.draw = function(context) { drawRect(context, this); };
+                    elements.push(rectElement);
+                });
+            }
+
+            // Apply background if specified
+            if (template.layout_config.background) {
+                const bgElement = {
+                    id: Date.now() + Math.random(),
+                    type: 'rect',
+                    x: 0,
+                    y: 0,
+                    width: canvas.width,
+                    height: canvas.height,
+                    fill: template.layout_config.background || template.color_palette?.background || '#ffffff',
+                    stroke: 'transparent',
+                    strokeWidth: 0,
+                    opacity: 1,
+                    rotation: 0,
+                    zIndex: -1
+                };
+                bgElement.draw = function(context) { drawRect(context, this); };
+                elements.unshift(bgElement); // Add as first element (background)
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            // Simple toast notification
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: ${type === 'success' ? '#4caf50' : '#667eea'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
         }
 
         // Crop Functions
