@@ -847,6 +847,67 @@ async def generate_text(
             keywords_str = ", ".join(request.keywords)
             enhanced_prompt += f"\n필수 키워드: {keywords_str}"
 
+        # 🧠 RAG: Retrieve brand guidelines and high-performing examples
+        rag_context = ""
+        rag_info = {
+            "brand_guidelines_used": False,
+            "examples_found": 0,
+            "rag_enabled": False
+        }
+
+        try:
+            vector_client = get_vector_client()
+            rag_context_parts = []
+
+            # 1. Retrieve brand guidelines if segment exists
+            # Note: Brand guidelines feature ready, but requires brand_id in Segment model
+            # This will be enabled when Segment table has brand_id column
+            if request.segment_id:
+                segment = db.query(Segment).filter(Segment.id == request.segment_id).first()
+                if segment and hasattr(segment, 'brand_id') and segment.brand_id:
+                    brand_context = vector_client.get_brand_context(
+                        brand_id=segment.brand_id,
+                        query=request.prompt,
+                        n_results=2
+                    )
+                    if brand_context:
+                        rag_context_parts.append(f"=== 브랜드 가이드라인 ===\n{brand_context}")
+                        rag_info["brand_guidelines_used"] = True
+
+            # 2. Retrieve high-performing similar content as examples
+            similar_high_performers = vector_client.search_high_performing_texts(
+                query=request.prompt,
+                min_score=0.05,  # Performance score threshold
+                n_results=3
+            )
+
+            if similar_high_performers:
+                examples_text = "=== 고성과 콘텐츠 예시 ===\n"
+                for i, example in enumerate(similar_high_performers, 1):
+                    ctr = example.get('ctr', 0)
+                    score = example.get('performance_score', 0)
+                    content = example.get('content', '')[:200]  # Limit length
+                    examples_text += f"\n[예시 {i}] (CTR: {ctr:.2%}, 성과점수: {score:.3f})\n{content}...\n"
+
+                rag_context_parts.append(examples_text)
+                rag_info["examples_found"] = len(similar_high_performers)
+
+            # Combine RAG context
+            if rag_context_parts:
+                rag_context = "\n\n".join(rag_context_parts)
+                rag_info["rag_enabled"] = True
+                print(f"🧠 RAG enabled: brand_guidelines={rag_info['brand_guidelines_used']}, examples={rag_info['examples_found']}")
+
+        except Exception as e:
+            print(f"⚠️  Warning: RAG context retrieval failed: {e}")
+            # Continue without RAG context
+
+        # Build enhanced system message with RAG context
+        system_message = "You are a helpful content creation assistant for marketing campaigns. Create engaging, persuasive content in Korean."
+
+        if rag_context:
+            system_message += f"\n\n{rag_context}\n\n위의 브랜드 가이드라인과 고성과 콘텐츠 예시를 참고하여, 사용자의 요청에 맞는 콘텐츠를 생성하세요."
+
         # Call AI API based on selected model
         generated_text = ""
         prompt_tokens = 0
@@ -854,11 +915,11 @@ async def generate_text(
         total_tokens = 0
 
         if selected_model in ["gpt-3.5-turbo", "gpt-4-turbo"]:
-            # OpenAI GPT (3.5 or 4)
+            # OpenAI GPT (3.5 or 4) with RAG-enhanced system message
             response = openai_client.chat.completions.create(
                 model=selected_model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful content creation assistant for marketing campaigns. Create engaging, persuasive content in Korean."},
+                    {"role": "system", "content": system_message},
                     {"role": "user", "content": enhanced_prompt}
                 ],
                 max_tokens=request.max_tokens,
@@ -872,9 +933,11 @@ async def generate_text(
             total_tokens = usage.total_tokens
 
         elif selected_model == "gemini-pro":
-            # Google Gemini Pro
+            # Google Gemini Pro with RAG-enhanced prompt
+            # Gemini doesn't have separate system message, so prepend to prompt
+            gemini_prompt = f"{system_message}\n\n{enhanced_prompt}"
             response = gemini_client.generate_content(
-                enhanced_prompt,
+                gemini_prompt,
                 generation_config=genai.types.GenerationConfig(
                     max_output_tokens=request.max_tokens,
                     temperature=request.temperature
@@ -964,6 +1027,7 @@ async def generate_text(
             "model": selected_model,
             "requested_model": request.model,
             "router_info": router_info,
+            "rag_info": rag_info,
             "usage": {
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
