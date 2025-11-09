@@ -355,7 +355,7 @@ async def update_quota_cost(user_id: int, cost: float, db: Session):
 class TextGenerationRequest(BaseModel):
     prompt: str
     user_id: int = 1  # Default to user 1 for now (should come from auth)
-    model: Optional[str] = "gpt-3.5-turbo"  # "gpt-3.5-turbo" or "gemini-pro"
+    model: Optional[str] = "auto"  # "gpt-3.5-turbo", "gemini-pro", "gpt-4-turbo", or "auto" for smart selection
     segment_id: Optional[int] = None
     tone: Optional[str] = "전문적"
     keywords: Optional[List[str]] = []
@@ -704,38 +704,61 @@ async def generate_text(
     db: Session = Depends(get_db)
 ):
     """
-    Generate AI text using GPT-3.5-turbo or Gemini Pro
+    Generate AI text using GPT-3.5-turbo, Gemini Pro, or GPT-4 Turbo
 
     **Supported Models:**
-    - gpt-3.5-turbo (OpenAI)
-    - gemini-pro (Google)
+    - gpt-3.5-turbo (OpenAI) - Fast & economical
+    - gemini-pro (Google) - Rich context & analytical
+    - gpt-4-turbo (OpenAI) - Complex understanding
+    - auto - Smart model selection based on prompt
 
     **Rate Limit:** 10 requests per minute
 
     **Features:**
-    - Real-time cost estimation
-    - Token usage tracking
-    - User quota enforcement
-    - Automatic caching for duplicate prompts
-    - Multi-model support
+    - 🤖 AI Router: Intelligent model selection
+    - 💰 Real-time cost estimation
+    - 📊 Token usage tracking
+    - 👤 User quota enforcement
+    - 💾 Automatic caching for duplicate prompts
+    - 🎯 Multi-model support
     """
 
-    # Validate model parameter
-    supported_models = ["gpt-3.5-turbo", "gemini-pro"]
-    if request.model not in supported_models:
+    # Import AI Router
+    from ai_router import AIRouter
+
+    # Smart Model Selection
+    selected_model = request.model
+    router_info = None
+
+    if request.model == "auto" or request.model is None:
+        # Use AI Router to select best model
+        router_result = AIRouter.select_model(
+            prompt=request.prompt,
+            task_type="text",
+            tone=request.tone,
+            max_tokens=request.max_tokens
+        )
+        selected_model = router_result["model"]
+        router_info = router_result
+
+        print(f"🤖 AI Router selected: {selected_model} (reason: {router_result['reason']})")
+
+    # Validate selected model
+    supported_models = ["gpt-3.5-turbo", "gemini-pro", "gpt-4-turbo"]
+    if selected_model not in supported_models:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported model: {request.model}. Supported models: {', '.join(supported_models)}"
+            detail=f"Unsupported model: {selected_model}. Supported models: {', '.join(supported_models)} or 'auto'"
         )
 
-    # Check if requested model's client is initialized
-    if request.model == "gpt-3.5-turbo" and not openai_client:
+    # Check if selected model's client is initialized
+    if selected_model in ["gpt-3.5-turbo", "gpt-4-turbo"] and not openai_client:
         raise HTTPException(
             status_code=503,
             detail="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
         )
 
-    if request.model == "gemini-pro" and not gemini_client:
+    if selected_model == "gemini-pro" and not gemini_client:
         raise HTTPException(
             status_code=503,
             detail="Google API key not configured. Please set GOOGLE_API_KEY environment variable."
@@ -750,7 +773,7 @@ async def generate_text(
         cache_hit = vector_client.search_prompt_cache(
             query=request.prompt,
             job_type="text",
-            model=request.model,
+            model=selected_model,
             similarity_threshold=0.95  # 95% similarity
         )
 
@@ -763,7 +786,7 @@ async def generate_text(
                 content_type="text",
                 prompt=request.prompt,
                 result=cached_text,
-                model=request.model,
+                model=selected_model,
                 cache_key=cache_hit["cache_id"],
                 is_cached_result=True
             )
@@ -775,7 +798,9 @@ async def generate_text(
                 "success": True,
                 "text": cached_text,
                 "prompt": request.prompt,
-                "model": request.model,
+                "model": selected_model,
+                "requested_model": request.model,
+                "router_info": router_info,
                 "cached": True,
                 "cache_info": {
                     "cache_id": cache_hit["cache_id"],
@@ -798,9 +823,10 @@ async def generate_text(
     job = GenerationJob(
         user_id=request.user_id,
         job_type="text",
-        model=request.model,
+        model=selected_model,
         prompt=request.prompt,
-        status="pending"
+        status="pending",
+        segment_id=request.segment_id
     )
     db.add(job)
     db.commit()
@@ -821,18 +847,79 @@ async def generate_text(
             keywords_str = ", ".join(request.keywords)
             enhanced_prompt += f"\n필수 키워드: {keywords_str}"
 
+        # 🧠 RAG: Retrieve brand guidelines and high-performing examples
+        rag_context = ""
+        rag_info = {
+            "brand_guidelines_used": False,
+            "examples_found": 0,
+            "rag_enabled": False
+        }
+
+        try:
+            vector_client = get_vector_client()
+            rag_context_parts = []
+
+            # 1. Retrieve brand guidelines if segment exists
+            # Note: Brand guidelines feature ready, but requires brand_id in Segment model
+            # This will be enabled when Segment table has brand_id column
+            if request.segment_id:
+                segment = db.query(Segment).filter(Segment.id == request.segment_id).first()
+                if segment and hasattr(segment, 'brand_id') and segment.brand_id:
+                    brand_context = vector_client.get_brand_context(
+                        brand_id=segment.brand_id,
+                        query=request.prompt,
+                        n_results=2
+                    )
+                    if brand_context:
+                        rag_context_parts.append(f"=== 브랜드 가이드라인 ===\n{brand_context}")
+                        rag_info["brand_guidelines_used"] = True
+
+            # 2. Retrieve high-performing similar content as examples
+            similar_high_performers = vector_client.search_high_performing_texts(
+                query=request.prompt,
+                min_score=0.05,  # Performance score threshold
+                n_results=3
+            )
+
+            if similar_high_performers:
+                examples_text = "=== 고성과 콘텐츠 예시 ===\n"
+                for i, example in enumerate(similar_high_performers, 1):
+                    ctr = example.get('ctr', 0)
+                    score = example.get('performance_score', 0)
+                    content = example.get('content', '')[:200]  # Limit length
+                    examples_text += f"\n[예시 {i}] (CTR: {ctr:.2%}, 성과점수: {score:.3f})\n{content}...\n"
+
+                rag_context_parts.append(examples_text)
+                rag_info["examples_found"] = len(similar_high_performers)
+
+            # Combine RAG context
+            if rag_context_parts:
+                rag_context = "\n\n".join(rag_context_parts)
+                rag_info["rag_enabled"] = True
+                print(f"🧠 RAG enabled: brand_guidelines={rag_info['brand_guidelines_used']}, examples={rag_info['examples_found']}")
+
+        except Exception as e:
+            print(f"⚠️  Warning: RAG context retrieval failed: {e}")
+            # Continue without RAG context
+
+        # Build enhanced system message with RAG context
+        system_message = "You are a helpful content creation assistant for marketing campaigns. Create engaging, persuasive content in Korean."
+
+        if rag_context:
+            system_message += f"\n\n{rag_context}\n\n위의 브랜드 가이드라인과 고성과 콘텐츠 예시를 참고하여, 사용자의 요청에 맞는 콘텐츠를 생성하세요."
+
         # Call AI API based on selected model
         generated_text = ""
         prompt_tokens = 0
         completion_tokens = 0
         total_tokens = 0
 
-        if request.model == "gpt-3.5-turbo":
-            # OpenAI GPT-3.5 Turbo
+        if selected_model in ["gpt-3.5-turbo", "gpt-4-turbo"]:
+            # OpenAI GPT (3.5 or 4) with RAG-enhanced system message
             response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=selected_model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful content creation assistant for marketing campaigns. Create engaging, persuasive content in Korean."},
+                    {"role": "system", "content": system_message},
                     {"role": "user", "content": enhanced_prompt}
                 ],
                 max_tokens=request.max_tokens,
@@ -845,10 +932,12 @@ async def generate_text(
             completion_tokens = usage.completion_tokens
             total_tokens = usage.total_tokens
 
-        elif request.model == "gemini-pro":
-            # Google Gemini Pro
+        elif selected_model == "gemini-pro":
+            # Google Gemini Pro with RAG-enhanced prompt
+            # Gemini doesn't have separate system message, so prepend to prompt
+            gemini_prompt = f"{system_message}\n\n{enhanced_prompt}"
             response = gemini_client.generate_content(
-                enhanced_prompt,
+                gemini_prompt,
                 generation_config=genai.types.GenerationConfig(
                     max_output_tokens=request.max_tokens,
                     temperature=request.temperature
@@ -863,8 +952,12 @@ async def generate_text(
             completion_tokens = len(generated_text) // 4
             total_tokens = prompt_tokens + completion_tokens
 
-        # Calculate cost
-        estimated_cost = calculate_text_cost(request.model, prompt_tokens, completion_tokens)
+        # Calculate cost (use AI Router's estimation if available)
+        from ai_router import AIRouter
+        estimated_cost = AIRouter.estimate_cost(selected_model, prompt_tokens, completion_tokens)
+        if estimated_cost == 0.0:
+            # Fallback to old calculation
+            estimated_cost = calculate_text_cost(selected_model, prompt_tokens, completion_tokens)
 
         # Update job with success
         job.status = "completed"
@@ -883,7 +976,7 @@ async def generate_text(
             content_type="text",
             prompt=request.prompt,
             result=generated_text,
-            model=request.model
+            model=selected_model
         )
         db.add(content_record)
         db.commit()
@@ -896,7 +989,7 @@ async def generate_text(
                 content_id=content_record.id,
                 text=generated_text,
                 prompt=request.prompt,
-                model=request.model,
+                model=selected_model,
                 metadata={
                     "user_id": request.user_id,
                     "segment_id": request.segment_id,
@@ -910,7 +1003,7 @@ async def generate_text(
                 cache_id = vector_client.add_prompt_cache(
                     prompt=request.prompt,
                     result=generated_text,
-                    model=request.model,
+                    model=selected_model,
                     job_type="text",
                     metadata={
                         "user_id": request.user_id,
@@ -931,7 +1024,10 @@ async def generate_text(
             "success": True,
             "text": generated_text,
             "prompt": request.prompt,
-            "model": request.model,
+            "model": selected_model,
+            "requested_model": request.model,
+            "router_info": router_info,
+            "rag_info": rag_info,
             "usage": {
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
