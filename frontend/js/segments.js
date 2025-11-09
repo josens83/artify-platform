@@ -11,7 +11,7 @@ const SegmentsPage = {
     editMode: false,
     cache: new CacheManager(600000), // 10 minutes cache
     currentPage: 1,
-    pageSize: 20,
+    pageSize: 12, // Changed from 20 to 12 as recommended
     chartJsLoaded: false,
     segmentCharts: {},
 
@@ -39,6 +39,69 @@ const SegmentsPage = {
                 debouncedFilter(e.target.value);
             });
         }
+
+        // New segment button
+        const btnNewSegment = document.getElementById('btn-new-segment');
+        if (btnNewSegment) {
+            btnNewSegment.addEventListener('click', () => this.showCreateModal());
+        }
+
+        // Modal form submit
+        const segmentForm = document.getElementById('segment-form');
+        if (segmentForm) {
+            segmentForm.addEventListener('submit', (e) => this.handleSubmit(e));
+        }
+
+        // Modal cancel button
+        const btnCancelModal = document.getElementById('btn-cancel-modal');
+        if (btnCancelModal) {
+            btnCancelModal.addEventListener('click', () => this.hideModal());
+        }
+
+        // Modal overlay click to close
+        const modalOverlay = document.getElementById('segment-modal');
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    this.hideModal();
+                }
+            });
+        }
+
+        // ESC key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('segment-modal');
+                if (modal && modal.classList.contains('active')) {
+                    this.hideModal();
+                }
+            }
+        });
+
+        // Event delegation for segment cards and pagination
+        document.addEventListener('click', (e) => {
+            // Handle segment card actions
+            if (e.target.matches('[data-action="generate"]')) {
+                const segmentId = parseInt(e.target.dataset.segmentId);
+                this.navigateToGenerate(segmentId);
+            } else if (e.target.matches('[data-action="edit"]')) {
+                const segmentId = parseInt(e.target.dataset.segmentId);
+                this.showEditModal(segmentId);
+            } else if (e.target.matches('[data-action="delete"]')) {
+                const segmentId = parseInt(e.target.dataset.segmentId);
+                this.deleteSegment(segmentId);
+            } else if (e.target.matches('[data-action="reload"]')) {
+                this.loadSegments();
+            } else if (e.target.matches('[data-action="create"]')) {
+                this.showCreateModal();
+            } else if (e.target.matches('[data-action="page-prev"]')) {
+                if (this.currentPage > 1) {
+                    this.changePage(this.currentPage - 1);
+                }
+            } else if (e.target.matches('[data-action="page-next"]')) {
+                this.changePage(this.currentPage + 1);
+            }
+        });
     },
 
     /**
@@ -85,7 +148,7 @@ const SegmentsPage = {
                     <div class="empty-icon">⚠️</div>
                     <h2 class="empty-title">세그먼트를 불러올 수 없습니다</h2>
                     <p class="empty-description">${error.message}</p>
-                    <button class="btn-new" onclick="SegmentsPage.loadSegments()">다시 시도</button>
+                    <button class="btn-new" data-action="reload">다시 시도</button>
                 </div>
             `;
         }
@@ -105,7 +168,7 @@ const SegmentsPage = {
                     <p class="empty-description">
                         첫 번째 타겟 세그먼트를 만들어 맞춤형 콘텐츠를 생성하세요.
                     </p>
-                    <button class="btn-new" onclick="SegmentsPage.showCreateModal()">
+                    <button class="btn-new" data-action="create">
                         + 새 세그먼트 만들기
                     </button>
                 </div>
@@ -254,19 +317,19 @@ const SegmentsPage = {
         return `
             <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
                 <button
-                    onclick="SegmentsPage.changePage(${this.currentPage - 1})"
+                    data-action="page-prev"
                     ${this.currentPage === 1 ? 'disabled' : ''}
                     style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
-                    이전
+                    ◀ 이전
                 </button>
                 <span style="padding: 8px 16px; color: #667eea;">
                     ${this.currentPage} / ${paginationData.totalPages}
                 </span>
                 <button
-                    onclick="SegmentsPage.changePage(${this.currentPage + 1})"
+                    data-action="page-next"
                     ${!paginationData.hasMore ? 'disabled' : ''}
                     style="padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; cursor: pointer;">
-                    다음
+                    다음 ▶
                 </button>
             </div>
         `;
@@ -323,14 +386,14 @@ const SegmentsPage = {
                 </div>
 
                 <div class="segment-actions">
-                    <button class="btn btn-primary" onclick="SegmentsPage.navigateToGenerate(${segment.id})">
-                        ✨ 콘텐츠 생성
+                    <button class="btn btn-primary" data-action="generate" data-segment-id="${segment.id}">
+                        🧠 콘텐츠 생성
                     </button>
-                    <button class="btn btn-secondary" onclick="SegmentsPage.showEditModal(${segment.id})">
-                        수정
+                    <button class="btn btn-secondary" data-action="edit" data-segment-id="${segment.id}">
+                        ✏️ 수정
                     </button>
-                    <button class="btn btn-danger" onclick="SegmentsPage.deleteSegment(${segment.id})">
-                        삭제
+                    <button class="btn btn-danger" data-action="delete" data-segment-id="${segment.id}">
+                        🗑️ 삭제
                     </button>
                 </div>
             </div>
@@ -564,5 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
     SegmentsPage.init();
 });
 
-// Make SegmentsPage globally available
-window.SegmentsPage = SegmentsPage;
+// Expose only for debugging purposes
+if (typeof window !== 'undefined') {
+    window.__debug = window.__debug || {};
+    window.__debug.SegmentsPage = SegmentsPage;
+}
