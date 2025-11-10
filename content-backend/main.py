@@ -196,12 +196,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Explicit methods
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],  # Include OPTIONS for preflight
     allow_headers=["*"],
+    expose_headers=["*"],  # Expose all headers to the client
     max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 logger.info(f"CORS middleware configured with {len(CORS_ORIGINS)} origins")
+logger.info(f"Allowed origins: {CORS_ORIGINS}")
 
 # OpenAI client
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
