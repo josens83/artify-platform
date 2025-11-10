@@ -121,7 +121,15 @@ const HomePage = {
                         throw new Error('API not available');
                     }
                 } catch (error) {
-                    console.error('Failed to load projects:', error);
+                    // Log different messages based on error type
+                    if (error.message.includes('401')) {
+                        console.log('[HomePage] Not authenticated, using local projects');
+                    } else if (error.message.includes('API not available')) {
+                        console.log('[HomePage] API not available, using dummy projects');
+                    } else {
+                        console.warn('[HomePage] Failed to load projects:', error.message);
+                    }
+
                     // Use dummy data
                     projects = this.getDummyProjects();
                     state.set('projects', projects);
@@ -166,6 +174,29 @@ const HomePage = {
             });
             grid.appendChild(card);
         });
+
+        // Show info message if using demo projects
+        if (projects.length > 0 && projects[0].id && projects[0].id.startsWith('dummy_')) {
+            const infoMessage = document.createElement('div');
+            infoMessage.style.cssText = `
+                grid-column: 1 / -1;
+                background: #eff6ff;
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-top: 16px;
+                color: #1e40af;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            `;
+            infoMessage.innerHTML = `
+                <span style="font-size: 16px;">ℹ️</span>
+                <span>데모 프로젝트를 표시하고 있습니다. 로그인하면 클라우드에 저장된 프로젝트를 확인할 수 있습니다.</span>
+            `;
+            grid.appendChild(infoMessage);
+        }
     },
 
     async createNewProject() {
