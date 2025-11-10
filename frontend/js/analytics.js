@@ -40,8 +40,16 @@ const AnalyticsPage = {
                 return;
             }
 
-            // Import API dynamically
-            const { default: api } = await import('./api.js');
+            // Wait for API to be available
+            if (!window.api) {
+                console.warn('[AnalyticsPage] API not loaded yet, waiting...');
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const api = window.api;
+            if (!api || !api.config) {
+                throw new Error('API not available');
+            }
 
             // Fetch analytics data
             const response = await api.request(
@@ -473,10 +481,15 @@ const AnalyticsPage = {
      * Generate AI insights
      */
     async generateInsights() {
-        UI.toast('AI 인사이트를 생성하는 중...', 'info');
+        if (typeof UI !== 'undefined') {
+            UI.toast('AI 인사이트를 생성하는 중...', 'info');
+        }
 
         try {
-            const { default: api } = await import('./api.js');
+            const api = window.api;
+            if (!api || !api.config) {
+                throw new Error('API not available');
+            }
 
             // Generate insights using GPT
             const response = await api.request(
@@ -501,13 +514,17 @@ const AnalyticsPage = {
                     insightsSection.outerHTML = this.renderInsights();
                 }
 
-                UI.toast('인사이트가 생성되었습니다', 'success');
+                if (typeof UI !== 'undefined') {
+                    UI.toast('인사이트가 생성되었습니다', 'success');
+                }
             } else {
                 throw new Error(response.error || 'Failed to generate insights');
             }
         } catch (error) {
             console.error('[AnalyticsPage] Insights error:', error);
-            UI.toast('인사이트 생성에 실패했습니다', 'error');
+            if (typeof UI !== 'undefined') {
+                UI.toast('인사이트 생성에 실패했습니다', 'error');
+            }
         }
     },
 

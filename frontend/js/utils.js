@@ -224,3 +224,16 @@ export class EventEmitter {
         this.events[event].forEach(listener => listener(...args));
     }
 }
+
+// Make utilities available globally for non-module scripts
+window.Utils = {
+    debounce,
+    throttle,
+    lazyLoadImages,
+    CacheManager,
+    paginate,
+    batchDOMUpdates,
+    loadScript,
+    memoize,
+    EventEmitter
+};
