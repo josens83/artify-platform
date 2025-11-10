@@ -43,7 +43,17 @@ class API {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                // Try to get error details from response body
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    if (errorData.detail) {
+                        errorMessage = `HTTP ${response.status}: ${errorData.detail}`;
+                    }
+                } catch (e) {
+                    // If parsing fails, use default message
+                }
+                throw new Error(errorMessage);
             }
 
             return await response.json();

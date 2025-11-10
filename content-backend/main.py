@@ -1341,6 +1341,8 @@ async def create_segment(
 ):
     """Create a new segment"""
     try:
+        logger.info(f"Creating segment: name={segment.name}, criteria={segment.criteria}")
+
         new_segment = Segment(
             name=segment.name,
             description=segment.description,
@@ -1350,16 +1352,22 @@ async def create_segment(
         db.commit()
         db.refresh(new_segment)
 
-        # 캐시 무효화
-        cache = get_cache()
-        cache.delete("segments:all")
-        logger.info("Cache invalidated: segments:all")
+        logger.info(f"Segment created successfully: id={new_segment.id}")
+
+        # 캐시 무효화 (에러 발생해도 무시)
+        try:
+            cache = get_cache()
+            cache.delete("segments:all")
+            logger.info("Cache invalidated: segments:all")
+        except Exception as cache_err:
+            logger.warning(f"Failed to invalidate cache: {cache_err}")
 
         return new_segment
 
     except Exception as e:
+        logger.error(f"Error creating segment: {str(e)}", exc_info=True)
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to create segment: {str(e)}")
 
 
 @app.get("/segments/{segment_id}", response_model=SegmentResponse)
