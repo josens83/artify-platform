@@ -20,8 +20,17 @@ const SegmentsPage = {
      */
     async init() {
         console.log('[SegmentsPage] Initializing...');
-        await this.loadSegments();
+
+        // Always setup event listeners first, even if loading fails
         this.setupEventListeners();
+
+        // Then try to load segments
+        try {
+            await this.loadSegments();
+        } catch (error) {
+            console.error('[SegmentsPage] Failed to initialize:', error);
+            // Continue anyway - setupEventListeners already called
+        }
     },
 
     /**
@@ -134,10 +143,17 @@ const SegmentsPage = {
                 throw new Error('API not available');
             }
 
-            // Fetch segments from backend
+            // Fetch segments from backend with timeout (30s for cold start)
             console.log('[SegmentsPage] Fetching from:', `${api.config.CONTENT_BACKEND_URL}/segments`);
 
-            const response = await api.request(`${api.config.CONTENT_BACKEND_URL}/segments`);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('요청 시간이 초과되었습니다 (30초). 서버가 시작 중일 수 있습니다.')), 30000)
+            );
+
+            const response = await Promise.race([
+                api.request(`${api.config.CONTENT_BACKEND_URL}/segments`),
+                timeoutPromise
+            ]);
 
             console.log('[SegmentsPage] API Response:', response);
 
@@ -167,9 +183,21 @@ const SegmentsPage = {
             this.segments = [];
 
             // Show error state with better message
-            const errorMessage = error.message.includes('500')
-                ? '서버에서 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.'
-                : error.message;
+            let errorMessage = '알 수 없는 오류가 발생했습니다.';
+            if (error.message.includes('500')) {
+                errorMessage = '서버에서 데이터를 불러올 수 없습니다. 서버가 시작 중이거나 일시적인 문제가 있을 수 있습니다.';
+            } else if (error.message.includes('시간이 초과')) {
+                errorMessage = error.message;
+            } else if (error.message.includes('API not available')) {
+                errorMessage = 'API가 로드되지 않았습니다. 페이지를 새로고침해주세요.';
+            } else {
+                errorMessage = error.message;
+            }
+
+            if (!container) {
+                console.error('[SegmentsPage] Container not found!');
+                return;
+            }
 
             container.innerHTML = `
                 <div class="empty-state">
