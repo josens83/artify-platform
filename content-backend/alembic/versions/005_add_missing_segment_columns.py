@@ -30,23 +30,35 @@ def upgrade():
     # Get existing columns
     existing_columns = [col['name'] for col in inspector.get_columns('segments')]
 
-    # Add description if missing
+    # Add criteria if missing (from original schema)
+    if 'criteria' not in existing_columns:
+        op.add_column('segments', sa.Column('criteria', sa.Text(), nullable=True))
+
+    # Add description if missing (from original schema)
     if 'description' not in existing_columns:
         op.add_column('segments', sa.Column('description', sa.Text(), nullable=True))
 
-    # Add tone if missing
+    # Add created_at if missing (from original schema)
+    if 'created_at' not in existing_columns:
+        op.add_column('segments', sa.Column('created_at', sa.DateTime(), nullable=True))
+
+    # Add updated_at if missing (from original schema)
+    if 'updated_at' not in existing_columns:
+        op.add_column('segments', sa.Column('updated_at', sa.DateTime(), nullable=True))
+
+    # Add tone if missing (from RFP features)
     if 'tone' not in existing_columns:
         op.add_column('segments', sa.Column('tone', sa.String(100), nullable=True))
 
-    # Add keywords if missing
+    # Add keywords if missing (from RFP features)
     if 'keywords' not in existing_columns:
         op.add_column('segments', sa.Column('keywords', sa.Text(), nullable=True))
 
-    # Add reference_urls if missing
+    # Add reference_urls if missing (from RFP features)
     if 'reference_urls' not in existing_columns:
         op.add_column('segments', sa.Column('reference_urls', sa.Text(), nullable=True))
 
-    # Add prompt_template if missing
+    # Add prompt_template if missing (from RFP features)
     if 'prompt_template' not in existing_columns:
         op.add_column('segments', sa.Column('prompt_template', sa.Text(), nullable=True))
 
@@ -58,4 +70,7 @@ def downgrade():
     op.drop_column('segments', 'reference_urls')
     op.drop_column('segments', 'keywords')
     op.drop_column('segments', 'tone')
+    op.drop_column('segments', 'updated_at')
+    op.drop_column('segments', 'created_at')
     op.drop_column('segments', 'description')
+    op.drop_column('segments', 'criteria')
