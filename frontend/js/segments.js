@@ -408,7 +408,19 @@ const SegmentsPage = {
      * Render individual segment card
      */
     renderSegmentCard(segment) {
-        const criteria = segment.criteria || {};
+        // Parse criteria if it's a JSON string
+        let criteria = {};
+        if (typeof segment.criteria === 'string') {
+            try {
+                criteria = JSON.parse(segment.criteria);
+            } catch (e) {
+                console.warn('[SegmentsPage] Failed to parse criteria for segment', segment.id);
+                criteria = {};
+            }
+        } else if (segment.criteria) {
+            criteria = segment.criteria;
+        }
+
         const tags = [];
 
         if (criteria.age_range) tags.push(this.formatAgeRange(criteria.age_range));
@@ -511,7 +523,19 @@ const SegmentsPage = {
         document.getElementById('segment-name').value = segment.name;
         document.getElementById('segment-description').value = segment.description || '';
 
-        const criteria = segment.criteria || {};
+        // Parse criteria if it's a JSON string
+        let criteria = {};
+        if (typeof segment.criteria === 'string') {
+            try {
+                criteria = JSON.parse(segment.criteria);
+            } catch (e) {
+                console.warn('[SegmentsPage] Failed to parse criteria:', e);
+                criteria = {};
+            }
+        } else if (segment.criteria) {
+            criteria = segment.criteria;
+        }
+
         document.getElementById('age-range').value = criteria.age_range || '';
         document.getElementById('gender').value = criteria.gender || '';
         document.getElementById('interests').value = criteria.interests || '';
@@ -536,15 +560,19 @@ const SegmentsPage = {
     async handleSubmit(event) {
         event.preventDefault();
 
+        // Build criteria object
+        const criteriaObj = {
+            age_range: document.getElementById('age-range').value,
+            gender: document.getElementById('gender').value,
+            interests: document.getElementById('interests').value.trim(),
+            location: document.getElementById('location').value.trim()
+        };
+
+        // Backend expects criteria as JSON string
         const formData = {
             name: document.getElementById('segment-name').value.trim(),
             description: document.getElementById('segment-description').value.trim(),
-            criteria: {
-                age_range: document.getElementById('age-range').value,
-                gender: document.getElementById('gender').value,
-                interests: document.getElementById('interests').value.trim(),
-                location: document.getElementById('location').value.trim()
-            }
+            criteria: JSON.stringify(criteriaObj)
         };
 
         try {
