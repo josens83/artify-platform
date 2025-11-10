@@ -72,16 +72,16 @@ const HomePage = {
                 onClick: () => window.location.href = 'generate.html'
             },
             {
-                icon: '📊',
-                title: '분석 대시보드',
-                description: '캠페인 성과를 분석하고 인사이트를 얻으세요',
-                onClick: () => window.location.href = 'analytics.html'
-            },
-            {
                 icon: '🎨',
                 title: '에디터',
                 description: '비주얼 캠페인을 디자인하고 편집하세요',
                 onClick: () => window.location.href = 'editor.html'
+            },
+            {
+                icon: '📊',
+                title: '분석 대시보드',
+                description: '캠페인 성과를 분석하고 인사이트를 얻으세요',
+                onClick: () => window.location.href = 'analytics.html'
             }
         ];
 
