@@ -122,33 +122,66 @@ const SegmentsPage = {
                 return;
             }
 
-            // Import API dynamically
-            const { default: api } = await import('./api.js');
+            // Wait for API to be available
+            if (!window.api) {
+                console.warn('[SegmentsPage] API not loaded yet, waiting...');
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const api = window.api;
+            if (!api || !api.config) {
+                console.warn('[SegmentsPage] API not available');
+                throw new Error('API not available');
+            }
 
             // Fetch segments from backend
+            console.log('[SegmentsPage] Fetching from:', `${api.config.CONTENT_BACKEND_URL}/segments`);
+
             const response = await api.request(`${api.config.CONTENT_BACKEND_URL}/segments`);
 
-            if (response.success) {
-                this.segments = response.segments || [];
+            console.log('[SegmentsPage] API Response:', response);
 
-                // Cache the results
-                this.cache.set('segments', this.segments);
-
-                console.log(`[SegmentsPage] Loaded ${this.segments.length} segments`);
-                this.renderSegments();
+            // Backend returns array directly (List[SegmentResponse])
+            if (Array.isArray(response)) {
+                this.segments = response;
+            } else if (response && response.success && response.segments) {
+                // Fallback for wrapped response
+                this.segments = response.segments;
+            } else if (response && Array.isArray(response.data)) {
+                // Another possible format
+                this.segments = response.data;
             } else {
-                throw new Error(response.error || 'Failed to load segments');
+                console.warn('[SegmentsPage] Unexpected response format, using empty array');
+                this.segments = [];
             }
+
+            // Cache the results
+            this.cache.set('segments', this.segments);
+
+            console.log(`[SegmentsPage] Loaded ${this.segments.length} segments`);
+            this.renderSegments();
         } catch (error) {
             console.error('[SegmentsPage] Error loading segments:', error);
 
-            // Show error state
+            // Use empty array as fallback
+            this.segments = [];
+
+            // Show error state with better message
+            const errorMessage = error.message.includes('500')
+                ? '서버에서 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.'
+                : error.message;
+
             container.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-icon">⚠️</div>
                     <h2 class="empty-title">세그먼트를 불러올 수 없습니다</h2>
-                    <p class="empty-description">${error.message}</p>
-                    <button class="btn-new" data-action="reload">다시 시도</button>
+                    <p class="empty-description">${errorMessage}</p>
+                    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn-new" data-action="reload">다시 시도</button>
+                        <button class="btn-new" data-action="create" style="background: #667eea; color: white;">
+                            + 새 세그먼트 만들기
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -487,8 +520,10 @@ const SegmentsPage = {
         };
 
         try {
-            // Import API dynamically
-            const { default: api } = await import('./api.js');
+            const api = window.api;
+            if (!api || !api.config) {
+                throw new Error('API not available');
+            }
 
             if (this.editMode && this.currentSegment) {
                 // Update existing segment
@@ -500,15 +535,19 @@ const SegmentsPage = {
                     }
                 );
 
-                if (response.success) {
-                    UI.toast('세그먼트가 수정되었습니다', 'success');
+                // Backend may return segment object directly or wrapped
+                const success = response && (response.id || response.success);
+                if (success) {
+                    if (typeof UI !== 'undefined') {
+                        UI.toast('세그먼트가 수정되었습니다', 'success');
+                    }
                     this.hideModal();
 
                     // Invalidate cache
                     this.cache.clear();
                     await this.loadSegments();
                 } else {
-                    throw new Error(response.error || 'Failed to update segment');
+                    throw new Error(response?.error || 'Failed to update segment');
                 }
             } else {
                 // Create new segment
@@ -520,20 +559,26 @@ const SegmentsPage = {
                     }
                 );
 
-                if (response.success) {
-                    UI.toast('세그먼트가 생성되었습니다', 'success');
+                // Backend may return segment object directly or wrapped
+                const success = response && (response.id || response.success);
+                if (success) {
+                    if (typeof UI !== 'undefined') {
+                        UI.toast('세그먼트가 생성되었습니다', 'success');
+                    }
                     this.hideModal();
 
                     // Invalidate cache
                     this.cache.clear();
                     await this.loadSegments();
                 } else {
-                    throw new Error(response.error || 'Failed to create segment');
+                    throw new Error(response?.error || 'Failed to create segment');
                 }
             }
         } catch (error) {
             console.error('[SegmentsPage] Error saving segment:', error);
-            UI.toast(error.message, 'error');
+            if (typeof UI !== 'undefined') {
+                UI.toast(error.message, 'error');
+            }
         }
     },
 
@@ -546,26 +591,33 @@ const SegmentsPage = {
         }
 
         try {
-            // Import API dynamically
-            const { default: api } = await import('./api.js');
+            const api = window.api;
+            if (!api || !api.config) {
+                throw new Error('API not available');
+            }
 
             const response = await api.request(
                 `${api.config.CONTENT_BACKEND_URL}/segments/${segmentId}`,
                 { method: 'DELETE' }
             );
 
-            if (response.success) {
-                UI.toast('세그먼트가 삭제되었습니다', 'success');
+            // Backend returns {success: true, message: "..."}
+            if (response && response.success) {
+                if (typeof UI !== 'undefined') {
+                    UI.toast('세그먼트가 삭제되었습니다', 'success');
+                }
 
                 // Invalidate cache
                 this.cache.clear();
                 await this.loadSegments();
             } else {
-                throw new Error(response.error || 'Failed to delete segment');
+                throw new Error(response?.error || 'Failed to delete segment');
             }
         } catch (error) {
             console.error('[SegmentsPage] Error deleting segment:', error);
-            UI.toast(error.message, 'error');
+            if (typeof UI !== 'undefined') {
+                UI.toast(error.message, 'error');
+            }
         }
     },
 
