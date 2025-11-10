@@ -48,30 +48,46 @@ const AnalyticsPage = {
 
             const api = window.api;
             if (!api || !api.config) {
+                console.warn('[AnalyticsPage] API not available, using mock data');
                 throw new Error('API not available');
             }
 
-            // Fetch analytics data
-            const response = await api.request(
-                `${api.config.CONTENT_BACKEND_URL}/analytics/summary?days=${dateRange}`
+            console.log('[AnalyticsPage] Fetching from:', `${api.config.CONTENT_BACKEND_URL}/analytics/summary?days=${dateRange}`);
+            console.log('[AnalyticsPage] Note: First request may take 30+ seconds if backend is waking up from sleep...');
+
+            // Add timeout to API request (30 seconds for Render.com free tier)
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('API request timeout (30s)')), 30000)
             );
 
-            if (response.success) {
+            // Fetch analytics data with timeout
+            const response = await Promise.race([
+                api.request(`${api.config.CONTENT_BACKEND_URL}/analytics/summary?days=${dateRange}`),
+                timeoutPromise
+            ]).catch(error => {
+                console.warn('[AnalyticsPage] API request failed:', error);
+                throw error;
+            });
+
+            console.log('[AnalyticsPage] API Response:', response);
+
+            if (response && response.success) {
                 this.data = response.data || this.getMockData();
 
                 // Cache the results
                 this.cache.set(cacheKey, this.data);
 
-                console.log('[AnalyticsPage] Data loaded:', this.data);
+                console.log('[AnalyticsPage] Data loaded from API:', this.data);
                 this.render();
             } else {
-                throw new Error(response.error || 'Failed to load analytics');
+                console.warn('[AnalyticsPage] API returned unsuccessful response, using mock data');
+                throw new Error(response?.error || 'Failed to load analytics');
             }
         } catch (error) {
             console.error('[AnalyticsPage] Error loading data:', error);
 
             // Use mock data on error
-            console.log('[AnalyticsPage] Using mock data');
+            console.log('[AnalyticsPage] Using mock data as fallback');
             this.data = this.getMockData();
             this.render();
         }
