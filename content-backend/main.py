@@ -1986,6 +1986,54 @@ async def startup_event():
     print("Initializing database...")
     init_db()
     print("✓ Database initialized")
+
+    # Run Alembic migrations automatically
+    print("🔄 Running database migrations...")
+    try:
+        import subprocess
+        import sys
+
+        # Get the directory of this file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Check current migration status
+        result = subprocess.run(
+            [sys.executable, "-m", "alembic", "current"],
+            cwd=current_dir,
+            capture_output=True,
+            text=True
+        )
+
+        if "head" in result.stdout:
+            print("✓ Database is already at head revision")
+        elif result.returncode != 0 or "No alembic" in result.stdout or "no alembic_version" in result.stderr.lower():
+            # No version table, stamp at 004 first
+            print("⚠️  No alembic version found, stamping at revision 004...")
+            subprocess.run(
+                [sys.executable, "-m", "alembic", "stamp", "004"],
+                cwd=current_dir,
+                check=False  # Don't fail if stamp fails
+            )
+            print("🔄 Upgrading to head...")
+            subprocess.run(
+                [sys.executable, "-m", "alembic", "upgrade", "head"],
+                cwd=current_dir,
+                check=True
+            )
+            print("✓ Migrations applied successfully")
+        else:
+            # Has a version, just upgrade
+            print("📌 Upgrading to head...")
+            subprocess.run(
+                [sys.executable, "-m", "alembic", "upgrade", "head"],
+                cwd=current_dir,
+                check=True
+            )
+            print("✓ Migrations applied successfully")
+    except Exception as e:
+        print(f"⚠️  Migration warning: {str(e)}")
+        print("Continuing without migrations...")
+
     print("✓ OpenAI API configured")
     print("=" * 50)
     print("Ready to serve requests!")
