@@ -364,6 +364,7 @@ def init_db():
         # Check if gen_jobs table exists and add missing columns
         if 'gen_jobs' in inspector.get_table_names():
             gen_jobs_columns = [col['name'] for col in inspector.get_columns('gen_jobs')]
+            gen_jobs_columns_info = {col['name']: col for col in inspector.get_columns('gen_jobs')}
 
             # Define all required columns for gen_jobs
             gen_jobs_required_columns = {
@@ -383,6 +384,19 @@ def init_db():
             }
 
             with engine.connect() as conn:
+                # First, fix prompt column if it's JSON type (should be TEXT)
+                if 'prompt' in gen_jobs_columns:
+                    prompt_col_info = gen_jobs_columns_info.get('prompt')
+                    if prompt_col_info and str(prompt_col_info['type']).upper() in ['JSON', 'JSONB']:
+                        try:
+                            # Change column type from JSON to TEXT
+                            conn.execute(text('ALTER TABLE gen_jobs ALTER COLUMN prompt TYPE TEXT USING prompt::text'))
+                            conn.commit()
+                            print("✓ Changed 'prompt' column type from JSON to TEXT in gen_jobs table")
+                        except Exception as e:
+                            print(f"⚠️  Could not change 'prompt' column type: {str(e)}")
+                            conn.rollback()
+
                 # Add missing columns to gen_jobs
                 for col_name, col_type in gen_jobs_required_columns.items():
                     if col_name not in gen_jobs_columns:
