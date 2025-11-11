@@ -1067,38 +1067,38 @@ async def generate_image(
 
     # Validate model parameter
     supported_models = ["dall-e-3", "stable-diffusion-xl"]
-    if request.model not in supported_models:
+    if body.model not in supported_models:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported model: {request.model}. Supported models: {', '.join(supported_models)}"
+            detail=f"Unsupported model: {body.model}. Supported models: {', '.join(supported_models)}"
         )
 
     # Check if requested model's client is initialized
-    if request.model == "dall-e-3" and not openai_client:
+    if body.model == "dall-e-3" and not openai_client:
         raise HTTPException(
             status_code=503,
             detail="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable."
         )
 
-    if request.model == "stable-diffusion-xl" and not stability_enabled:
+    if body.model == "stable-diffusion-xl" and not stability_enabled:
         raise HTTPException(
             status_code=503,
             detail="Stability AI API key not configured. Please set STABILITY_API_KEY environment variable."
         )
 
     # Calculate cost upfront for images
-    estimated_cost = calculate_image_cost(request.model, request.size)
+    estimated_cost = calculate_image_cost(body.model, body.size)
 
     # Check user quota before generation
-    await check_quota(request.user_id, "image", db, estimated_cost)
+    await check_quota(body.user_id, "image", db, estimated_cost)
 
     # Check cache first
     try:
         vector_client = get_vector_client()
         cache_hit = vector_client.search_prompt_cache(
-            query=request.prompt,
+            query=body.prompt,
             job_type="image",
-            model=request.model,
+            model=body.model,
             similarity_threshold=0.95  # 95% similarity
         )
 
@@ -1109,9 +1109,9 @@ async def generate_image(
             # Save to database with cache flag
             content_record = GeneratedContent(
                 content_type="image",
-                prompt=request.prompt,
+                prompt=body.prompt,
                 result=cached_url,
-                model=request.model,
+                model=body.model,
                 cache_key=cache_hit["cache_id"],
                 is_cached_result=True
             )
@@ -1122,8 +1122,8 @@ async def generate_image(
             return {
                 "success": True,
                 "imageUrl": cached_url,
-                "prompt": request.prompt,
-                "model": request.model,
+                "prompt": body.prompt,
+                "model": body.model,
                 "cached": True,
                 "cache_info": {
                     "cache_id": cache_hit["cache_id"],
@@ -1141,10 +1141,10 @@ async def generate_image(
         print(f"⚠️  Warning: Cache check failed: {e}")
 
     job = GenerationJob(
-        user_id=request.user_id,
+        user_id=body.user_id,
         job_type="image",
-        model=request.model,
-        prompt=request.prompt,
+        model=body.model,
+        prompt=body.prompt,
         status="pending",
         estimated_cost=estimated_cost
     )
@@ -1155,22 +1155,22 @@ async def generate_image(
         # Call AI API based on selected model
         image_url = ""
 
-        if request.model == "dall-e-3":
+        if body.model == "dall-e-3":
             # OpenAI DALL-E 3
             response = openai_client.images.generate(
                 model="dall-e-3",
-                prompt=request.prompt,
-                size=request.size,
-                quality=request.quality,
+                prompt=body.prompt,
+                size=body.size,
+                quality=body.quality,
                 n=1
             )
             image_url = response.data[0].url
 
-        elif request.model == "stable-diffusion-xl":
+        elif body.model == "stable-diffusion-xl":
             # Stability AI - Stable Diffusion XL
             # Validate size for Stability AI
             valid_sizes = ["1024x1024", "1536x640", "640x1536"]
-            size = request.size if request.size in valid_sizes else "1024x1024"
+            size = body.size if body.size in valid_sizes else "1024x1024"
 
             # Parse size
             width, height = map(int, size.split("x"))
@@ -1187,7 +1187,7 @@ async def generate_image(
             payload = {
                 "text_prompts": [
                     {
-                        "text": request.prompt,
+                        "text": body.prompt,
                         "weight": 1
                     }
                 ],
@@ -1217,14 +1217,14 @@ async def generate_image(
         db.commit()
 
         # Update user quota with actual cost
-        await update_quota_cost(request.user_id, estimated_cost, db)
+        await update_quota_cost(body.user_id, estimated_cost, db)
 
         # Save to database
         content_record = GeneratedContent(
             content_type="image",
-            prompt=request.prompt,
+            prompt=body.prompt,
             result=image_url,
-            model=request.model
+            model=body.model
         )
         db.add(content_record)
         db.commit()
@@ -1235,27 +1235,27 @@ async def generate_image(
             vector_client = get_vector_client()
             vector_client.add_image_metadata(
                 content_id=content_record.id,
-                prompt=request.prompt,
+                prompt=body.prompt,
                 image_url=image_url,
-                model=request.model,
+                model=body.model,
                 metadata={
-                    "user_id": request.user_id,
-                    "size": request.size,
-                    "quality": request.quality if request.model == "dall-e-3" else None
+                    "user_id": body.user_id,
+                    "size": body.size,
+                    "quality": body.quality if body.model == "dall-e-3" else None
                 }
             )
 
             # Also add to prompt cache for future reuse
             try:
                 cache_id = vector_client.add_prompt_cache(
-                    prompt=request.prompt,
+                    prompt=body.prompt,
                     result=image_url,
-                    model=request.model,
+                    model=body.model,
                     job_type="image",
                     metadata={
-                        "user_id": request.user_id,
-                        "size": request.size,
-                        "quality": request.quality if request.model == "dall-e-3" else None,
+                        "user_id": body.user_id,
+                        "size": body.size,
+                        "quality": body.quality if body.model == "dall-e-3" else None,
                         "cost_usd": estimated_cost
                     }
                 )
@@ -1270,9 +1270,9 @@ async def generate_image(
         return {
             "success": True,
             "imageUrl": image_url,
-            "prompt": request.prompt,
-            "model": request.model,
-            "size": request.size,
+            "prompt": body.prompt,
+            "model": body.model,
+            "size": body.size,
             "usage": {
                 "estimated_cost_usd": estimated_cost
             }
