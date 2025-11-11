@@ -2847,32 +2847,50 @@
                 // P30: Start auto-save to server
                 startAutoSave();
             } else {
-                // Check if there's generated content from generate page
+                // Check if there's generated content from generate page (stored in sessionStorage)
                 const from = urlParams.get('from');
-                const generatedText = urlParams.get('text');
-                const generatedImage = urlParams.get('image');
 
-                if (from === 'generate' && (generatedText || generatedImage)) {
-                    // Add generated content to canvas
-                    if (generatedText) {
-                        addElement({
-                            type: 'text',
-                            content: decodeURIComponent(generatedText),
-                            x: 100,
-                            y: 100,
-                            fontSize: 24,
-                            color: '#000000'
-                        });
-                    }
-                    if (generatedImage) {
-                        addElement({
-                            type: 'image',
-                            src: decodeURIComponent(generatedImage),
-                            x: 100,
-                            y: 200,
-                            width: 200,
-                            height: 200
-                        });
+                if (from === 'generate') {
+                    // Load content from sessionStorage
+                    const editorContentStr = sessionStorage.getItem('artify_editor_content');
+                    if (editorContentStr) {
+                        try {
+                            const editorContent = JSON.parse(editorContentStr);
+                            console.log('[Editor] Loading content from sessionStorage:', editorContent);
+
+                            // Add generated text to canvas
+                            if (editorContent.text) {
+                                addElement({
+                                    type: 'text',
+                                    content: editorContent.text,
+                                    x: 100,
+                                    y: 100,
+                                    fontSize: 24,
+                                    color: '#000000'
+                                });
+                                console.log('[Editor] Added text to canvas');
+                            }
+
+                            // Add generated image to canvas
+                            if (editorContent.image) {
+                                addElement({
+                                    type: 'image',
+                                    src: editorContent.image,
+                                    x: 100,
+                                    y: 250,
+                                    width: 300,
+                                    height: 300
+                                });
+                                console.log('[Editor] Added image to canvas');
+                            }
+
+                            // Clear sessionStorage after loading
+                            sessionStorage.removeItem('artify_editor_content');
+                        } catch (e) {
+                            console.error('[Editor] Failed to load content from sessionStorage:', e);
+                        }
+                    } else {
+                        console.log('[Editor] No content found in sessionStorage');
                     }
                 }
 
