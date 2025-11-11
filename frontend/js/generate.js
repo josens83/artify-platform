@@ -100,7 +100,12 @@ const GeneratePage = {
             const saved = localStorage.getItem('artify_saved_results');
             if (saved) {
                 this.savedResults = JSON.parse(saved);
+                // Copy saved results to generatedResults so they show up on page load
+                this.generatedResults = [...this.savedResults];
                 console.log(`[GeneratePage] Loaded ${this.savedResults.length} saved results`);
+
+                // Render the loaded results
+                this.renderResults();
             }
         } catch (error) {
             console.error('[GeneratePage] Error loading saved results:', error);
