@@ -2188,7 +2188,7 @@
 
         // P30: Auto-save to server
         let hasUnsavedChanges = false;
-        let autoSaveInterval = null;
+        // autoSaveInterval already declared above
         let lastAutoSaveTime = null;
 
         // P15: Plugin System
@@ -6449,16 +6449,16 @@
 
     <!-- Editor JavaScript -->
     <script src="js/state.js"></script>
-    <script src="js/api.js"></script>
+    <script type="module" src="js/api.js"></script>
     <script src="js/router.js"></script>
-    <script src="js/editor.js"></script>
+    <script type="module" src="js/editor.js"></script>
     <script src="js/panels/panel-generate.js"></script>
     <script src="js/panels/panel-segments.js"></script>
     <script src="js/panels/panel-analytics.js"></script>
     <script src="js/panels/panel-history.js"></script>
 
     <script>
-        // Initialize Editor
+        // Initialize Editor - editor.html already has the layout, so we just init the canvas
         const urlParams = new URLSearchParams(window.location.search);
         const projectId = urlParams.get('id');
         const mode = urlParams.get('mode');
@@ -6468,10 +6468,46 @@
             console.log('Editor page loaded');
             console.log('Fabric.js loaded:', typeof fabric !== 'undefined');
 
-            if (typeof EditorPage !== 'undefined') {
-                EditorPage.init(projectId);
-            } else {
-                console.error('EditorPage not found');
+            // Editor.html already has the full layout, so don't call EditorPage.init()
+            // Just initialize the canvas directly
+            if (typeof fabric !== 'undefined') {
+                const canvasEl = document.getElementById('canvas');
+                if (canvasEl) {
+                    const canvas = new fabric.Canvas('canvas', {
+                        width: 800,
+                        height: 600,
+                        backgroundColor: '#ffffff'
+                    });
+                    console.log('Canvas initialized');
+
+                    // If there's generated content from URL, load it
+                    const generatedText = urlParams.get('text');
+                    const generatedImage = urlParams.get('image');
+
+                    if (generatedText) {
+                        const text = new fabric.IText(generatedText, {
+                            left: 100,
+                            top: 100,
+                            fontSize: 24,
+                            fill: '#000000'
+                        });
+                        canvas.add(text);
+                        canvas.renderAll();
+                    }
+
+                    if (generatedImage) {
+                        fabric.Image.fromURL(generatedImage, function(img) {
+                            img.set({
+                                left: 100,
+                                top: 200,
+                                scaleX: 0.5,
+                                scaleY: 0.5
+                            });
+                            canvas.add(img);
+                            canvas.renderAll();
+                        });
+                    }
+                }
             }
         });
     </script>
