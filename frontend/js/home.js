@@ -148,6 +148,14 @@ const HomePage = {
         const grid = document.getElementById('projects-grid');
         if (!grid) return;
 
+        // Ensure projects is an array
+        if (!projects) {
+            projects = [];
+        } else if (!Array.isArray(projects)) {
+            console.warn('[HomePage] Projects is not an array, received:', typeof projects, projects);
+            projects = [];
+        }
+
         if (projects.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state" style="
