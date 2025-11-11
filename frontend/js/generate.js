@@ -309,7 +309,19 @@ const GeneratePage = {
     buildSegmentContext() {
         if (!this.currentSegment) return '';
 
-        const criteria = this.currentSegment.criteria || {};
+        // Parse criteria if it's a JSON string
+        let criteria = {};
+        if (typeof this.currentSegment.criteria === 'string') {
+            try {
+                criteria = JSON.parse(this.currentSegment.criteria);
+            } catch (e) {
+                console.warn('[GeneratePage] Failed to parse criteria:', e);
+                criteria = {};
+            }
+        } else if (this.currentSegment.criteria) {
+            criteria = this.currentSegment.criteria;
+        }
+
         const parts = [`타겟 세그먼트: ${this.currentSegment.name}`];
 
         if (this.currentSegment.description) {
