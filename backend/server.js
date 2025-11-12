@@ -414,11 +414,32 @@ app.post('/api/login', authLimiter, async (req, res) => {
  *       401:
  *         description: 인증 필요
  */
+// Optional auth middleware - allows both authenticated and non-authenticated requests
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token) {
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+      if (!err) {
+        req.user = user;
+      }
+    });
+  }
+  next();
+};
+
 // Project routes
-app.get('/api/projects', projectLimiter, authenticateToken, async (req, res) => {
+app.get('/api/projects', projectLimiter, optionalAuth, async (req, res) => {
   try {
-    const projects = await db.getProjectsByUserId(req.user.id);
-    res.json({ projects });
+    // If user is authenticated, return their projects
+    if (req.user && req.user.id) {
+      const projects = await db.getProjectsByUserId(req.user.id);
+      res.json({ projects });
+    } else {
+      // If not authenticated, return empty array
+      res.json({ projects: [] });
+    }
   } catch (error) {
     console.error('Get projects error:', error);
     res.status(500).json({ error: 'Server error' });
