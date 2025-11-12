@@ -2871,18 +2871,41 @@
                             // Add generated image to canvas
                             if (editorContent.image) {
                                 const img = new Image();
-                                img.crossOrigin = 'anonymous'; // For CORS
+                                // Don't set crossOrigin - OpenAI DALL-E doesn't support CORS
+                                // This means we can draw the image but can't use toDataURL (tainted canvas)
                                 img.onload = function() {
-                                    const imageElement = new Element('image', 100, editorContent.text ? 250 : 100, 400, 400);
+                                    // Scale image to fit canvas better
+                                    const maxWidth = 500;
+                                    const maxHeight = 500;
+                                    let width = img.width;
+                                    let height = img.height;
+
+                                    if (width > maxWidth || height > maxHeight) {
+                                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                                        width = width * ratio;
+                                        height = height * ratio;
+                                    }
+
+                                    const yPos = editorContent.text ? 250 : 100;
+                                    const imageElement = new Element('image', 100, yPos, width, height);
                                     imageElement.imageData = img;
                                     elements.push(imageElement);
                                     saveHistory();
                                     updateLayersList();
                                     render();
-                                    console.log('[Editor] Added image to canvas');
+                                    console.log('[Editor] Added image to canvas:', width, 'x', height);
                                 };
-                                img.onerror = function() {
-                                    console.error('[Editor] Failed to load image from URL');
+                                img.onerror = function(e) {
+                                    console.error('[Editor] Failed to load image from URL:', e);
+                                    // Show error message on canvas
+                                    const textElement = new Element('text', 100, editorContent.text ? 250 : 100, 400, 50);
+                                    textElement.text = '⚠️ 이미지 로드 실패 (URL 만료됨)';
+                                    textElement.fontSize = 18;
+                                    textElement.fill = '#ef4444';
+                                    elements.push(textElement);
+                                    saveHistory();
+                                    updateLayersList();
+                                    render();
                                 };
                                 img.src = editorContent.image;
                             }
@@ -3301,23 +3324,37 @@
         }
 
         function handleDoubleClick(e) {
-            if (currentTool === 'text' || (selectedElement && selectedElement.type === 'text')) {
-                // P16: Convert screen coordinates to canvas coordinates
-                const coords = screenToCanvas(e.clientX, e.clientY);
-                const x = coords.x;
-                const y = coords.y;
+            // P16: Convert screen coordinates to canvas coordinates
+            const coords = screenToCanvas(e.clientX, e.clientY);
+            const x = coords.x;
+            const y = coords.y;
 
-                if (!selectedElement || selectedElement.type !== 'text') {
-                    const text = new Element('text', x, y, 200, 40);
-                    text.fill = document.getElementById('propFill').value;
-                    elements.push(text);
-                    selectedElement = text;
-                    selectedElements = [text];
-                    saveHistory();
+            // Check if double-clicking on an existing text element
+            let clickedTextElement = null;
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                if (el.type === 'text' && !el.locked && el.visible &&
+                    x >= el.x && x <= el.x + el.width &&
+                    y >= el.y && y <= el.y + el.height) {
+                    clickedTextElement = el;
+                    break;
                 }
+            }
 
-                // Show inline text editor
-                showInlineTextEditor(selectedElement);
+            if (clickedTextElement) {
+                // Edit existing text element
+                selectedElement = clickedTextElement;
+                selectedElements = [clickedTextElement];
+                showInlineTextEditor(clickedTextElement);
+            } else if (currentTool === 'text') {
+                // Create new text element only if text tool is selected
+                const text = new Element('text', x, y, 200, 40);
+                text.fill = document.getElementById('propFill').value;
+                elements.push(text);
+                selectedElement = text;
+                selectedElements = [text];
+                saveHistory();
+                showInlineTextEditor(text);
             }
         }
 
@@ -3331,15 +3368,16 @@
             const rect = canvas.getBoundingClientRect();
             const canvasContainer = document.querySelector('.canvas-wrapper');
 
-            // Position the editor
-            editor.style.left = (textElement.x) + 'px';
-            editor.style.top = (textElement.y) + 'px';
-            editor.style.width = Math.max(textElement.width, 100) + 'px';
-            editor.style.minHeight = textElement.height + 'px';
+            // Position the editor (accounting for zoom and pan)
+            editor.style.left = (textElement.x * zoom + panX) + 'px';
+            editor.style.top = (textElement.y * zoom + panY) + 'px';
+            editor.style.width = Math.max(textElement.width * zoom, 100) + 'px';
+            editor.style.minHeight = (textElement.height * zoom) + 'px';
+            editor.style.transform = `scale(1)`;  // Reset any previous transforms
 
             // Style the editor to match the text element
             editor.style.fontFamily = textElement.fontFamily;
-            editor.style.fontSize = textElement.fontSize + 'px';
+            editor.style.fontSize = (textElement.fontSize * zoom) + 'px';
             editor.style.color = textElement.fill;
             editor.style.fontWeight = textElement.bold ? 'bold' : 'normal';
             editor.style.fontStyle = textElement.italic ? 'italic' : 'normal';
