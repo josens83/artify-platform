@@ -2860,32 +2860,41 @@
 
                             // Add generated text to canvas
                             if (editorContent.text) {
-                                addElement({
-                                    type: 'text',
-                                    content: editorContent.text,
-                                    x: 100,
-                                    y: 100,
-                                    fontSize: 24,
-                                    color: '#000000'
-                                });
+                                const textElement = new Element('text', 100, 100, 600, 100);
+                                textElement.text = editorContent.text;
+                                textElement.fontSize = 24;
+                                textElement.fill = '#000000';
+                                elements.push(textElement);
                                 console.log('[Editor] Added text to canvas');
                             }
 
                             // Add generated image to canvas
                             if (editorContent.image) {
-                                addElement({
-                                    type: 'image',
-                                    src: editorContent.image,
-                                    x: 100,
-                                    y: 250,
-                                    width: 300,
-                                    height: 300
-                                });
-                                console.log('[Editor] Added image to canvas');
+                                const img = new Image();
+                                img.crossOrigin = 'anonymous'; // For CORS
+                                img.onload = function() {
+                                    const imageElement = new Element('image', 100, editorContent.text ? 250 : 100, 400, 400);
+                                    imageElement.imageData = img;
+                                    elements.push(imageElement);
+                                    saveHistory();
+                                    updateLayersList();
+                                    render();
+                                    console.log('[Editor] Added image to canvas');
+                                };
+                                img.onerror = function() {
+                                    console.error('[Editor] Failed to load image from URL');
+                                };
+                                img.src = editorContent.image;
                             }
 
                             // Clear sessionStorage after loading
                             sessionStorage.removeItem('artify_editor_content');
+
+                            // Update UI after adding text (image updates when loaded)
+                            if (editorContent.text) {
+                                saveHistory();
+                                updateLayersList();
+                            }
                         } catch (e) {
                             console.error('[Editor] Failed to load content from sessionStorage:', e);
                         }
