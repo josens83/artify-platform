@@ -4425,6 +4425,19 @@
             render();
         }
 
+        // Global addElement function for adding elements to canvas
+        function addElement(element) {
+            // Ensure element has required properties
+            if (!element.id) {
+                element.id = 'element_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            elements.push(element);
+            saveHistory();
+            updateLayersList();
+            render();
+        }
+
         function saveHistory() {
             history = history.slice(0, historyIndex + 1);
 
