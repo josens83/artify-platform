@@ -147,7 +147,11 @@ const GeneratePage = {
      * Delete saved result
      */
     deleteSavedResult(resultId) {
+        // Remove from both arrays
         this.savedResults = this.savedResults.filter(r => r.id !== resultId);
+        this.generatedResults = this.generatedResults.filter(r => r.id !== resultId);
+
+        // Save and re-render
         this.saveToLocalStorage();
         this.renderResults();
         UI.toast('저장된 결과가 삭제되었습니다', 'success');
@@ -494,7 +498,12 @@ const GeneratePage = {
 
                     ${hasImage ? `
                         <div class="image-content">
-                            <img data-src="${result.image.url}" alt="Generated image" style="background: #f3f4f6; min-height: 200px;" />
+                            <img
+                                src="${result.image.url}"
+                                alt="Generated image"
+                                style="background: #f3f4f6; min-height: 200px;"
+                                onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div style=\\'padding: 60px 20px; text-align: center; color: #9ca3af;\\'>🖼️<br/><small>이미지가 만료되었습니다</small></div>';"
+                            />
                         </div>
                     ` : `
                         <div class="image-content">
