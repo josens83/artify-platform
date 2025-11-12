@@ -2892,6 +2892,7 @@
                                     elements.push(imageElement);
                                     saveHistory();
                                     updateLayersList();
+                                    isDirty = true;  // Mark canvas as dirty to trigger render
                                     render();
                                     console.log('[Editor] Added image to canvas:', width, 'x', height);
                                 };
@@ -2917,6 +2918,8 @@
                             if (editorContent.text) {
                                 saveHistory();
                                 updateLayersList();
+                                isDirty = true;  // Mark canvas as dirty to trigger render
+                                render();
                             }
                         } catch (e) {
                             console.error('[Editor] Failed to load content from sessionStorage:', e);
