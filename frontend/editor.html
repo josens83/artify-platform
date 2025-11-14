@@ -1536,6 +1536,71 @@
                     <button class="btn-icon" onclick="flipImage('vertical')" style="flex: 1;">↕️ 상하 반전</button>
                 </div>
 
+                <!-- Image Effects -->
+                <div class="panel-title" style="margin-top: 15px;">효과</div>
+
+                <!-- Shadow -->
+                <div class="panel-group">
+                    <label class="panel-label">
+                        <input type="checkbox" id="imageShadowEnabled" onchange="toggleImageShadow(this.checked)"> 그림자
+                    </label>
+                </div>
+                <div id="imageShadowControls" style="display: none;">
+                    <div class="panel-group">
+                        <label class="panel-label">X 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="5" id="imageShadowX" oninput="updateImageShadow('offsetX', this.value)">
+                            <span class="slider-value" id="shadowXValue">5px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">Y 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="5" id="imageShadowY" oninput="updateImageShadow('offsetY', this.value)">
+                            <span class="slider-value" id="shadowYValue">5px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">흐림 정도</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="50" value="10" id="imageShadowBlur" oninput="updateImageShadow('blur', this.value)">
+                            <span class="slider-value" id="shadowBlurValue">10px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">그림자 색상</label>
+                        <input type="color" class="panel-input" id="imageShadowColor" value="#000000" onchange="updateImageShadow('color', this.value)">
+                    </div>
+                </div>
+
+                <!-- Border -->
+                <div class="panel-group" style="margin-top: 10px;">
+                    <label class="panel-label">
+                        <input type="checkbox" id="imageBorderEnabled" onchange="toggleImageBorder(this.checked)"> 테두리
+                    </label>
+                </div>
+                <div id="imageBorderControls" style="display: none;">
+                    <div class="panel-group">
+                        <label class="panel-label">두께</label>
+                        <div class="slider-group">
+                            <input type="range" min="1" max="20" value="2" id="imageBorderWidth" oninput="updateImageBorder('width', this.value)">
+                            <span class="slider-value" id="borderWidthValue">2px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">색상</label>
+                        <input type="color" class="panel-input" id="imageBorderColor" value="#000000" onchange="updateImageBorder('color', this.value)">
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">스타일</label>
+                        <select class="panel-input" id="imageBorderStyle" onchange="updateImageBorder('style', this.value)">
+                            <option value="solid">실선</option>
+                            <option value="dashed">대시선</option>
+                            <option value="dotted">점선</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- AI Features (P13) -->
                 <div class="panel-title" style="margin-top: 15px;">AI 기능</div>
                 <button class="btn-icon" onclick="removeBackground()" style="width: 100%; margin-bottom: 8px;">🎨 배경 제거</button>
@@ -2404,6 +2469,23 @@
                         hueRotate: 0,
                         invert: 0
                     };
+
+                    // Image shadow
+                    this.imageShadow = {
+                        enabled: false,
+                        offsetX: 5,
+                        offsetY: 5,
+                        blur: 10,
+                        color: '#000000'
+                    };
+
+                    // Image border
+                    this.imageBorder = {
+                        enabled: false,
+                        width: 2,
+                        color: '#000000',
+                        style: 'solid' // solid, dashed, dotted
+                    };
                 }
 
                 // Drawing path specific
@@ -2674,6 +2756,14 @@
 
                     case 'image':
                         if (this.imageData) {
+                            // Apply shadow
+                            if (this.imageShadow && this.imageShadow.enabled) {
+                                context.shadowOffsetX = this.imageShadow.offsetX;
+                                context.shadowOffsetY = this.imageShadow.offsetY;
+                                context.shadowBlur = this.imageShadow.blur;
+                                context.shadowColor = this.imageShadow.color;
+                            }
+
                             // Apply filters
                             if (this.filters) {
                                 const filterParts = [];
@@ -2687,8 +2777,33 @@
                                 if (this.filters.invert !== undefined && this.filters.invert > 0) filterParts.push(`invert(${this.filters.invert}%)`);
                                 context.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
                             }
+
                             context.drawImage(this.imageData, this.x, this.y, this.width, this.height);
                             context.filter = 'none';
+
+                            // Reset shadow
+                            context.shadowOffsetX = 0;
+                            context.shadowOffsetY = 0;
+                            context.shadowBlur = 0;
+                            context.shadowColor = 'transparent';
+
+                            // Apply border
+                            if (this.imageBorder && this.imageBorder.enabled) {
+                                context.strokeStyle = this.imageBorder.color;
+                                context.lineWidth = this.imageBorder.width;
+
+                                // Set line dash pattern based on style
+                                if (this.imageBorder.style === 'dashed') {
+                                    context.setLineDash([10, 5]);
+                                } else if (this.imageBorder.style === 'dotted') {
+                                    context.setLineDash([2, 3]);
+                                } else {
+                                    context.setLineDash([]);
+                                }
+
+                                context.strokeRect(this.x, this.y, this.width, this.height);
+                                context.setLineDash([]); // Reset line dash
+                            }
                         }
                         break;
 
@@ -3942,6 +4057,29 @@
                             document.getElementById('invertValue').textContent = selectedElement.filters.invert + '%';
                         }
                     }
+
+                    // Update image shadow controls
+                    if (selectedElement.imageShadow) {
+                        document.getElementById('imageShadowEnabled').checked = selectedElement.imageShadow.enabled;
+                        document.getElementById('imageShadowControls').style.display = selectedElement.imageShadow.enabled ? 'block' : 'none';
+                        document.getElementById('imageShadowX').value = selectedElement.imageShadow.offsetX;
+                        document.getElementById('shadowXValue').textContent = selectedElement.imageShadow.offsetX + 'px';
+                        document.getElementById('imageShadowY').value = selectedElement.imageShadow.offsetY;
+                        document.getElementById('shadowYValue').textContent = selectedElement.imageShadow.offsetY + 'px';
+                        document.getElementById('imageShadowBlur').value = selectedElement.imageShadow.blur;
+                        document.getElementById('shadowBlurValue').textContent = selectedElement.imageShadow.blur + 'px';
+                        document.getElementById('imageShadowColor').value = selectedElement.imageShadow.color;
+                    }
+
+                    // Update image border controls
+                    if (selectedElement.imageBorder) {
+                        document.getElementById('imageBorderEnabled').checked = selectedElement.imageBorder.enabled;
+                        document.getElementById('imageBorderControls').style.display = selectedElement.imageBorder.enabled ? 'block' : 'none';
+                        document.getElementById('imageBorderWidth').value = selectedElement.imageBorder.width;
+                        document.getElementById('borderWidthValue').textContent = selectedElement.imageBorder.width + 'px';
+                        document.getElementById('imageBorderColor').value = selectedElement.imageBorder.color;
+                        document.getElementById('imageBorderStyle').value = selectedElement.imageBorder.style;
+                    }
                 } else {
                     textProps.style.display = 'none';
                     imageProps.style.display = 'none';
@@ -4053,6 +4191,84 @@
                     break;
                 case 'color':
                     selectedElement.textShadow.color = value;
+                    break;
+            }
+
+            render();
+        }
+
+        function toggleImageShadow(enabled) {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            if (!selectedElement.imageShadow) {
+                selectedElement.imageShadow = {
+                    enabled: false,
+                    offsetX: 5,
+                    offsetY: 5,
+                    blur: 10,
+                    color: '#000000'
+                };
+            }
+
+            selectedElement.imageShadow.enabled = enabled;
+            document.getElementById('imageShadowControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateImageShadow(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.imageShadow) return;
+
+            switch (prop) {
+                case 'offsetX':
+                    selectedElement.imageShadow.offsetX = parseFloat(value);
+                    document.getElementById('shadowXValue').textContent = value + 'px';
+                    break;
+                case 'offsetY':
+                    selectedElement.imageShadow.offsetY = parseFloat(value);
+                    document.getElementById('shadowYValue').textContent = value + 'px';
+                    break;
+                case 'blur':
+                    selectedElement.imageShadow.blur = parseFloat(value);
+                    document.getElementById('shadowBlurValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.imageShadow.color = value;
+                    break;
+            }
+
+            render();
+        }
+
+        function toggleImageBorder(enabled) {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            if (!selectedElement.imageBorder) {
+                selectedElement.imageBorder = {
+                    enabled: false,
+                    width: 2,
+                    color: '#000000',
+                    style: 'solid'
+                };
+            }
+
+            selectedElement.imageBorder.enabled = enabled;
+            document.getElementById('imageBorderControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateImageBorder(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.imageBorder) return;
+
+            switch (prop) {
+                case 'width':
+                    selectedElement.imageBorder.width = parseFloat(value);
+                    document.getElementById('borderWidthValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.imageBorder.color = value;
+                    break;
+                case 'style':
+                    selectedElement.imageBorder.style = value;
                     break;
             }
 
