@@ -1755,8 +1755,8 @@
                         <button class="export-format-btn" onclick="selectExportFormat('jpg')" id="formatJpg">
                             JPG
                         </button>
-                        <button class="export-format-btn" onclick="selectExportFormat('svg')" id="formatSvg">
-                            SVG
+                        <button class="export-format-btn" onclick="selectExportFormat('pdf')" id="formatPdf">
+                            PDF
                         </button>
                     </div>
                 </div>
@@ -4888,11 +4888,11 @@
             document.querySelectorAll('.export-format-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('format' + format.charAt(0).toUpperCase() + format.slice(1)).classList.add('active');
 
-            // Show/hide resolution options for SVG
+            // Show/hide resolution options for PDF and SVG
             const resolutionGroup = document.getElementById('resolutionGroup');
             const qualityGroup = document.getElementById('qualityGroup');
 
-            if (format === 'svg') {
+            if (format === 'svg' || format === 'pdf') {
                 resolutionGroup.style.display = 'none';
                 qualityGroup.style.display = 'none';
             } else {
@@ -4924,6 +4924,8 @@
                     exportAsPNG(fileName, exportResolution);
                 } else if (exportFormat === 'jpg') {
                     exportAsJPG(fileName, exportResolution, exportQuality);
+                } else if (exportFormat === 'pdf') {
+                    exportAsPDF(fileName);
                 }
 
                 closeExportModal();
@@ -4981,6 +4983,56 @@
             tempCanvas.toBlob((blob) => {
                 downloadBlob(blob, fileName + '.jpg');
             }, 'image/jpeg', quality);
+        }
+
+        function exportAsPDF(fileName) {
+            // Create a temporary canvas for high-resolution rendering
+            const scale = 2; // Higher resolution for PDF
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width * scale;
+            tempCanvas.height = canvas.height * scale;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Scale the context
+            tempCtx.scale(scale, scale);
+
+            // Fill white background
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw all elements
+            for (let element of elements) {
+                element.draw(tempCtx);
+            }
+
+            // Convert canvas to image data
+            const imgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+
+            // Use jsPDF to create PDF
+            const { jsPDF } = window.jspdf;
+
+            // Calculate PDF dimensions (A4 or fit to content)
+            const pdfWidth = canvas.width;
+            const pdfHeight = canvas.height;
+
+            // Use landscape if width > height
+            const orientation = pdfWidth > pdfHeight ? 'landscape' : 'portrait';
+
+            // Create PDF with custom dimensions (in mm, 96 DPI)
+            const mmWidth = pdfWidth * 0.264583; // px to mm conversion
+            const mmHeight = pdfHeight * 0.264583;
+
+            const pdf = new jsPDF({
+                orientation: orientation,
+                unit: 'mm',
+                format: [mmWidth, mmHeight]
+            });
+
+            // Add image to PDF
+            pdf.addImage(imgData, 'JPEG', 0, 0, mmWidth, mmHeight);
+
+            // Download PDF
+            pdf.save(fileName + '.pdf');
         }
 
         function exportAsSVG(fileName) {
