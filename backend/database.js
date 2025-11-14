@@ -40,6 +40,8 @@ async function initDatabase() {
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         data JSONB DEFAULT '{}',
+        share_id VARCHAR(32) UNIQUE,
+        is_public BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -48,6 +50,11 @@ async function initDatabase() {
     // Create index on user_id for faster queries
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id)
+    `);
+
+    // Create index on share_id for faster lookups
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_projects_share_id ON projects(share_id) WHERE share_id IS NOT NULL
     `);
 
     console.log('✅ Database tables initialized');
@@ -146,6 +153,33 @@ const db = {
   async deleteProject(id) {
     const result = await pool.query(
       'DELETE FROM projects WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  },
+
+  // Generate share link for project
+  async generateShareLink(id, shareId) {
+    const result = await pool.query(
+      'UPDATE projects SET share_id = $1, is_public = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, share_id, is_public',
+      [shareId, id]
+    );
+    return result.rows[0];
+  },
+
+  // Get project by share ID
+  async getProjectByShareId(shareId) {
+    const result = await pool.query(
+      'SELECT id, user_id, name, data, created_at, updated_at, is_public FROM projects WHERE share_id = $1 AND is_public = TRUE',
+      [shareId]
+    );
+    return result.rows[0];
+  },
+
+  // Revoke share link
+  async revokeShareLink(id) {
+    const result = await pool.query(
+      'UPDATE projects SET share_id = NULL, is_public = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id',
       [id]
     );
     return result.rows.length > 0;
