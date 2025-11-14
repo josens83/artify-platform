@@ -1118,6 +1118,7 @@
                 <button class="header-btn" onclick="showKeyboardShortcutsModal()" aria-label="키보드 단축키" title="키보드 단축키 (?)">⌨️ 단축키</button>
                 <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
                 <button class="header-btn primary" onclick="saveProject()" aria-label="프로젝트 저장">💾 저장</button>
+                <button class="header-btn" onclick="showShareModal()" aria-label="공유 링크">🔗 공유</button>
                 <div id="editor-auth-container" style="display: inline-block; margin-left: 10px;">
                     <button class="btn-login" onclick="AuthUI.showLoginModal()">
                         로그인
@@ -1489,9 +1490,116 @@
                     </div>
                 </div>
 
+                <div class="panel-group">
+                    <label class="panel-label">Contrast</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterContrast" oninput="updateImageFilter('contrast', this.value)">
+                        <span class="slider-value" id="contrastValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Saturation</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterSaturate" oninput="updateImageFilter('saturate', this.value)">
+                        <span class="slider-value" id="saturateValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Hue Rotate</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="360" value="0" id="filterHueRotate" oninput="updateImageFilter('hueRotate', this.value)">
+                        <span class="slider-value" id="hueRotateValue">0°</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Invert</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="0" id="filterInvert" oninput="updateImageFilter('invert', this.value)">
+                        <span class="slider-value" id="invertValue">0%</span>
+                    </div>
+                </div>
+
                 <div class="btn-group" style="margin-top: 10px;">
                     <button class="btn-icon" onclick="resetImageFilters()" style="flex: 1;">필터 초기화</button>
                     <button class="btn-icon" onclick="startCropMode()" style="flex: 1;" id="cropBtn">✂️ 크롭</button>
+                </div>
+
+                <div class="panel-title" style="margin-top: 15px;">회전 & 반전</div>
+                <div class="btn-group">
+                    <button class="btn-icon" onclick="rotateImage(-90)" style="flex: 1;">↺ 좌로 90°</button>
+                    <button class="btn-icon" onclick="rotateImage(90)" style="flex: 1;">↻ 우로 90°</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="flipImage('horizontal')" style="flex: 1;">↔️ 좌우 반전</button>
+                    <button class="btn-icon" onclick="flipImage('vertical')" style="flex: 1;">↕️ 상하 반전</button>
+                </div>
+
+                <!-- Image Effects -->
+                <div class="panel-title" style="margin-top: 15px;">효과</div>
+
+                <!-- Shadow -->
+                <div class="panel-group">
+                    <label class="panel-label">
+                        <input type="checkbox" id="imageShadowEnabled" onchange="toggleImageShadow(this.checked)"> 그림자
+                    </label>
+                </div>
+                <div id="imageShadowControls" style="display: none;">
+                    <div class="panel-group">
+                        <label class="panel-label">X 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="5" id="imageShadowX" oninput="updateImageShadow('offsetX', this.value)">
+                            <span class="slider-value" id="shadowXValue">5px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">Y 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="5" id="imageShadowY" oninput="updateImageShadow('offsetY', this.value)">
+                            <span class="slider-value" id="shadowYValue">5px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">흐림 정도</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="50" value="10" id="imageShadowBlur" oninput="updateImageShadow('blur', this.value)">
+                            <span class="slider-value" id="shadowBlurValue">10px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">그림자 색상</label>
+                        <input type="color" class="panel-input" id="imageShadowColor" value="#000000" onchange="updateImageShadow('color', this.value)">
+                    </div>
+                </div>
+
+                <!-- Border -->
+                <div class="panel-group" style="margin-top: 10px;">
+                    <label class="panel-label">
+                        <input type="checkbox" id="imageBorderEnabled" onchange="toggleImageBorder(this.checked)"> 테두리
+                    </label>
+                </div>
+                <div id="imageBorderControls" style="display: none;">
+                    <div class="panel-group">
+                        <label class="panel-label">두께</label>
+                        <div class="slider-group">
+                            <input type="range" min="1" max="20" value="2" id="imageBorderWidth" oninput="updateImageBorder('width', this.value)">
+                            <span class="slider-value" id="borderWidthValue">2px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">색상</label>
+                        <input type="color" class="panel-input" id="imageBorderColor" value="#000000" onchange="updateImageBorder('color', this.value)">
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">스타일</label>
+                        <select class="panel-input" id="imageBorderStyle" onchange="updateImageBorder('style', this.value)">
+                            <option value="solid">실선</option>
+                            <option value="dashed">대시선</option>
+                            <option value="dotted">점선</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- AI Features (P13) -->
@@ -1671,7 +1779,23 @@
                 <div class="btn-group" style="margin-top: 10px;">
                     <button class="btn-icon" onclick="moveLayer('up')" style="flex:1">↑ 위로</button>
                     <button class="btn-icon" onclick="moveLayer('down')" style="flex:1">↓ 아래로</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="duplicateSelected()" style="flex:1">📋 복제 (Ctrl+D)</button>
                     <button class="btn-icon" onclick="deleteSelected()" style="flex:1">🗑️ 삭제</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="createLayerGroup()" style="flex:1">📁 그룹 생성</button>
+                    <button class="btn-icon" onclick="ungroupLayers()" style="flex:1">📂 그룹 해제</button>
+                </div>
+                <div class="panel-title" style="margin-top: 15px;">일괄 작업</div>
+                <div class="btn-group">
+                    <button class="btn-icon" onclick="toggleAllLayersLock()" style="flex:1">🔒 전체 잠금</button>
+                    <button class="btn-icon" onclick="toggleAllLayersVisibility()" style="flex:1">👁️ 전체 숨김</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="soloSelectedLayer()" style="flex:1">⭐ Solo 모드</button>
+                    <button class="btn-icon" onclick="showAllLayers()" style="flex:1">👁️ 전체 표시</button>
                 </div>
             </div>
 
@@ -2151,6 +2275,7 @@
         let gridEnabled = true;
         let snapEnabled = true;
         let nextGroupId = 1;
+        let groups = []; // Layer groups: [{id, name, elementIds: []}]
         let imageCache = new Map();
         let clipboard = null;
         let autoSaveInterval = null;
@@ -2356,7 +2481,28 @@
                         grayscale: 0,
                         sepia: 0,
                         blur: 0,
-                        brightness: 100
+                        brightness: 100,
+                        contrast: 100,
+                        saturate: 100,
+                        hueRotate: 0,
+                        invert: 0
+                    };
+
+                    // Image shadow
+                    this.imageShadow = {
+                        enabled: false,
+                        offsetX: 5,
+                        offsetY: 5,
+                        blur: 10,
+                        color: '#000000'
+                    };
+
+                    // Image border
+                    this.imageBorder = {
+                        enabled: false,
+                        width: 2,
+                        color: '#000000',
+                        style: 'solid' // solid, dashed, dotted
                     };
                 }
 
@@ -2628,6 +2774,14 @@
 
                     case 'image':
                         if (this.imageData) {
+                            // Apply shadow
+                            if (this.imageShadow && this.imageShadow.enabled) {
+                                context.shadowOffsetX = this.imageShadow.offsetX;
+                                context.shadowOffsetY = this.imageShadow.offsetY;
+                                context.shadowBlur = this.imageShadow.blur;
+                                context.shadowColor = this.imageShadow.color;
+                            }
+
                             // Apply filters
                             if (this.filters) {
                                 const filterParts = [];
@@ -2635,10 +2789,39 @@
                                 if (this.filters.sepia > 0) filterParts.push(`sepia(${this.filters.sepia}%)`);
                                 if (this.filters.blur > 0) filterParts.push(`blur(${this.filters.blur}px)`);
                                 if (this.filters.brightness !== 100) filterParts.push(`brightness(${this.filters.brightness}%)`);
+                                if (this.filters.contrast !== undefined && this.filters.contrast !== 100) filterParts.push(`contrast(${this.filters.contrast}%)`);
+                                if (this.filters.saturate !== undefined && this.filters.saturate !== 100) filterParts.push(`saturate(${this.filters.saturate}%)`);
+                                if (this.filters.hueRotate !== undefined && this.filters.hueRotate > 0) filterParts.push(`hue-rotate(${this.filters.hueRotate}deg)`);
+                                if (this.filters.invert !== undefined && this.filters.invert > 0) filterParts.push(`invert(${this.filters.invert}%)`);
                                 context.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
                             }
+
                             context.drawImage(this.imageData, this.x, this.y, this.width, this.height);
                             context.filter = 'none';
+
+                            // Reset shadow
+                            context.shadowOffsetX = 0;
+                            context.shadowOffsetY = 0;
+                            context.shadowBlur = 0;
+                            context.shadowColor = 'transparent';
+
+                            // Apply border
+                            if (this.imageBorder && this.imageBorder.enabled) {
+                                context.strokeStyle = this.imageBorder.color;
+                                context.lineWidth = this.imageBorder.width;
+
+                                // Set line dash pattern based on style
+                                if (this.imageBorder.style === 'dashed') {
+                                    context.setLineDash([10, 5]);
+                                } else if (this.imageBorder.style === 'dotted') {
+                                    context.setLineDash([2, 3]);
+                                } else {
+                                    context.setLineDash([]);
+                                }
+
+                                context.strokeRect(this.x, this.y, this.width, this.height);
+                                context.setLineDash([]); // Reset line dash
+                            }
                         }
                         break;
 
@@ -3582,6 +3765,10 @@
                 // P20: Toggle lock
                 e.preventDefault();
                 toggleSelectedLock();
+            } else if (e.ctrlKey && e.key === 'h') {
+                // Toggle visibility
+                e.preventDefault();
+                toggleSelectedVisibility();
             } else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 // P20: Duplicate in place
                 e.preventDefault();
@@ -3873,6 +4060,47 @@
                         document.getElementById('blurValue').textContent = selectedElement.filters.blur + 'px';
                         document.getElementById('filterBrightness').value = selectedElement.filters.brightness;
                         document.getElementById('brightnessValue').textContent = selectedElement.filters.brightness + '%';
+
+                        // New filters
+                        if (selectedElement.filters.contrast !== undefined) {
+                            document.getElementById('filterContrast').value = selectedElement.filters.contrast;
+                            document.getElementById('contrastValue').textContent = selectedElement.filters.contrast + '%';
+                        }
+                        if (selectedElement.filters.saturate !== undefined) {
+                            document.getElementById('filterSaturate').value = selectedElement.filters.saturate;
+                            document.getElementById('saturateValue').textContent = selectedElement.filters.saturate + '%';
+                        }
+                        if (selectedElement.filters.hueRotate !== undefined) {
+                            document.getElementById('filterHueRotate').value = selectedElement.filters.hueRotate;
+                            document.getElementById('hueRotateValue').textContent = selectedElement.filters.hueRotate + '°';
+                        }
+                        if (selectedElement.filters.invert !== undefined) {
+                            document.getElementById('filterInvert').value = selectedElement.filters.invert;
+                            document.getElementById('invertValue').textContent = selectedElement.filters.invert + '%';
+                        }
+                    }
+
+                    // Update image shadow controls
+                    if (selectedElement.imageShadow) {
+                        document.getElementById('imageShadowEnabled').checked = selectedElement.imageShadow.enabled;
+                        document.getElementById('imageShadowControls').style.display = selectedElement.imageShadow.enabled ? 'block' : 'none';
+                        document.getElementById('imageShadowX').value = selectedElement.imageShadow.offsetX;
+                        document.getElementById('shadowXValue').textContent = selectedElement.imageShadow.offsetX + 'px';
+                        document.getElementById('imageShadowY').value = selectedElement.imageShadow.offsetY;
+                        document.getElementById('shadowYValue').textContent = selectedElement.imageShadow.offsetY + 'px';
+                        document.getElementById('imageShadowBlur').value = selectedElement.imageShadow.blur;
+                        document.getElementById('shadowBlurValue').textContent = selectedElement.imageShadow.blur + 'px';
+                        document.getElementById('imageShadowColor').value = selectedElement.imageShadow.color;
+                    }
+
+                    // Update image border controls
+                    if (selectedElement.imageBorder) {
+                        document.getElementById('imageBorderEnabled').checked = selectedElement.imageBorder.enabled;
+                        document.getElementById('imageBorderControls').style.display = selectedElement.imageBorder.enabled ? 'block' : 'none';
+                        document.getElementById('imageBorderWidth').value = selectedElement.imageBorder.width;
+                        document.getElementById('borderWidthValue').textContent = selectedElement.imageBorder.width + 'px';
+                        document.getElementById('imageBorderColor').value = selectedElement.imageBorder.color;
+                        document.getElementById('imageBorderStyle').value = selectedElement.imageBorder.style;
                     }
                 } else {
                     textProps.style.display = 'none';
@@ -3991,6 +4219,84 @@
             render();
         }
 
+        function toggleImageShadow(enabled) {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            if (!selectedElement.imageShadow) {
+                selectedElement.imageShadow = {
+                    enabled: false,
+                    offsetX: 5,
+                    offsetY: 5,
+                    blur: 10,
+                    color: '#000000'
+                };
+            }
+
+            selectedElement.imageShadow.enabled = enabled;
+            document.getElementById('imageShadowControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateImageShadow(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.imageShadow) return;
+
+            switch (prop) {
+                case 'offsetX':
+                    selectedElement.imageShadow.offsetX = parseFloat(value);
+                    document.getElementById('shadowXValue').textContent = value + 'px';
+                    break;
+                case 'offsetY':
+                    selectedElement.imageShadow.offsetY = parseFloat(value);
+                    document.getElementById('shadowYValue').textContent = value + 'px';
+                    break;
+                case 'blur':
+                    selectedElement.imageShadow.blur = parseFloat(value);
+                    document.getElementById('shadowBlurValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.imageShadow.color = value;
+                    break;
+            }
+
+            render();
+        }
+
+        function toggleImageBorder(enabled) {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            if (!selectedElement.imageBorder) {
+                selectedElement.imageBorder = {
+                    enabled: false,
+                    width: 2,
+                    color: '#000000',
+                    style: 'solid'
+                };
+            }
+
+            selectedElement.imageBorder.enabled = enabled;
+            document.getElementById('imageBorderControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateImageBorder(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.imageBorder) return;
+
+            switch (prop) {
+                case 'width':
+                    selectedElement.imageBorder.width = parseFloat(value);
+                    document.getElementById('borderWidthValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.imageBorder.color = value;
+                    break;
+                case 'style':
+                    selectedElement.imageBorder.style = value;
+                    break;
+            }
+
+            render();
+        }
+
         function setColor(color) {
             document.getElementById('propFill').value = color;
             if (selectedElement) {
@@ -4017,6 +4323,18 @@
                 case 'brightness':
                     document.getElementById('brightnessValue').textContent = value + '%';
                     break;
+                case 'contrast':
+                    document.getElementById('contrastValue').textContent = value + '%';
+                    break;
+                case 'saturate':
+                    document.getElementById('saturateValue').textContent = value + '%';
+                    break;
+                case 'hueRotate':
+                    document.getElementById('hueRotateValue').textContent = value + '°';
+                    break;
+                case 'invert':
+                    document.getElementById('invertValue').textContent = value + '%';
+                    break;
             }
 
             render();
@@ -4029,7 +4347,11 @@
                 grayscale: 0,
                 sepia: 0,
                 blur: 0,
-                brightness: 100
+                brightness: 100,
+                contrast: 100,
+                saturate: 100,
+                hueRotate: 0,
+                invert: 0
             };
 
             updatePropertiesPanel();
@@ -4202,13 +4524,41 @@
             }
 
             layersList.innerHTML = '';
-            for (let i = elements.length - 1; i >= 0; i--) {
-                const element = elements[i];
 
-                // P17: Skip if element doesn't match filter
-                if (!filteredElements.includes(element)) continue;
+            // Track which elements have been rendered
+            const renderedElementIds = new Set();
+
+            // Helper function to get element icon
+            function getElementIcon(element) {
+                switch (element.type) {
+                    case 'rect': return '▢';
+                    case 'circle': return '○';
+                    case 'triangle': return '△';
+                    case 'star': return '★';
+                    case 'diamond': return '◆';
+                    case 'hexagon': return '⬢';
+                    case 'speech-bubble': return '💬';
+                    case 'cloud': return '☁️';
+                    case 'line': return '─';
+                    case 'arrow': return '→';
+                    case 'text': return 'T';
+                    case 'image': return '🖼️';
+                    case 'pencil': return '✏️';
+                    default: return '•';
+                }
+            }
+
+            // Helper function to create layer item
+            function createLayerItem(element, isGroupChild = false) {
+                const elementIndex = elements.indexOf(element);
                 const layer = document.createElement('div');
                 layer.className = 'layer-item' + (element === selectedElement ? ' active' : '');
+                if (isGroupChild) {
+                    layer.style.paddingLeft = '30px';
+                    layer.style.borderLeft = '2px solid #667eea';
+                    layer.style.marginLeft = '10px';
+                }
+
                 layer.onclick = () => {
                     selectedElement = element;
                     updatePropertiesPanel();
@@ -4216,45 +4566,229 @@
                     render();
                 };
 
-                let icon = '';
-                switch (element.type) {
-                    case 'rect': icon = '▢'; break;
-                    case 'circle': icon = '○'; break;
-                    case 'triangle': icon = '△'; break;
-                    case 'star': icon = '★'; break;
-                    case 'diamond': icon = '◆'; break;
-                    case 'hexagon': icon = '⬢'; break;
-                    case 'speech-bubble': icon = '💬'; break;
-                    case 'cloud': icon = '☁️'; break;
-                    case 'line': icon = '─'; break;
-                    case 'arrow': icon = '→'; break;
-                    case 'text': icon = 'T'; break;
-                    case 'image': icon = '🖼️'; break;
-                    case 'pencil': icon = '✏️'; break;
-                }
+                const icon = getElementIcon(element);
+                const displayName = element.type === 'text' ? element.text.substring(0, 15) : element.type;
 
                 layer.innerHTML = `
-                    <div><span class="layer-icon">${icon}</span>${element.type === 'text' ? element.text.substring(0, 15) : element.type}</div>
+                    <div><span class="layer-icon">${icon}</span>${displayName}</div>
                     <div class="layer-actions">
-                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerVisibility(${i})">${element.visible ? '👁️' : '🚫'}</button>
-                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerLock(${i})">${element.locked ? '🔒' : '🔓'}</button>
+                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerVisibility(${elementIndex})">${element.visible ? '👁️' : '🚫'}</button>
+                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerLock(${elementIndex})">${element.locked ? '🔒' : '🔓'}</button>
                     </div>
                 `;
-                layersList.appendChild(layer);
+                return layer;
+            }
+
+            // Render groups and their children (reverse order for top-to-bottom display)
+            for (let i = groups.length - 1; i >= 0; i--) {
+                const group = groups[i];
+
+                // Create group header
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'layer-item';
+                groupHeader.style.background = '#f0f0f0';
+                groupHeader.style.fontWeight = 'bold';
+                groupHeader.onclick = () => selectGroup(group.id);
+
+                const expandIcon = group.expanded ? '▼' : '▶';
+                groupHeader.innerHTML = `
+                    <div>
+                        <span class="layer-icon" onclick="event.stopPropagation(); toggleGroupExpansion(${group.id})" style="cursor: pointer;">${expandIcon}</span>
+                        <span class="layer-icon">📁</span>${group.name}
+                    </div>
+                    <div class="layer-actions">
+                        <span style="font-size: 11px; color: #666;">${group.elementIds.length}개</span>
+                    </div>
+                `;
+                layersList.appendChild(groupHeader);
+
+                // Render group children if expanded
+                if (group.expanded) {
+                    const groupElements = elements.filter(el => el.groupId === group.id && filteredElements.includes(el));
+                    groupElements.reverse().forEach(element => {
+                        layersList.appendChild(createLayerItem(element, true));
+                        renderedElementIds.add(element.id);
+                    });
+                } else {
+                    // Mark group elements as rendered even if collapsed
+                    group.elementIds.forEach(id => renderedElementIds.add(id));
+                }
+            }
+
+            // Render ungrouped elements
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const element = elements[i];
+
+                // Skip if already rendered as part of a group or doesn't match filter
+                if (renderedElementIds.has(element.id) || !filteredElements.includes(element)) continue;
+
+                // Skip if element has a groupId (shouldn't happen, but safety check)
+                if (element.groupId) continue;
+
+                layersList.appendChild(createLayerItem(element, false));
             }
         }
 
         function toggleLayerVisibility(index) {
-            const actualIndex = elements.length - 1 - index;
-            elements[actualIndex].visible = !elements[actualIndex].visible;
-            updateLayersList();
-            render();
+            if (index >= 0 && index < elements.length) {
+                elements[index].visible = !elements[index].visible;
+                updateLayersList();
+                render();
+            }
         }
 
         function toggleLayerLock(index) {
-            const actualIndex = elements.length - 1 - index;
-            elements[actualIndex].locked = !elements[actualIndex].locked;
+            if (index >= 0 && index < elements.length) {
+                elements[index].locked = !elements[index].locked;
+                updateLayersList();
+            }
+        }
+
+        function createLayerGroup() {
+            // Get all selected elements (using Ctrl+Click multi-select)
+            const selectedIds = new Set();
+
+            if (selectedElements.length >= 2) {
+                // Use multi-selected elements
+                selectedElements.forEach(el => selectedIds.add(el.id));
+            } else if (selectedElement) {
+                // If only one element selected, ask user to select more
+                alert('그룹을 생성하려면 2개 이상의 레이어를 선택하세요.\n(Ctrl+클릭으로 여러 레이어를 선택할 수 있습니다)');
+                return;
+            } else {
+                alert('그룹화할 레이어를 선택하세요.');
+                return;
+            }
+
+            // Create new group
+            const groupId = nextGroupId++;
+            const groupName = prompt('그룹 이름을 입력하세요:', `그룹 ${groupId}`);
+
+            if (!groupName) return;
+
+            const group = {
+                id: groupId,
+                name: groupName,
+                elementIds: Array.from(selectedIds),
+                expanded: true
+            };
+
+            groups.push(group);
+
+            // Assign groupId to selected elements
+            elements.forEach(element => {
+                if (selectedIds.has(element.id)) {
+                    element.groupId = groupId;
+                }
+            });
+
             updateLayersList();
+            saveHistory();
+            render();
+        }
+
+        function ungroupLayers() {
+            if (!selectedElement) {
+                alert('그룹 해제할 레이어를 선택하세요.');
+                return;
+            }
+
+            const groupId = selectedElement.groupId;
+            if (!groupId) {
+                alert('선택된 레이어가 그룹에 속해 있지 않습니다.');
+                return;
+            }
+
+            // Remove groupId from all elements in this group
+            elements.forEach(element => {
+                if (element.groupId === groupId) {
+                    element.groupId = null;
+                }
+            });
+
+            // Remove group from groups array
+            const groupIndex = groups.findIndex(g => g.id === groupId);
+            if (groupIndex !== -1) {
+                groups.splice(groupIndex, 1);
+            }
+
+            updateLayersList();
+            saveHistory();
+            render();
+        }
+
+        function toggleGroupExpansion(groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (group) {
+                group.expanded = !group.expanded;
+                updateLayersList();
+            }
+        }
+
+        function selectGroup(groupId) {
+            // Select all elements in the group
+            const groupElements = elements.filter(el => el.groupId === groupId);
+            if (groupElements.length > 0) {
+                selectedElements = groupElements;
+                selectedElement = groupElements[0];
+                updatePropertiesPanel();
+                updateLayersList();
+                render();
+            }
+        }
+
+        function toggleAllLayersLock() {
+            // Check if any layer is unlocked
+            const hasUnlocked = elements.some(el => !el.locked);
+
+            // If any unlocked, lock all. If all locked, unlock all
+            elements.forEach(element => {
+                element.locked = hasUnlocked;
+            });
+
+            updateLayersList();
+            saveHistory();
+        }
+
+        function toggleAllLayersVisibility() {
+            // Check if any layer is visible
+            const hasVisible = elements.some(el => el.visible);
+
+            // If any visible, hide all. If all hidden, show all
+            elements.forEach(element => {
+                element.visible = !hasVisible;
+            });
+
+            updateLayersList();
+            render();
+            saveHistory();
+        }
+
+        function soloSelectedLayer() {
+            if (!selectedElement) {
+                alert('Solo 모드로 표시할 레이어를 선택하세요.');
+                return;
+            }
+
+            // Hide all layers except selected
+            elements.forEach(element => {
+                element.visible = (element === selectedElement);
+            });
+
+            updateLayersList();
+            render();
+            saveHistory();
+        }
+
+        function showAllLayers() {
+            // Show all layers
+            elements.forEach(element => {
+                element.visible = true;
+            });
+
+            updateLayersList();
+            render();
+            saveHistory();
         }
 
         // P18: Smart Alignment Guide Calculation
@@ -4470,6 +5004,15 @@
             selectedElement.locked = !selectedElement.locked;
             updateLayersList();
             render();
+        }
+
+        function toggleSelectedVisibility() {
+            if (!selectedElement) return;
+
+            selectedElement.visible = !selectedElement.visible;
+            updateLayersList();
+            render();
+            saveHistory();
         }
 
         function duplicateInPlace() {

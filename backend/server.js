@@ -711,6 +711,83 @@ app.delete('/api/projects/:id', projectLimiter, authenticateToken, async (req, r
   }
 });
 
+// Generate share link for project
+app.post('/api/projects/:id/share', projectLimiter, authenticateToken, async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const project = await db.getProjectById(projectId);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Generate unique share ID
+    const crypto = require('crypto');
+    const shareId = crypto.randomBytes(16).toString('hex');
+
+    const result = await db.generateShareLink(projectId, shareId);
+    const shareUrl = `${req.protocol}://${req.get('host')}/editor.html?share=${shareId}`;
+
+    res.json({
+      shareId: result.share_id,
+      shareUrl: shareUrl,
+      isPublic: result.is_public
+    });
+  } catch (error) {
+    console.error('Generate share link error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get shared project (no auth required)
+app.get('/api/projects/shared/:shareId', async (req, res) => {
+  try {
+    const shareId = req.params.shareId;
+    const project = await db.getProjectByShareId(shareId);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Shared project not found or no longer public' });
+    }
+
+    res.json({
+      id: project.id,
+      name: project.name,
+      data: project.data,
+      createdAt: project.created_at,
+      updatedAt: project.updated_at
+    });
+  } catch (error) {
+    console.error('Get shared project error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Revoke share link
+app.delete('/api/projects/:id/share', projectLimiter, authenticateToken, async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const project = await db.getProjectById(projectId);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await db.revokeShareLink(projectId);
+    res.json({ message: 'Share link revoked successfully' });
+  } catch (error) {
+    console.error('Revoke share link error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Initialize database and start server
 async function startServer() {
   try {
