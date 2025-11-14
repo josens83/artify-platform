@@ -1398,6 +1398,22 @@
                     </div>
                 </div>
 
+                <!-- Text Wrapping Controls -->
+                <div class="panel-group">
+                    <label class="panel-label">
+                        <input type="checkbox" id="propWrapText" checked onchange="updateElementProp('wrapText', this.checked)">
+                        자동 줄바꿈
+                    </label>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">텍스트 박스 너비</label>
+                    <div class="slider-group">
+                        <input type="range" min="50" max="800" step="10" value="300" id="propMaxWidth" oninput="updateElementProp('maxWidth', this.value)">
+                        <span class="slider-value" id="maxWidthValue">300px</span>
+                    </div>
+                </div>
+
                 <div class="panel-group">
                     <label class="panel-label">
                         <input type="checkbox" id="textShadowEnabled" onchange="toggleTextShadow(this.checked)">
@@ -2320,6 +2336,10 @@
                     this.lineHeight = 1.2;
                     this.letterSpacing = 0;
 
+                    // Text wrapping
+                    this.wrapText = true;  // Enable auto text wrapping
+                    this.maxWidth = width || 300;  // Max width for wrapping
+
                     this.textShadow = {
                         enabled: false,
                         offsetX: 2,
@@ -2378,6 +2398,35 @@
                 }
 
                 return gradient;
+            }
+
+            // Text wrapping helper
+            wrapLines(context, text, maxWidth) {
+                if (!this.wrapText) {
+                    return [text];
+                }
+
+                const words = text.split(' ');
+                const lines = [];
+                let currentLine = '';
+
+                for (let i = 0; i < words.length; i++) {
+                    const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+                    const metrics = context.measureText(testLine);
+
+                    if (metrics.width > maxWidth && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = words[i];
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+
+                return lines.length > 0 ? lines : [text];
             }
 
             draw(context) {
@@ -2494,39 +2543,78 @@
                             context.shadowColor = this.textShadow.color;
                         }
 
-                        let textX = this.x;
-                        if (this.textAlign === 'center') textX += this.width / 2;
-                        else if (this.textAlign === 'right') textX += this.width;
+                        // Wrap text into multiple lines
+                        const lines = this.wrapLines(context, this.text, this.maxWidth || this.width);
+                        const lineHeightPx = this.fontSize * (this.lineHeight || 1.2);
 
-                        // P22: Apply letter spacing
-                        if (this.letterSpacing && this.letterSpacing !== 0) {
-                            // Draw each character separately with spacing
-                            let currentX = textX;
-                            const chars = this.text.split('');
+                        // Draw each line
+                        lines.forEach((line, lineIndex) => {
+                            let textX = this.x;
+                            if (this.textAlign === 'center') textX += this.width / 2;
+                            else if (this.textAlign === 'right') textX += this.width;
 
-                            for (let i = 0; i < chars.length; i++) {
-                                const char = chars[i];
-                                const metrics = context.measureText(char);
+                            const textY = this.y + (lineIndex * lineHeightPx);
 
-                                if (this.textAlign === 'center') {
-                                    const totalWidth = this.text.split('').reduce((acc, c) => {
-                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                            // P22: Apply letter spacing
+                            if (this.letterSpacing && this.letterSpacing !== 0) {
+                                // Draw each character separately with spacing
+                                let currentX = textX;
+                                const chars = line.split('');
+
+                                for (let i = 0; i < chars.length; i++) {
+                                    const char = chars[i];
+                                    const metrics = context.measureText(char);
+
+                                    if (this.textAlign === 'center') {
+                                        const totalWidth = line.split('').reduce((acc, c) => {
+                                            return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                        }, 0);
+                                        currentX = this.x + this.width / 2 - totalWidth / 2 + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    } else if (this.textAlign === 'right') {
+                                        const totalWidth = line.split('').reduce((acc, c) => {
+                                            return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                        }, 0);
+                                        currentX = this.x + this.width - totalWidth + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    } else {
+                                        currentX = this.x + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    }
+
+                                    context.fillText(char, currentX, textY);
+                                }
+                            } else {
+                                context.fillText(line, textX, textY);
+                            }
+
+                            // P22: Underline with letter spacing consideration
+                            if (this.underline) {
+                                let underlineWidth;
+                                let underlineX;
+
+                                if (this.letterSpacing && this.letterSpacing !== 0) {
+                                    // Calculate total width with letter spacing
+                                    underlineWidth = line.split('').reduce((acc, c, i) => {
+                                        return acc + context.measureText(c).width + (i < line.length - 1 ? this.letterSpacing : 0);
                                     }, 0);
-                                    currentX = this.x + this.width / 2 - totalWidth / 2 + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
-                                } else if (this.textAlign === 'right') {
-                                    const totalWidth = this.text.split('').reduce((acc, c) => {
-                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
-                                    }, 0);
-                                    currentX = this.x + this.width - totalWidth + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
                                 } else {
-                                    currentX = this.x + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    underlineWidth = context.measureText(line).width;
                                 }
 
-                                context.fillText(char, currentX, this.y);
+                                if (this.textAlign === 'center') {
+                                    underlineX = this.x + this.width / 2 - underlineWidth / 2;
+                                } else if (this.textAlign === 'right') {
+                                    underlineX = this.x + this.width - underlineWidth;
+                                } else {
+                                    underlineX = this.x;
+                                }
+
+                                context.beginPath();
+                                context.moveTo(underlineX, textY + this.fontSize + 2);
+                                context.lineTo(underlineX + underlineWidth, textY + this.fontSize + 2);
+                                context.strokeStyle = this.fill;
+                                context.lineWidth = 1;
+                                context.stroke();
                             }
-                        } else {
-                            context.fillText(this.text, textX, this.y);
-                        }
+                        });
 
                         // Reset shadow
                         context.shadowOffsetX = 0;
@@ -2534,35 +2622,8 @@
                         context.shadowBlur = 0;
                         context.shadowColor = 'transparent';
 
-                        // P22: Underline with letter spacing consideration
-                        if (this.underline) {
-                            let underlineWidth;
-                            let underlineX;
-
-                            if (this.letterSpacing && this.letterSpacing !== 0) {
-                                // Calculate total width with letter spacing
-                                underlineWidth = this.text.split('').reduce((acc, c, i) => {
-                                    return acc + context.measureText(c).width + (i < this.text.length - 1 ? this.letterSpacing : 0);
-                                }, 0);
-                            } else {
-                                underlineWidth = context.measureText(this.text).width;
-                            }
-
-                            if (this.textAlign === 'center') {
-                                underlineX = this.x + this.width / 2 - underlineWidth / 2;
-                            } else if (this.textAlign === 'right') {
-                                underlineX = this.x + this.width - underlineWidth;
-                            } else {
-                                underlineX = this.x;
-                            }
-
-                            context.beginPath();
-                            context.moveTo(underlineX, this.y + this.fontSize + 2);
-                            context.lineTo(underlineX + underlineWidth, this.y + this.fontSize + 2);
-                            context.strokeStyle = this.fill;
-                            context.lineWidth = 1;
-                            context.stroke();
-                        }
+                        // Update height to fit all lines
+                        this.height = Math.max(this.height, lines.length * lineHeightPx);
                         break;
 
                     case 'image':
@@ -3777,6 +3838,15 @@
                         document.getElementById('letterSpacingValue').textContent = selectedElement.letterSpacing + 'px';
                     }
 
+                    // Text wrapping controls
+                    if (selectedElement.wrapText !== undefined) {
+                        document.getElementById('propWrapText').checked = selectedElement.wrapText;
+                    }
+                    if (selectedElement.maxWidth !== undefined) {
+                        document.getElementById('propMaxWidth').value = selectedElement.maxWidth;
+                        document.getElementById('maxWidthValue').textContent = selectedElement.maxWidth + 'px';
+                    }
+
                     // Update text shadow controls
                     if (selectedElement.textShadow) {
                         document.getElementById('textShadowEnabled').checked = selectedElement.textShadow.enabled;
@@ -3849,6 +3919,21 @@
                 case 'strokeWidth':
                     selectedElement[prop] = parseFloat(value);
                     document.getElementById('strokeValue').textContent = value + 'px';
+                    break;
+                case 'maxWidth':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('maxWidthValue').textContent = value + 'px';
+                    break;
+                case 'lineHeight':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('lineHeightValue').textContent = parseFloat(value).toFixed(1);
+                    break;
+                case 'letterSpacing':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('letterSpacingValue').textContent = value + 'px';
+                    break;
+                case 'wrapText':
+                    selectedElement[prop] = value;
                     break;
                 default:
                     selectedElement[prop] = value;
