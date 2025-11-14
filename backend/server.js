@@ -117,7 +117,11 @@ app.use(cors(corsOptions));
 // Preflight 요청 처리
 app.options('*', cors(corsOptions));
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve uploaded images statically
+app.use('/uploads', express.static('uploads'));
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -428,6 +432,113 @@ const optionalAuth = (req, res, next) => {
   }
   next();
 };
+
+// ==================== Image Upload API ====================
+
+/**
+ * @swagger
+ * /api/images/upload:
+ *   post:
+ *     summary: 이미지 업로드
+ *     description: Base64 이미지 또는 URL에서 이미지를 다운로드하여 영구 저장
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 description: Base64 인코딩된 이미지 (data:image/png;base64,...) 또는 이미지 URL
+ *             required:
+ *               - image
+ *     responses:
+ *       200:
+ *         description: 업로드 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ *                   description: 영구 이미지 URL
+ *       400:
+ *         description: 잘못된 요청
+ *       500:
+ *         description: 서버 오류
+ */
+app.post('/api/images/upload', projectLimiter, async (req, res) => {
+  try {
+    const { image } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ error: 'Image data required' });
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+    const crypto = require('crypto');
+
+    // Create images directory if not exists
+    const imagesDir = path.join(__dirname, 'uploads', 'images');
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const filename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}.png`;
+    const filepath = path.join(imagesDir, filename);
+
+    // Check if image is base64 or URL
+    if (image.startsWith('data:image')) {
+      // Base64 image
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      fs.writeFileSync(filepath, buffer);
+    } else if (image.startsWith('http://') || image.startsWith('https://')) {
+      // URL - download and save
+      const https = require('https');
+      const http = require('http');
+      const protocol = image.startsWith('https://') ? https : http;
+
+      await new Promise((resolve, reject) => {
+        protocol.get(image, (response) => {
+          if (response.statusCode !== 200) {
+            reject(new Error(`Failed to download image: ${response.statusCode}`));
+            return;
+          }
+
+          const fileStream = fs.createWriteStream(filepath);
+          response.pipe(fileStream);
+
+          fileStream.on('finish', () => {
+            fileStream.close();
+            resolve();
+          });
+
+          fileStream.on('error', (err) => {
+            fs.unlink(filepath, () => {});
+            reject(err);
+          });
+        }).on('error', reject);
+      });
+    } else {
+      return res.status(400).json({ error: 'Invalid image format. Must be base64 or URL' });
+    }
+
+    // Return permanent URL
+    const imageUrl = `/uploads/images/${filename}`;
+    res.json({ url: imageUrl });
+
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json({ error: 'Image upload failed', details: error.message });
+  }
+});
+
+// ==================== Projects API ====================
 
 // Project routes
 app.get('/api/projects', projectLimiter, optionalAuth, async (req, res) => {

@@ -378,11 +378,46 @@ const GeneratePage = {
             throw new Error(response.error || 'Failed to generate image');
         }
 
+        // Upload image to backend for permanent storage
+        const permanentUrl = await this.uploadImageToBackend(response.imageUrl);
+
         return {
-            url: response.imageUrl,
+            url: permanentUrl || response.imageUrl, // Use permanent URL if upload succeeds, fallback to temporary URL
+            originalUrl: response.imageUrl, // Keep original URL for reference
             model: payload.model,
             size: payload.size
         };
+    },
+
+    /**
+     * Upload image to backend for permanent storage
+     */
+    async uploadImageToBackend(imageUrl) {
+        try {
+            const { default: api } = await import('./api.js');
+
+            console.log('[GeneratePage] Uploading image to backend:', imageUrl);
+
+            const response = await api.request(
+                `${api.config.BACKEND_URL}/api/images/upload`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({ image: imageUrl })
+                }
+            );
+
+            if (response.url) {
+                console.log('[GeneratePage] Image uploaded successfully:', response.url);
+                // Convert relative URL to absolute URL
+                return `${api.config.BACKEND_URL}${response.url}`;
+            }
+
+            return null;
+        } catch (error) {
+            console.error('[GeneratePage] Failed to upload image to backend:', error);
+            // Return null to fallback to original URL
+            return null;
+        }
     },
 
     /**
