@@ -1489,6 +1489,38 @@
                     </div>
                 </div>
 
+                <div class="panel-group">
+                    <label class="panel-label">Contrast</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterContrast" oninput="updateImageFilter('contrast', this.value)">
+                        <span class="slider-value" id="contrastValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Saturation</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterSaturate" oninput="updateImageFilter('saturate', this.value)">
+                        <span class="slider-value" id="saturateValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Hue Rotate</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="360" value="0" id="filterHueRotate" oninput="updateImageFilter('hueRotate', this.value)">
+                        <span class="slider-value" id="hueRotateValue">0°</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Invert</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="0" id="filterInvert" oninput="updateImageFilter('invert', this.value)">
+                        <span class="slider-value" id="invertValue">0%</span>
+                    </div>
+                </div>
+
                 <div class="btn-group" style="margin-top: 10px;">
                     <button class="btn-icon" onclick="resetImageFilters()" style="flex: 1;">필터 초기화</button>
                     <button class="btn-icon" onclick="startCropMode()" style="flex: 1;" id="cropBtn">✂️ 크롭</button>
@@ -2356,7 +2388,11 @@
                         grayscale: 0,
                         sepia: 0,
                         blur: 0,
-                        brightness: 100
+                        brightness: 100,
+                        contrast: 100,
+                        saturate: 100,
+                        hueRotate: 0,
+                        invert: 0
                     };
                 }
 
@@ -2635,6 +2671,10 @@
                                 if (this.filters.sepia > 0) filterParts.push(`sepia(${this.filters.sepia}%)`);
                                 if (this.filters.blur > 0) filterParts.push(`blur(${this.filters.blur}px)`);
                                 if (this.filters.brightness !== 100) filterParts.push(`brightness(${this.filters.brightness}%)`);
+                                if (this.filters.contrast !== undefined && this.filters.contrast !== 100) filterParts.push(`contrast(${this.filters.contrast}%)`);
+                                if (this.filters.saturate !== undefined && this.filters.saturate !== 100) filterParts.push(`saturate(${this.filters.saturate}%)`);
+                                if (this.filters.hueRotate !== undefined && this.filters.hueRotate > 0) filterParts.push(`hue-rotate(${this.filters.hueRotate}deg)`);
+                                if (this.filters.invert !== undefined && this.filters.invert > 0) filterParts.push(`invert(${this.filters.invert}%)`);
                                 context.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
                             }
                             context.drawImage(this.imageData, this.x, this.y, this.width, this.height);
@@ -3873,6 +3913,24 @@
                         document.getElementById('blurValue').textContent = selectedElement.filters.blur + 'px';
                         document.getElementById('filterBrightness').value = selectedElement.filters.brightness;
                         document.getElementById('brightnessValue').textContent = selectedElement.filters.brightness + '%';
+
+                        // New filters
+                        if (selectedElement.filters.contrast !== undefined) {
+                            document.getElementById('filterContrast').value = selectedElement.filters.contrast;
+                            document.getElementById('contrastValue').textContent = selectedElement.filters.contrast + '%';
+                        }
+                        if (selectedElement.filters.saturate !== undefined) {
+                            document.getElementById('filterSaturate').value = selectedElement.filters.saturate;
+                            document.getElementById('saturateValue').textContent = selectedElement.filters.saturate + '%';
+                        }
+                        if (selectedElement.filters.hueRotate !== undefined) {
+                            document.getElementById('filterHueRotate').value = selectedElement.filters.hueRotate;
+                            document.getElementById('hueRotateValue').textContent = selectedElement.filters.hueRotate + '°';
+                        }
+                        if (selectedElement.filters.invert !== undefined) {
+                            document.getElementById('filterInvert').value = selectedElement.filters.invert;
+                            document.getElementById('invertValue').textContent = selectedElement.filters.invert + '%';
+                        }
                     }
                 } else {
                     textProps.style.display = 'none';
@@ -4017,6 +4075,18 @@
                 case 'brightness':
                     document.getElementById('brightnessValue').textContent = value + '%';
                     break;
+                case 'contrast':
+                    document.getElementById('contrastValue').textContent = value + '%';
+                    break;
+                case 'saturate':
+                    document.getElementById('saturateValue').textContent = value + '%';
+                    break;
+                case 'hueRotate':
+                    document.getElementById('hueRotateValue').textContent = value + '°';
+                    break;
+                case 'invert':
+                    document.getElementById('invertValue').textContent = value + '%';
+                    break;
             }
 
             render();
@@ -4029,7 +4099,11 @@
                 grayscale: 0,
                 sepia: 0,
                 blur: 0,
-                brightness: 100
+                brightness: 100,
+                contrast: 100,
+                saturate: 100,
+                hueRotate: 0,
+                invert: 0
             };
 
             updatePropertiesPanel();
