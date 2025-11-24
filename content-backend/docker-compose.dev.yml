@@ -1,0 +1,35 @@
+version: '3.8'
+
+# Development-specific docker-compose configuration
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for development
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      # Mount source code for hot reloading
+      - .:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+    environment:
+      LOG_LEVEL: DEBUG
+      ENABLE_CONSOLE_LOGS: "true"
+      ENABLE_FILE_LOGS: "false"  # Disable file logging in dev
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debug port
+
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres  # Simple password for dev
+
+  redis:
+    command: redis-server  # No password in dev
+    ports:
+      - "6379:6379"

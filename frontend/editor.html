@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Artify - Canva Style Editor</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/auth.css">
     <style>
         * {
             margin: 0;
@@ -721,6 +722,173 @@
             margin-top: 10px;
         }
 
+        /* Template Library */
+        .template-filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .template-filter-btn:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .template-filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .template-library-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            height: 240px;
+        }
+
+        .template-library-card:hover {
+            border-color: #667eea;
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .template-preview {
+            width: 100%;
+            height: 150px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .template-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .template-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .template-library-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .template-library-desc {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .template-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #999;
+            margin-top: auto;
+        }
+
+        .template-category {
+            background: #e8eaff;
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        /* Keyboard Shortcuts */
+        .shortcuts-section {
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .shortcuts-section:last-child {
+            border-bottom: none;
+        }
+
+        .shortcuts-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .shortcuts-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .shortcut-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .shortcut-item:hover {
+            background: #e8eaff;
+        }
+
+        .shortcut-keys {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .shortcut-keys kbd {
+            background: white;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+            font-size: 12px;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+            color: #333;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        .shortcut-desc {
+            font-size: 14px;
+            color: #666;
+            text-align: right;
+        }
+
         /* Crop Mode */
         .crop-overlay {
             position: absolute;
@@ -947,9 +1115,15 @@
                 <button class="header-btn" onclick="showVersionHistoryModal()" aria-label="버전 히스토리">🕐 버전</button>
                 <button class="header-btn" onclick="showCollaborateModal()" aria-label="협업">👥 협업</button>
                 <button class="header-btn" onclick="showTemplateModal()" aria-label="캔버스 크기 변경">📐 캔버스 크기</button>
+                <button class="header-btn" onclick="showKeyboardShortcutsModal()" aria-label="키보드 단축키" title="키보드 단축키 (?)">⌨️ 단축키</button>
                 <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
                 <button class="header-btn primary" onclick="saveProject()" aria-label="프로젝트 저장">💾 저장</button>
-                <button class="header-btn" onclick="handleLogout()" aria-label="로그아웃">로그아웃</button>
+                <button class="header-btn" onclick="showShareModal()" aria-label="공유 링크">🔗 공유</button>
+                <div id="editor-auth-container" style="display: inline-block; margin-left: 10px;">
+                    <button class="btn-login" onclick="AuthUI.showLoginModal()">
+                        로그인
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1010,6 +1184,10 @@
             <div class="tool-item" onclick="document.getElementById('imageUpload').click()" role="button" aria-label="이미지 업로드" tabindex="0">
                 <div>🖼️</div>
                 <div class="tool-label">이미지</div>
+            </div>
+            <div class="tool-item" onclick="showTemplateLibraryModal()" role="button" aria-label="템플릿 라이브러리" tabindex="0">
+                <div>📋</div>
+                <div class="tool-label">템플릿</div>
             </div>
             <input type="file" id="imageUpload" accept="image/*" style="display:none" onchange="handleImageUpload(event)" aria-label="이미지 파일 선택">
         </div>
@@ -1221,6 +1399,22 @@
                     </div>
                 </div>
 
+                <!-- Text Wrapping Controls -->
+                <div class="panel-group">
+                    <label class="panel-label">
+                        <input type="checkbox" id="propWrapText" checked onchange="updateElementProp('wrapText', this.checked)">
+                        자동 줄바꿈
+                    </label>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">텍스트 박스 너비</label>
+                    <div class="slider-group">
+                        <input type="range" min="50" max="800" step="10" value="300" id="propMaxWidth" oninput="updateElementProp('maxWidth', this.value)">
+                        <span class="slider-value" id="maxWidthValue">300px</span>
+                    </div>
+                </div>
+
                 <div class="panel-group">
                     <label class="panel-label">
                         <input type="checkbox" id="textShadowEnabled" onchange="toggleTextShadow(this.checked)">
@@ -1296,9 +1490,116 @@
                     </div>
                 </div>
 
+                <div class="panel-group">
+                    <label class="panel-label">Contrast</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterContrast" oninput="updateImageFilter('contrast', this.value)">
+                        <span class="slider-value" id="contrastValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Saturation</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="200" value="100" id="filterSaturate" oninput="updateImageFilter('saturate', this.value)">
+                        <span class="slider-value" id="saturateValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Hue Rotate</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="360" value="0" id="filterHueRotate" oninput="updateImageFilter('hueRotate', this.value)">
+                        <span class="slider-value" id="hueRotateValue">0°</span>
+                    </div>
+                </div>
+
+                <div class="panel-group">
+                    <label class="panel-label">Invert</label>
+                    <div class="slider-group">
+                        <input type="range" min="0" max="100" value="0" id="filterInvert" oninput="updateImageFilter('invert', this.value)">
+                        <span class="slider-value" id="invertValue">0%</span>
+                    </div>
+                </div>
+
                 <div class="btn-group" style="margin-top: 10px;">
                     <button class="btn-icon" onclick="resetImageFilters()" style="flex: 1;">필터 초기화</button>
                     <button class="btn-icon" onclick="startCropMode()" style="flex: 1;" id="cropBtn">✂️ 크롭</button>
+                </div>
+
+                <div class="panel-title" style="margin-top: 15px;">회전 & 반전</div>
+                <div class="btn-group">
+                    <button class="btn-icon" onclick="rotateImage(-90)" style="flex: 1;">↺ 좌로 90°</button>
+                    <button class="btn-icon" onclick="rotateImage(90)" style="flex: 1;">↻ 우로 90°</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="flipImage('horizontal')" style="flex: 1;">↔️ 좌우 반전</button>
+                    <button class="btn-icon" onclick="flipImage('vertical')" style="flex: 1;">↕️ 상하 반전</button>
+                </div>
+
+                <!-- Image Effects -->
+                <div class="panel-title" style="margin-top: 15px;">효과</div>
+
+                <!-- Shadow -->
+                <div class="panel-group">
+                    <label class="panel-label">
+                        <input type="checkbox" id="imageShadowEnabled" onchange="toggleImageShadow(this.checked)"> 그림자
+                    </label>
+                </div>
+                <div id="imageShadowControls" style="display: none;">
+                    <div class="panel-group">
+                        <label class="panel-label">X 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="5" id="imageShadowX" oninput="updateImageShadow('offsetX', this.value)">
+                            <span class="slider-value" id="shadowXValue">5px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">Y 오프셋</label>
+                        <div class="slider-group">
+                            <input type="range" min="-50" max="50" value="5" id="imageShadowY" oninput="updateImageShadow('offsetY', this.value)">
+                            <span class="slider-value" id="shadowYValue">5px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">흐림 정도</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="50" value="10" id="imageShadowBlur" oninput="updateImageShadow('blur', this.value)">
+                            <span class="slider-value" id="shadowBlurValue">10px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">그림자 색상</label>
+                        <input type="color" class="panel-input" id="imageShadowColor" value="#000000" onchange="updateImageShadow('color', this.value)">
+                    </div>
+                </div>
+
+                <!-- Border -->
+                <div class="panel-group" style="margin-top: 10px;">
+                    <label class="panel-label">
+                        <input type="checkbox" id="imageBorderEnabled" onchange="toggleImageBorder(this.checked)"> 테두리
+                    </label>
+                </div>
+                <div id="imageBorderControls" style="display: none;">
+                    <div class="panel-group">
+                        <label class="panel-label">두께</label>
+                        <div class="slider-group">
+                            <input type="range" min="1" max="20" value="2" id="imageBorderWidth" oninput="updateImageBorder('width', this.value)">
+                            <span class="slider-value" id="borderWidthValue">2px</span>
+                        </div>
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">색상</label>
+                        <input type="color" class="panel-input" id="imageBorderColor" value="#000000" onchange="updateImageBorder('color', this.value)">
+                    </div>
+                    <div class="panel-group">
+                        <label class="panel-label">스타일</label>
+                        <select class="panel-input" id="imageBorderStyle" onchange="updateImageBorder('style', this.value)">
+                            <option value="solid">실선</option>
+                            <option value="dashed">대시선</option>
+                            <option value="dotted">점선</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- AI Features (P13) -->
@@ -1478,7 +1779,23 @@
                 <div class="btn-group" style="margin-top: 10px;">
                     <button class="btn-icon" onclick="moveLayer('up')" style="flex:1">↑ 위로</button>
                     <button class="btn-icon" onclick="moveLayer('down')" style="flex:1">↓ 아래로</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="duplicateSelected()" style="flex:1">📋 복제 (Ctrl+D)</button>
                     <button class="btn-icon" onclick="deleteSelected()" style="flex:1">🗑️ 삭제</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="createLayerGroup()" style="flex:1">📁 그룹 생성</button>
+                    <button class="btn-icon" onclick="ungroupLayers()" style="flex:1">📂 그룹 해제</button>
+                </div>
+                <div class="panel-title" style="margin-top: 15px;">일괄 작업</div>
+                <div class="btn-group">
+                    <button class="btn-icon" onclick="toggleAllLayersLock()" style="flex:1">🔒 전체 잠금</button>
+                    <button class="btn-icon" onclick="toggleAllLayersVisibility()" style="flex:1">👁️ 전체 숨김</button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn-icon" onclick="soloSelectedLayer()" style="flex:1">⭐ Solo 모드</button>
+                    <button class="btn-icon" onclick="showAllLayers()" style="flex:1">👁️ 전체 표시</button>
                 </div>
             </div>
 
@@ -1562,8 +1879,8 @@
                         <button class="export-format-btn" onclick="selectExportFormat('jpg')" id="formatJpg">
                             JPG
                         </button>
-                        <button class="export-format-btn" onclick="selectExportFormat('svg')" id="formatSvg">
-                            SVG
+                        <button class="export-format-btn" onclick="selectExportFormat('pdf')" id="formatPdf">
+                            PDF
                         </button>
                     </div>
                 </div>
@@ -1745,6 +2062,200 @@
         </div>
     </div>
 
+    <!-- Template Library Modal -->
+    <div class="modal-overlay" id="templateLibraryModal">
+        <div class="modal-content" style="max-width: 900px; height: 80vh;">
+            <div class="modal-header">
+                <h2 class="modal-title">📋 템플릿 라이브러리</h2>
+                <button class="modal-close" onclick="closeTemplateLibraryModal()">×</button>
+            </div>
+
+            <div class="export-options" style="height: calc(100% - 60px); overflow: hidden; display: flex; flex-direction: column;">
+                <!-- Category Filters -->
+                <div style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="template-filter-btn active" onclick="filterTemplates('all')">전체</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('social')">소셜 미디어</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('banner')">배너</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('poster')">포스터</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('presentation')">프레젠테이션</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('minimal')">미니멀</button>
+                    <button class="template-filter-btn" onclick="filterTemplates('bold')">볼드</button>
+                </div>
+
+                <!-- Templates Grid -->
+                <div id="templatesGrid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; padding: 4px;">
+                    <!-- Templates will be loaded here dynamically -->
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">
+                        템플릿을 불러오는 중...
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div style="margin-top: 16px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 템플릿을 클릭하면 현재 캔버스에 적용됩니다
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-overlay" id="keyboardShortcutsModal">
+        <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 class="modal-title">⌨️ 키보드 단축키</h2>
+                <button class="modal-close" onclick="closeKeyboardShortcutsModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <div style="display: grid; gap: 24px;">
+                    <!-- General Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">일반</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>S</kbd></span>
+                                <span class="shortcut-desc">프로젝트 저장</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>?</kbd></span>
+                                <span class="shortcut-desc">단축키 가이드 열기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>/</kbd></span>
+                                <span class="shortcut-desc">레이어 검색 포커스</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">편집</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Z</kbd></span>
+                                <span class="shortcut-desc">실행 취소</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Y</kbd></span>
+                                <span class="shortcut-desc">다시 실행</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Delete</kbd></span>
+                                <span class="shortcut-desc">선택한 요소 삭제</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>C</kbd></span>
+                                <span class="shortcut-desc">복사</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>V</kbd></span>
+                                <span class="shortcut-desc">붙여넣기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>D</kbd></span>
+                                <span class="shortcut-desc">복제</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd></span>
+                                <span class="shortcut-desc">제자리 복제</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selection Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">선택</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>A</kbd></span>
+                                <span class="shortcut-desc">모두 선택</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Click</kbd></span>
+                                <span class="shortcut-desc">다중 선택</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>G</kbd></span>
+                                <span class="shortcut-desc">그룹 만들기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd></span>
+                                <span class="shortcut-desc">그룹 해제</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Movement Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">이동 및 정렬</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></span>
+                                <span class="shortcut-desc">선택한 요소 이동 (1px)</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Arrow</kbd></span>
+                                <span class="shortcut-desc">선택한 요소 이동 (10px)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layers Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">레이어</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>]</kbd></span>
+                                <span class="shortcut-desc">레이어 위로 이동</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>[</kbd></span>
+                                <span class="shortcut-desc">레이어 아래로 이동</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>L</kbd></span>
+                                <span class="shortcut-desc">레이어 잠금 토글</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View Section -->
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-title">보기</h3>
+                        <div class="shortcuts-list">
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>+</kbd></span>
+                                <span class="shortcut-desc">확대</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>-</kbd></span>
+                                <span class="shortcut-desc">축소</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>0</kbd></span>
+                                <span class="shortcut-desc">화면에 맞추기</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-keys"><kbd>Space</kbd> + <kbd>Drag</kbd></span>
+                                <span class="shortcut-desc">캔버스 이동 (패닝)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div style="margin-top: 24px; padding: 16px; background: #f8f9ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: #667eea;">💡 Tip</div>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #666; line-height: 1.8;">
+                        <li>대부분의 작업은 마우스 오른쪽 클릭으로도 수행할 수 있습니다</li>
+                        <li>텍스트 편집 중에는 단축키가 비활성화됩니다</li>
+                        <li>속성 패널에서 정밀한 값 조정이 가능합니다</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script>
         // Global State
@@ -1764,6 +2275,7 @@
         let gridEnabled = true;
         let snapEnabled = true;
         let nextGroupId = 1;
+        let groups = []; // Layer groups: [{id, name, elementIds: []}]
         let imageCache = new Map();
         let clipboard = null;
         let autoSaveInterval = null;
@@ -1817,7 +2329,7 @@
 
         // P30: Auto-save to server
         let hasUnsavedChanges = false;
-        let autoSaveInterval = null;
+        // autoSaveInterval already declared above
         let lastAutoSaveTime = null;
 
         // P15: Plugin System
@@ -1949,6 +2461,10 @@
                     this.lineHeight = 1.2;
                     this.letterSpacing = 0;
 
+                    // Text wrapping
+                    this.wrapText = true;  // Enable auto text wrapping
+                    this.maxWidth = width || 300;  // Max width for wrapping
+
                     this.textShadow = {
                         enabled: false,
                         offsetX: 2,
@@ -1965,7 +2481,28 @@
                         grayscale: 0,
                         sepia: 0,
                         blur: 0,
-                        brightness: 100
+                        brightness: 100,
+                        contrast: 100,
+                        saturate: 100,
+                        hueRotate: 0,
+                        invert: 0
+                    };
+
+                    // Image shadow
+                    this.imageShadow = {
+                        enabled: false,
+                        offsetX: 5,
+                        offsetY: 5,
+                        blur: 10,
+                        color: '#000000'
+                    };
+
+                    // Image border
+                    this.imageBorder = {
+                        enabled: false,
+                        width: 2,
+                        color: '#000000',
+                        style: 'solid' // solid, dashed, dotted
                     };
                 }
 
@@ -2007,6 +2544,35 @@
                 }
 
                 return gradient;
+            }
+
+            // Text wrapping helper
+            wrapLines(context, text, maxWidth) {
+                if (!this.wrapText) {
+                    return [text];
+                }
+
+                const words = text.split(' ');
+                const lines = [];
+                let currentLine = '';
+
+                for (let i = 0; i < words.length; i++) {
+                    const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+                    const metrics = context.measureText(testLine);
+
+                    if (metrics.width > maxWidth && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = words[i];
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+
+                return lines.length > 0 ? lines : [text];
             }
 
             draw(context) {
@@ -2123,39 +2689,78 @@
                             context.shadowColor = this.textShadow.color;
                         }
 
-                        let textX = this.x;
-                        if (this.textAlign === 'center') textX += this.width / 2;
-                        else if (this.textAlign === 'right') textX += this.width;
+                        // Wrap text into multiple lines
+                        const lines = this.wrapLines(context, this.text, this.maxWidth || this.width);
+                        const lineHeightPx = this.fontSize * (this.lineHeight || 1.2);
 
-                        // P22: Apply letter spacing
-                        if (this.letterSpacing && this.letterSpacing !== 0) {
-                            // Draw each character separately with spacing
-                            let currentX = textX;
-                            const chars = this.text.split('');
+                        // Draw each line
+                        lines.forEach((line, lineIndex) => {
+                            let textX = this.x;
+                            if (this.textAlign === 'center') textX += this.width / 2;
+                            else if (this.textAlign === 'right') textX += this.width;
 
-                            for (let i = 0; i < chars.length; i++) {
-                                const char = chars[i];
-                                const metrics = context.measureText(char);
+                            const textY = this.y + (lineIndex * lineHeightPx);
 
-                                if (this.textAlign === 'center') {
-                                    const totalWidth = this.text.split('').reduce((acc, c) => {
-                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                            // P22: Apply letter spacing
+                            if (this.letterSpacing && this.letterSpacing !== 0) {
+                                // Draw each character separately with spacing
+                                let currentX = textX;
+                                const chars = line.split('');
+
+                                for (let i = 0; i < chars.length; i++) {
+                                    const char = chars[i];
+                                    const metrics = context.measureText(char);
+
+                                    if (this.textAlign === 'center') {
+                                        const totalWidth = line.split('').reduce((acc, c) => {
+                                            return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                        }, 0);
+                                        currentX = this.x + this.width / 2 - totalWidth / 2 + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    } else if (this.textAlign === 'right') {
+                                        const totalWidth = line.split('').reduce((acc, c) => {
+                                            return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
+                                        }, 0);
+                                        currentX = this.x + this.width - totalWidth + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    } else {
+                                        currentX = this.x + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    }
+
+                                    context.fillText(char, currentX, textY);
+                                }
+                            } else {
+                                context.fillText(line, textX, textY);
+                            }
+
+                            // P22: Underline with letter spacing consideration
+                            if (this.underline) {
+                                let underlineWidth;
+                                let underlineX;
+
+                                if (this.letterSpacing && this.letterSpacing !== 0) {
+                                    // Calculate total width with letter spacing
+                                    underlineWidth = line.split('').reduce((acc, c, i) => {
+                                        return acc + context.measureText(c).width + (i < line.length - 1 ? this.letterSpacing : 0);
                                     }, 0);
-                                    currentX = this.x + this.width / 2 - totalWidth / 2 + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
-                                } else if (this.textAlign === 'right') {
-                                    const totalWidth = this.text.split('').reduce((acc, c) => {
-                                        return acc + context.measureText(c).width + (c !== chars[chars.length - 1] ? this.letterSpacing : 0);
-                                    }, 0);
-                                    currentX = this.x + this.width - totalWidth + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
                                 } else {
-                                    currentX = this.x + (i > 0 ? chars.slice(0, i).reduce((acc, c) => acc + context.measureText(c).width + this.letterSpacing, 0) : 0);
+                                    underlineWidth = context.measureText(line).width;
                                 }
 
-                                context.fillText(char, currentX, this.y);
+                                if (this.textAlign === 'center') {
+                                    underlineX = this.x + this.width / 2 - underlineWidth / 2;
+                                } else if (this.textAlign === 'right') {
+                                    underlineX = this.x + this.width - underlineWidth;
+                                } else {
+                                    underlineX = this.x;
+                                }
+
+                                context.beginPath();
+                                context.moveTo(underlineX, textY + this.fontSize + 2);
+                                context.lineTo(underlineX + underlineWidth, textY + this.fontSize + 2);
+                                context.strokeStyle = this.fill;
+                                context.lineWidth = 1;
+                                context.stroke();
                             }
-                        } else {
-                            context.fillText(this.text, textX, this.y);
-                        }
+                        });
 
                         // Reset shadow
                         context.shadowOffsetX = 0;
@@ -2163,39 +2768,20 @@
                         context.shadowBlur = 0;
                         context.shadowColor = 'transparent';
 
-                        // P22: Underline with letter spacing consideration
-                        if (this.underline) {
-                            let underlineWidth;
-                            let underlineX;
-
-                            if (this.letterSpacing && this.letterSpacing !== 0) {
-                                // Calculate total width with letter spacing
-                                underlineWidth = this.text.split('').reduce((acc, c, i) => {
-                                    return acc + context.measureText(c).width + (i < this.text.length - 1 ? this.letterSpacing : 0);
-                                }, 0);
-                            } else {
-                                underlineWidth = context.measureText(this.text).width;
-                            }
-
-                            if (this.textAlign === 'center') {
-                                underlineX = this.x + this.width / 2 - underlineWidth / 2;
-                            } else if (this.textAlign === 'right') {
-                                underlineX = this.x + this.width - underlineWidth;
-                            } else {
-                                underlineX = this.x;
-                            }
-
-                            context.beginPath();
-                            context.moveTo(underlineX, this.y + this.fontSize + 2);
-                            context.lineTo(underlineX + underlineWidth, this.y + this.fontSize + 2);
-                            context.strokeStyle = this.fill;
-                            context.lineWidth = 1;
-                            context.stroke();
-                        }
+                        // Update height to fit all lines
+                        this.height = Math.max(this.height, lines.length * lineHeightPx);
                         break;
 
                     case 'image':
                         if (this.imageData) {
+                            // Apply shadow
+                            if (this.imageShadow && this.imageShadow.enabled) {
+                                context.shadowOffsetX = this.imageShadow.offsetX;
+                                context.shadowOffsetY = this.imageShadow.offsetY;
+                                context.shadowBlur = this.imageShadow.blur;
+                                context.shadowColor = this.imageShadow.color;
+                            }
+
                             // Apply filters
                             if (this.filters) {
                                 const filterParts = [];
@@ -2203,10 +2789,39 @@
                                 if (this.filters.sepia > 0) filterParts.push(`sepia(${this.filters.sepia}%)`);
                                 if (this.filters.blur > 0) filterParts.push(`blur(${this.filters.blur}px)`);
                                 if (this.filters.brightness !== 100) filterParts.push(`brightness(${this.filters.brightness}%)`);
+                                if (this.filters.contrast !== undefined && this.filters.contrast !== 100) filterParts.push(`contrast(${this.filters.contrast}%)`);
+                                if (this.filters.saturate !== undefined && this.filters.saturate !== 100) filterParts.push(`saturate(${this.filters.saturate}%)`);
+                                if (this.filters.hueRotate !== undefined && this.filters.hueRotate > 0) filterParts.push(`hue-rotate(${this.filters.hueRotate}deg)`);
+                                if (this.filters.invert !== undefined && this.filters.invert > 0) filterParts.push(`invert(${this.filters.invert}%)`);
                                 context.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
                             }
+
                             context.drawImage(this.imageData, this.x, this.y, this.width, this.height);
                             context.filter = 'none';
+
+                            // Reset shadow
+                            context.shadowOffsetX = 0;
+                            context.shadowOffsetY = 0;
+                            context.shadowBlur = 0;
+                            context.shadowColor = 'transparent';
+
+                            // Apply border
+                            if (this.imageBorder && this.imageBorder.enabled) {
+                                context.strokeStyle = this.imageBorder.color;
+                                context.lineWidth = this.imageBorder.width;
+
+                                // Set line dash pattern based on style
+                                if (this.imageBorder.style === 'dashed') {
+                                    context.setLineDash([10, 5]);
+                                } else if (this.imageBorder.style === 'dotted') {
+                                    context.setLineDash([2, 3]);
+                                } else {
+                                    context.setLineDash([]);
+                                }
+
+                                context.strokeRect(this.x, this.y, this.width, this.height);
+                                context.setLineDash([]); // Reset line dash
+                            }
                         }
                         break;
 
@@ -2476,6 +3091,88 @@
                 // P30: Start auto-save to server
                 startAutoSave();
             } else {
+                // Check if there's generated content from generate page (stored in sessionStorage)
+                const from = urlParams.get('from');
+
+                if (from === 'generate') {
+                    // Load content from sessionStorage
+                    const editorContentStr = sessionStorage.getItem('artify_editor_content');
+                    if (editorContentStr) {
+                        try {
+                            const editorContent = JSON.parse(editorContentStr);
+                            console.log('[Editor] Loading content from sessionStorage:', editorContent);
+
+                            // Add generated text to canvas
+                            if (editorContent.text) {
+                                const textElement = new Element('text', 100, 100, 600, 100);
+                                textElement.text = editorContent.text;
+                                textElement.fontSize = 24;
+                                textElement.fill = '#000000';
+                                elements.push(textElement);
+                                console.log('[Editor] Added text to canvas');
+                            }
+
+                            // Add generated image to canvas
+                            if (editorContent.image) {
+                                const img = new Image();
+                                // Don't set crossOrigin - OpenAI DALL-E doesn't support CORS
+                                // This means we can draw the image but can't use toDataURL (tainted canvas)
+                                img.onload = function() {
+                                    // Scale image to fit canvas better
+                                    const maxWidth = 500;
+                                    const maxHeight = 500;
+                                    let width = img.width;
+                                    let height = img.height;
+
+                                    if (width > maxWidth || height > maxHeight) {
+                                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                                        width = width * ratio;
+                                        height = height * ratio;
+                                    }
+
+                                    const yPos = editorContent.text ? 250 : 100;
+                                    const imageElement = new Element('image', 100, yPos, width, height);
+                                    imageElement.imageData = img;
+                                    elements.push(imageElement);
+                                    saveHistory();
+                                    updateLayersList();
+                                    isDirty = true;  // Mark canvas as dirty to trigger render
+                                    render();
+                                    console.log('[Editor] Added image to canvas:', width, 'x', height);
+                                };
+                                img.onerror = function(e) {
+                                    console.error('[Editor] Failed to load image from URL:', e);
+                                    // Show error message on canvas
+                                    const textElement = new Element('text', 100, editorContent.text ? 250 : 100, 400, 50);
+                                    textElement.text = '⚠️ 이미지 로드 실패 (URL 만료됨)';
+                                    textElement.fontSize = 18;
+                                    textElement.fill = '#ef4444';
+                                    elements.push(textElement);
+                                    saveHistory();
+                                    updateLayersList();
+                                    render();
+                                };
+                                img.src = editorContent.image;
+                            }
+
+                            // Clear sessionStorage after loading
+                            sessionStorage.removeItem('artify_editor_content');
+
+                            // Update UI after adding text (image updates when loaded)
+                            if (editorContent.text) {
+                                saveHistory();
+                                updateLayersList();
+                                isDirty = true;  // Mark canvas as dirty to trigger render
+                                render();
+                            }
+                        } catch (e) {
+                            console.error('[Editor] Failed to load content from sessionStorage:', e);
+                        }
+                    } else {
+                        console.log('[Editor] No content found in sessionStorage');
+                    }
+                }
+
                 render();
             }
 
@@ -2507,6 +3204,73 @@
                 localStorage.clear();
                 window.location.href = 'login.html';
             }
+        }
+
+        // P16: Zoom & Pan Functions (moved before setupEventListeners to fix hoisting)
+        function handleWheel(e) {
+            e.preventDefault();
+
+            const oldZoom = zoom;
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * delta));
+
+            // Zoom toward mouse position
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            panX = mouseX - (mouseX - panX) * (zoom / oldZoom);
+            panY = mouseY - (mouseY - panY) * (zoom / oldZoom);
+
+            updateZoomLevel();
+            render();
+        }
+
+        function handleSpaceKeyDown(e) {
+            if (e.code === 'Space' && !isEditingText && !spacePressed) {
+                e.preventDefault();
+                spacePressed = true;
+                document.getElementById('canvasContainer').classList.add('panning');
+            }
+        }
+
+        function handleSpaceKeyUp(e) {
+            if (e.code === 'Space') {
+                spacePressed = false;
+                isPanning = false;
+                document.getElementById('canvasContainer').classList.remove('panning', 'dragging');
+            }
+        }
+
+        function handlePanStart(e) {
+            if (spacePressed) {
+                isPanning = true;
+                panStart = { x: e.clientX - panX, y: e.clientY - panY };
+                document.getElementById('canvasContainer').classList.add('dragging');
+            }
+        }
+
+        function handlePanMove(e) {
+            if (isPanning && spacePressed) {
+                panX = e.clientX - panStart.x;
+                panY = e.clientY - panStart.y;
+                render();
+            }
+        }
+
+        function handlePanEnd() {
+            if (isPanning) {
+                isPanning = false;
+                document.getElementById('canvasContainer').classList.remove('dragging');
+            }
+        }
+
+        // Convert screen coordinates to canvas coordinates (accounting for zoom/pan)
+        function screenToCanvas(screenX, screenY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (screenX - rect.left - panX) / zoom;
+            const y = (screenY - rect.top - panY) / zoom;
+            return { x, y };
         }
 
         function setupEventListeners() {
@@ -2807,23 +3571,37 @@
         }
 
         function handleDoubleClick(e) {
-            if (currentTool === 'text' || (selectedElement && selectedElement.type === 'text')) {
-                // P16: Convert screen coordinates to canvas coordinates
-                const coords = screenToCanvas(e.clientX, e.clientY);
-                const x = coords.x;
-                const y = coords.y;
+            // P16: Convert screen coordinates to canvas coordinates
+            const coords = screenToCanvas(e.clientX, e.clientY);
+            const x = coords.x;
+            const y = coords.y;
 
-                if (!selectedElement || selectedElement.type !== 'text') {
-                    const text = new Element('text', x, y, 200, 40);
-                    text.fill = document.getElementById('propFill').value;
-                    elements.push(text);
-                    selectedElement = text;
-                    selectedElements = [text];
-                    saveHistory();
+            // Check if double-clicking on an existing text element
+            let clickedTextElement = null;
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                if (el.type === 'text' && !el.locked && el.visible &&
+                    x >= el.x && x <= el.x + el.width &&
+                    y >= el.y && y <= el.y + el.height) {
+                    clickedTextElement = el;
+                    break;
                 }
+            }
 
-                // Show inline text editor
-                showInlineTextEditor(selectedElement);
+            if (clickedTextElement) {
+                // Edit existing text element
+                selectedElement = clickedTextElement;
+                selectedElements = [clickedTextElement];
+                showInlineTextEditor(clickedTextElement);
+            } else if (currentTool === 'text') {
+                // Create new text element only if text tool is selected
+                const text = new Element('text', x, y, 200, 40);
+                text.fill = document.getElementById('propFill').value;
+                elements.push(text);
+                selectedElement = text;
+                selectedElements = [text];
+                saveHistory();
+                showInlineTextEditor(text);
             }
         }
 
@@ -2837,15 +3615,16 @@
             const rect = canvas.getBoundingClientRect();
             const canvasContainer = document.querySelector('.canvas-wrapper');
 
-            // Position the editor
-            editor.style.left = (textElement.x) + 'px';
-            editor.style.top = (textElement.y) + 'px';
-            editor.style.width = Math.max(textElement.width, 100) + 'px';
-            editor.style.minHeight = textElement.height + 'px';
+            // Position the editor (accounting for zoom and pan)
+            editor.style.left = (textElement.x * zoom + panX) + 'px';
+            editor.style.top = (textElement.y * zoom + panY) + 'px';
+            editor.style.width = Math.max(textElement.width * zoom, 100) + 'px';
+            editor.style.minHeight = (textElement.height * zoom) + 'px';
+            editor.style.transform = `scale(1)`;  // Reset any previous transforms
 
             // Style the editor to match the text element
             editor.style.fontFamily = textElement.fontFamily;
-            editor.style.fontSize = textElement.fontSize + 'px';
+            editor.style.fontSize = (textElement.fontSize * zoom) + 'px';
             editor.style.color = textElement.fill;
             editor.style.fontWeight = textElement.bold ? 'bold' : 'normal';
             editor.style.fontStyle = textElement.italic ? 'italic' : 'normal';
@@ -2986,6 +3765,10 @@
                 // P20: Toggle lock
                 e.preventDefault();
                 toggleSelectedLock();
+            } else if (e.ctrlKey && e.key === 'h') {
+                // Toggle visibility
+                e.preventDefault();
+                toggleSelectedVisibility();
             } else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 // P20: Duplicate in place
                 e.preventDefault();
@@ -2998,6 +3781,10 @@
                     searchInput.focus();
                     searchInput.select();
                 }
+            } else if (e.key === '?' && !isEditingText) {
+                // Show keyboard shortcuts guide
+                e.preventDefault();
+                showKeyboardShortcutsModal();
             }
         }
 
@@ -3238,6 +4025,15 @@
                         document.getElementById('letterSpacingValue').textContent = selectedElement.letterSpacing + 'px';
                     }
 
+                    // Text wrapping controls
+                    if (selectedElement.wrapText !== undefined) {
+                        document.getElementById('propWrapText').checked = selectedElement.wrapText;
+                    }
+                    if (selectedElement.maxWidth !== undefined) {
+                        document.getElementById('propMaxWidth').value = selectedElement.maxWidth;
+                        document.getElementById('maxWidthValue').textContent = selectedElement.maxWidth + 'px';
+                    }
+
                     // Update text shadow controls
                     if (selectedElement.textShadow) {
                         document.getElementById('textShadowEnabled').checked = selectedElement.textShadow.enabled;
@@ -3264,6 +4060,47 @@
                         document.getElementById('blurValue').textContent = selectedElement.filters.blur + 'px';
                         document.getElementById('filterBrightness').value = selectedElement.filters.brightness;
                         document.getElementById('brightnessValue').textContent = selectedElement.filters.brightness + '%';
+
+                        // New filters
+                        if (selectedElement.filters.contrast !== undefined) {
+                            document.getElementById('filterContrast').value = selectedElement.filters.contrast;
+                            document.getElementById('contrastValue').textContent = selectedElement.filters.contrast + '%';
+                        }
+                        if (selectedElement.filters.saturate !== undefined) {
+                            document.getElementById('filterSaturate').value = selectedElement.filters.saturate;
+                            document.getElementById('saturateValue').textContent = selectedElement.filters.saturate + '%';
+                        }
+                        if (selectedElement.filters.hueRotate !== undefined) {
+                            document.getElementById('filterHueRotate').value = selectedElement.filters.hueRotate;
+                            document.getElementById('hueRotateValue').textContent = selectedElement.filters.hueRotate + '°';
+                        }
+                        if (selectedElement.filters.invert !== undefined) {
+                            document.getElementById('filterInvert').value = selectedElement.filters.invert;
+                            document.getElementById('invertValue').textContent = selectedElement.filters.invert + '%';
+                        }
+                    }
+
+                    // Update image shadow controls
+                    if (selectedElement.imageShadow) {
+                        document.getElementById('imageShadowEnabled').checked = selectedElement.imageShadow.enabled;
+                        document.getElementById('imageShadowControls').style.display = selectedElement.imageShadow.enabled ? 'block' : 'none';
+                        document.getElementById('imageShadowX').value = selectedElement.imageShadow.offsetX;
+                        document.getElementById('shadowXValue').textContent = selectedElement.imageShadow.offsetX + 'px';
+                        document.getElementById('imageShadowY').value = selectedElement.imageShadow.offsetY;
+                        document.getElementById('shadowYValue').textContent = selectedElement.imageShadow.offsetY + 'px';
+                        document.getElementById('imageShadowBlur').value = selectedElement.imageShadow.blur;
+                        document.getElementById('shadowBlurValue').textContent = selectedElement.imageShadow.blur + 'px';
+                        document.getElementById('imageShadowColor').value = selectedElement.imageShadow.color;
+                    }
+
+                    // Update image border controls
+                    if (selectedElement.imageBorder) {
+                        document.getElementById('imageBorderEnabled').checked = selectedElement.imageBorder.enabled;
+                        document.getElementById('imageBorderControls').style.display = selectedElement.imageBorder.enabled ? 'block' : 'none';
+                        document.getElementById('imageBorderWidth').value = selectedElement.imageBorder.width;
+                        document.getElementById('borderWidthValue').textContent = selectedElement.imageBorder.width + 'px';
+                        document.getElementById('imageBorderColor').value = selectedElement.imageBorder.color;
+                        document.getElementById('imageBorderStyle').value = selectedElement.imageBorder.style;
                     }
                 } else {
                     textProps.style.display = 'none';
@@ -3310,6 +4147,21 @@
                 case 'strokeWidth':
                     selectedElement[prop] = parseFloat(value);
                     document.getElementById('strokeValue').textContent = value + 'px';
+                    break;
+                case 'maxWidth':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('maxWidthValue').textContent = value + 'px';
+                    break;
+                case 'lineHeight':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('lineHeightValue').textContent = parseFloat(value).toFixed(1);
+                    break;
+                case 'letterSpacing':
+                    selectedElement[prop] = parseFloat(value);
+                    document.getElementById('letterSpacingValue').textContent = value + 'px';
+                    break;
+                case 'wrapText':
+                    selectedElement[prop] = value;
                     break;
                 default:
                     selectedElement[prop] = value;
@@ -3367,6 +4219,84 @@
             render();
         }
 
+        function toggleImageShadow(enabled) {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            if (!selectedElement.imageShadow) {
+                selectedElement.imageShadow = {
+                    enabled: false,
+                    offsetX: 5,
+                    offsetY: 5,
+                    blur: 10,
+                    color: '#000000'
+                };
+            }
+
+            selectedElement.imageShadow.enabled = enabled;
+            document.getElementById('imageShadowControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateImageShadow(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.imageShadow) return;
+
+            switch (prop) {
+                case 'offsetX':
+                    selectedElement.imageShadow.offsetX = parseFloat(value);
+                    document.getElementById('shadowXValue').textContent = value + 'px';
+                    break;
+                case 'offsetY':
+                    selectedElement.imageShadow.offsetY = parseFloat(value);
+                    document.getElementById('shadowYValue').textContent = value + 'px';
+                    break;
+                case 'blur':
+                    selectedElement.imageShadow.blur = parseFloat(value);
+                    document.getElementById('shadowBlurValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.imageShadow.color = value;
+                    break;
+            }
+
+            render();
+        }
+
+        function toggleImageBorder(enabled) {
+            if (!selectedElement || selectedElement.type !== 'image') return;
+
+            if (!selectedElement.imageBorder) {
+                selectedElement.imageBorder = {
+                    enabled: false,
+                    width: 2,
+                    color: '#000000',
+                    style: 'solid'
+                };
+            }
+
+            selectedElement.imageBorder.enabled = enabled;
+            document.getElementById('imageBorderControls').style.display = enabled ? 'block' : 'none';
+            render();
+        }
+
+        function updateImageBorder(prop, value) {
+            if (!selectedElement || selectedElement.type !== 'image' || !selectedElement.imageBorder) return;
+
+            switch (prop) {
+                case 'width':
+                    selectedElement.imageBorder.width = parseFloat(value);
+                    document.getElementById('borderWidthValue').textContent = value + 'px';
+                    break;
+                case 'color':
+                    selectedElement.imageBorder.color = value;
+                    break;
+                case 'style':
+                    selectedElement.imageBorder.style = value;
+                    break;
+            }
+
+            render();
+        }
+
         function setColor(color) {
             document.getElementById('propFill').value = color;
             if (selectedElement) {
@@ -3393,6 +4323,18 @@
                 case 'brightness':
                     document.getElementById('brightnessValue').textContent = value + '%';
                     break;
+                case 'contrast':
+                    document.getElementById('contrastValue').textContent = value + '%';
+                    break;
+                case 'saturate':
+                    document.getElementById('saturateValue').textContent = value + '%';
+                    break;
+                case 'hueRotate':
+                    document.getElementById('hueRotateValue').textContent = value + '°';
+                    break;
+                case 'invert':
+                    document.getElementById('invertValue').textContent = value + '%';
+                    break;
             }
 
             render();
@@ -3405,7 +4347,11 @@
                 grayscale: 0,
                 sepia: 0,
                 blur: 0,
-                brightness: 100
+                brightness: 100,
+                contrast: 100,
+                saturate: 100,
+                hueRotate: 0,
+                invert: 0
             };
 
             updatePropertiesPanel();
@@ -3578,13 +4524,41 @@
             }
 
             layersList.innerHTML = '';
-            for (let i = elements.length - 1; i >= 0; i--) {
-                const element = elements[i];
 
-                // P17: Skip if element doesn't match filter
-                if (!filteredElements.includes(element)) continue;
+            // Track which elements have been rendered
+            const renderedElementIds = new Set();
+
+            // Helper function to get element icon
+            function getElementIcon(element) {
+                switch (element.type) {
+                    case 'rect': return '▢';
+                    case 'circle': return '○';
+                    case 'triangle': return '△';
+                    case 'star': return '★';
+                    case 'diamond': return '◆';
+                    case 'hexagon': return '⬢';
+                    case 'speech-bubble': return '💬';
+                    case 'cloud': return '☁️';
+                    case 'line': return '─';
+                    case 'arrow': return '→';
+                    case 'text': return 'T';
+                    case 'image': return '🖼️';
+                    case 'pencil': return '✏️';
+                    default: return '•';
+                }
+            }
+
+            // Helper function to create layer item
+            function createLayerItem(element, isGroupChild = false) {
+                const elementIndex = elements.indexOf(element);
                 const layer = document.createElement('div');
                 layer.className = 'layer-item' + (element === selectedElement ? ' active' : '');
+                if (isGroupChild) {
+                    layer.style.paddingLeft = '30px';
+                    layer.style.borderLeft = '2px solid #667eea';
+                    layer.style.marginLeft = '10px';
+                }
+
                 layer.onclick = () => {
                     selectedElement = element;
                     updatePropertiesPanel();
@@ -3592,45 +4566,229 @@
                     render();
                 };
 
-                let icon = '';
-                switch (element.type) {
-                    case 'rect': icon = '▢'; break;
-                    case 'circle': icon = '○'; break;
-                    case 'triangle': icon = '△'; break;
-                    case 'star': icon = '★'; break;
-                    case 'diamond': icon = '◆'; break;
-                    case 'hexagon': icon = '⬢'; break;
-                    case 'speech-bubble': icon = '💬'; break;
-                    case 'cloud': icon = '☁️'; break;
-                    case 'line': icon = '─'; break;
-                    case 'arrow': icon = '→'; break;
-                    case 'text': icon = 'T'; break;
-                    case 'image': icon = '🖼️'; break;
-                    case 'pencil': icon = '✏️'; break;
-                }
+                const icon = getElementIcon(element);
+                const displayName = element.type === 'text' ? element.text.substring(0, 15) : element.type;
 
                 layer.innerHTML = `
-                    <div><span class="layer-icon">${icon}</span>${element.type === 'text' ? element.text.substring(0, 15) : element.type}</div>
+                    <div><span class="layer-icon">${icon}</span>${displayName}</div>
                     <div class="layer-actions">
-                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerVisibility(${i})">${element.visible ? '👁️' : '🚫'}</button>
-                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerLock(${i})">${element.locked ? '🔒' : '🔓'}</button>
+                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerVisibility(${elementIndex})">${element.visible ? '👁️' : '🚫'}</button>
+                        <button class="layer-btn" onclick="event.stopPropagation(); toggleLayerLock(${elementIndex})">${element.locked ? '🔒' : '🔓'}</button>
                     </div>
                 `;
-                layersList.appendChild(layer);
+                return layer;
+            }
+
+            // Render groups and their children (reverse order for top-to-bottom display)
+            for (let i = groups.length - 1; i >= 0; i--) {
+                const group = groups[i];
+
+                // Create group header
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'layer-item';
+                groupHeader.style.background = '#f0f0f0';
+                groupHeader.style.fontWeight = 'bold';
+                groupHeader.onclick = () => selectGroup(group.id);
+
+                const expandIcon = group.expanded ? '▼' : '▶';
+                groupHeader.innerHTML = `
+                    <div>
+                        <span class="layer-icon" onclick="event.stopPropagation(); toggleGroupExpansion(${group.id})" style="cursor: pointer;">${expandIcon}</span>
+                        <span class="layer-icon">📁</span>${group.name}
+                    </div>
+                    <div class="layer-actions">
+                        <span style="font-size: 11px; color: #666;">${group.elementIds.length}개</span>
+                    </div>
+                `;
+                layersList.appendChild(groupHeader);
+
+                // Render group children if expanded
+                if (group.expanded) {
+                    const groupElements = elements.filter(el => el.groupId === group.id && filteredElements.includes(el));
+                    groupElements.reverse().forEach(element => {
+                        layersList.appendChild(createLayerItem(element, true));
+                        renderedElementIds.add(element.id);
+                    });
+                } else {
+                    // Mark group elements as rendered even if collapsed
+                    group.elementIds.forEach(id => renderedElementIds.add(id));
+                }
+            }
+
+            // Render ungrouped elements
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const element = elements[i];
+
+                // Skip if already rendered as part of a group or doesn't match filter
+                if (renderedElementIds.has(element.id) || !filteredElements.includes(element)) continue;
+
+                // Skip if element has a groupId (shouldn't happen, but safety check)
+                if (element.groupId) continue;
+
+                layersList.appendChild(createLayerItem(element, false));
             }
         }
 
         function toggleLayerVisibility(index) {
-            const actualIndex = elements.length - 1 - index;
-            elements[actualIndex].visible = !elements[actualIndex].visible;
-            updateLayersList();
-            render();
+            if (index >= 0 && index < elements.length) {
+                elements[index].visible = !elements[index].visible;
+                updateLayersList();
+                render();
+            }
         }
 
         function toggleLayerLock(index) {
-            const actualIndex = elements.length - 1 - index;
-            elements[actualIndex].locked = !elements[actualIndex].locked;
+            if (index >= 0 && index < elements.length) {
+                elements[index].locked = !elements[index].locked;
+                updateLayersList();
+            }
+        }
+
+        function createLayerGroup() {
+            // Get all selected elements (using Ctrl+Click multi-select)
+            const selectedIds = new Set();
+
+            if (selectedElements.length >= 2) {
+                // Use multi-selected elements
+                selectedElements.forEach(el => selectedIds.add(el.id));
+            } else if (selectedElement) {
+                // If only one element selected, ask user to select more
+                alert('그룹을 생성하려면 2개 이상의 레이어를 선택하세요.\n(Ctrl+클릭으로 여러 레이어를 선택할 수 있습니다)');
+                return;
+            } else {
+                alert('그룹화할 레이어를 선택하세요.');
+                return;
+            }
+
+            // Create new group
+            const groupId = nextGroupId++;
+            const groupName = prompt('그룹 이름을 입력하세요:', `그룹 ${groupId}`);
+
+            if (!groupName) return;
+
+            const group = {
+                id: groupId,
+                name: groupName,
+                elementIds: Array.from(selectedIds),
+                expanded: true
+            };
+
+            groups.push(group);
+
+            // Assign groupId to selected elements
+            elements.forEach(element => {
+                if (selectedIds.has(element.id)) {
+                    element.groupId = groupId;
+                }
+            });
+
             updateLayersList();
+            saveHistory();
+            render();
+        }
+
+        function ungroupLayers() {
+            if (!selectedElement) {
+                alert('그룹 해제할 레이어를 선택하세요.');
+                return;
+            }
+
+            const groupId = selectedElement.groupId;
+            if (!groupId) {
+                alert('선택된 레이어가 그룹에 속해 있지 않습니다.');
+                return;
+            }
+
+            // Remove groupId from all elements in this group
+            elements.forEach(element => {
+                if (element.groupId === groupId) {
+                    element.groupId = null;
+                }
+            });
+
+            // Remove group from groups array
+            const groupIndex = groups.findIndex(g => g.id === groupId);
+            if (groupIndex !== -1) {
+                groups.splice(groupIndex, 1);
+            }
+
+            updateLayersList();
+            saveHistory();
+            render();
+        }
+
+        function toggleGroupExpansion(groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (group) {
+                group.expanded = !group.expanded;
+                updateLayersList();
+            }
+        }
+
+        function selectGroup(groupId) {
+            // Select all elements in the group
+            const groupElements = elements.filter(el => el.groupId === groupId);
+            if (groupElements.length > 0) {
+                selectedElements = groupElements;
+                selectedElement = groupElements[0];
+                updatePropertiesPanel();
+                updateLayersList();
+                render();
+            }
+        }
+
+        function toggleAllLayersLock() {
+            // Check if any layer is unlocked
+            const hasUnlocked = elements.some(el => !el.locked);
+
+            // If any unlocked, lock all. If all locked, unlock all
+            elements.forEach(element => {
+                element.locked = hasUnlocked;
+            });
+
+            updateLayersList();
+            saveHistory();
+        }
+
+        function toggleAllLayersVisibility() {
+            // Check if any layer is visible
+            const hasVisible = elements.some(el => el.visible);
+
+            // If any visible, hide all. If all hidden, show all
+            elements.forEach(element => {
+                element.visible = !hasVisible;
+            });
+
+            updateLayersList();
+            render();
+            saveHistory();
+        }
+
+        function soloSelectedLayer() {
+            if (!selectedElement) {
+                alert('Solo 모드로 표시할 레이어를 선택하세요.');
+                return;
+            }
+
+            // Hide all layers except selected
+            elements.forEach(element => {
+                element.visible = (element === selectedElement);
+            });
+
+            updateLayersList();
+            render();
+            saveHistory();
+        }
+
+        function showAllLayers() {
+            // Show all layers
+            elements.forEach(element => {
+                element.visible = true;
+            });
+
+            updateLayersList();
+            render();
+            saveHistory();
         }
 
         // P18: Smart Alignment Guide Calculation
@@ -3848,6 +5006,15 @@
             render();
         }
 
+        function toggleSelectedVisibility() {
+            if (!selectedElement) return;
+
+            selectedElement.visible = !selectedElement.visible;
+            updateLayersList();
+            render();
+            saveHistory();
+        }
+
         function duplicateInPlace() {
             if (!selectedElement) return;
 
@@ -3933,6 +5100,19 @@
             }
 
             updatePropertiesPanel();
+            render();
+        }
+
+        // Global addElement function for adding elements to canvas
+        function addElement(element) {
+            // Ensure element has required properties
+            if (!element.id) {
+                element.id = 'element_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            elements.push(element);
+            saveHistory();
+            updateLayersList();
             render();
         }
 
@@ -4251,11 +5431,11 @@
             document.querySelectorAll('.export-format-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('format' + format.charAt(0).toUpperCase() + format.slice(1)).classList.add('active');
 
-            // Show/hide resolution options for SVG
+            // Show/hide resolution options for PDF and SVG
             const resolutionGroup = document.getElementById('resolutionGroup');
             const qualityGroup = document.getElementById('qualityGroup');
 
-            if (format === 'svg') {
+            if (format === 'svg' || format === 'pdf') {
                 resolutionGroup.style.display = 'none';
                 qualityGroup.style.display = 'none';
             } else {
@@ -4287,6 +5467,8 @@
                     exportAsPNG(fileName, exportResolution);
                 } else if (exportFormat === 'jpg') {
                     exportAsJPG(fileName, exportResolution, exportQuality);
+                } else if (exportFormat === 'pdf') {
+                    exportAsPDF(fileName);
                 }
 
                 closeExportModal();
@@ -4344,6 +5526,56 @@
             tempCanvas.toBlob((blob) => {
                 downloadBlob(blob, fileName + '.jpg');
             }, 'image/jpeg', quality);
+        }
+
+        function exportAsPDF(fileName) {
+            // Create a temporary canvas for high-resolution rendering
+            const scale = 2; // Higher resolution for PDF
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width * scale;
+            tempCanvas.height = canvas.height * scale;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Scale the context
+            tempCtx.scale(scale, scale);
+
+            // Fill white background
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw all elements
+            for (let element of elements) {
+                element.draw(tempCtx);
+            }
+
+            // Convert canvas to image data
+            const imgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+
+            // Use jsPDF to create PDF
+            const { jsPDF } = window.jspdf;
+
+            // Calculate PDF dimensions (A4 or fit to content)
+            const pdfWidth = canvas.width;
+            const pdfHeight = canvas.height;
+
+            // Use landscape if width > height
+            const orientation = pdfWidth > pdfHeight ? 'landscape' : 'portrait';
+
+            // Create PDF with custom dimensions (in mm, 96 DPI)
+            const mmWidth = pdfWidth * 0.264583; // px to mm conversion
+            const mmHeight = pdfHeight * 0.264583;
+
+            const pdf = new jsPDF({
+                orientation: orientation,
+                unit: 'mm',
+                format: [mmWidth, mmHeight]
+            });
+
+            // Add image to PDF
+            pdf.addImage(imgData, 'JPEG', 0, 0, mmWidth, mmHeight);
+
+            // Download PDF
+            pdf.save(fileName + '.pdf');
         }
 
         function exportAsSVG(fileName) {
@@ -4465,12 +5697,20 @@
         document.addEventListener('click', function(e) {
             const exportModal = document.getElementById('exportModal');
             const templateModal = document.getElementById('templateModal');
+            const templateLibraryModal = document.getElementById('templateLibraryModal');
+            const keyboardShortcutsModal = document.getElementById('keyboardShortcutsModal');
 
             if (e.target === exportModal) {
                 closeExportModal();
             }
             if (e.target === templateModal) {
                 closeTemplateModal();
+            }
+            if (e.target === templateLibraryModal) {
+                closeTemplateLibraryModal();
+            }
+            if (e.target === keyboardShortcutsModal) {
+                closeKeyboardShortcutsModal();
             }
         });
 
@@ -4542,6 +5782,293 @@
 
             // Show success message
             alert(`캔버스 크기가 ${newWidth}x${newHeight}으로 변경되었습니다.`);
+        }
+
+        // Template Library Functions
+        let templatesCache = [];
+        let currentTemplateFilter = 'all';
+
+        async function showTemplateLibraryModal() {
+            document.getElementById('templateLibraryModal').classList.add('active');
+
+            // Load templates if not already loaded
+            if (templatesCache.length === 0) {
+                await loadTemplates();
+            } else {
+                renderTemplates();
+            }
+        }
+
+        function closeTemplateLibraryModal() {
+            document.getElementById('templateLibraryModal').classList.remove('active');
+        }
+
+        async function loadTemplates() {
+            const grid = document.getElementById('templatesGrid');
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">템플릿을 불러오는 중...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/templates/creatives?limit=50`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to load templates');
+                }
+
+                const templates = await response.json();
+                templatesCache = templates;
+
+                if (templates.length === 0) {
+                    grid.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+                            <div>아직 등록된 템플릿이 없습니다.</div>
+                            <div style="font-size: 14px; margin-top: 8px;">템플릿을 생성하여 시작하세요!</div>
+                        </div>
+                    `;
+                } else {
+                    renderTemplates();
+                }
+            } catch (error) {
+                console.error('Template loading error:', error);
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #ff6b6b;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                        <div>템플릿을 불러오는데 실패했습니다.</div>
+                        <div style="font-size: 14px; margin-top: 8px;">${error.message}</div>
+                        <button onclick="loadTemplates()" style="margin-top: 16px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">다시 시도</button>
+                    </div>
+                `;
+            }
+        }
+
+        function filterTemplates(category) {
+            currentTemplateFilter = category;
+
+            // Update filter button states
+            document.querySelectorAll('.template-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            renderTemplates();
+        }
+
+        function renderTemplates() {
+            const grid = document.getElementById('templatesGrid');
+
+            // Filter templates
+            let filtered = templatesCache;
+            if (currentTemplateFilter !== 'all') {
+                filtered = templatesCache.filter(t =>
+                    t.category === currentTemplateFilter ||
+                    t.channel === currentTemplateFilter
+                );
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                        <div>해당 카테고리에 템플릿이 없습니다.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render template cards
+            grid.innerHTML = filtered.map(template => `
+                <div class="template-library-card" onclick="applyTemplateToCanvas(${template.id})">
+                    <div class="template-preview">
+                        ${template.preview_url ? `<img src="${template.preview_url}" alt="${template.name}">` : getCategoryIcon(template.category)}
+                    </div>
+                    <div class="template-info">
+                        <div class="template-library-name" title="${template.name}">${template.name}</div>
+                        <div class="template-library-desc" title="${template.description || ''}">${template.description || '템플릿 설명 없음'}</div>
+                        <div class="template-meta">
+                            <span class="template-category">${template.category || 'general'}</span>
+                            <span>👁 ${template.usage_count || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                'social': '📱',
+                'banner': '🎨',
+                'poster': '🖼️',
+                'presentation': '💼',
+                'minimal': '⚪',
+                'bold': '🔥',
+                'elegant': '✨'
+            };
+            return `<div style="font-size: 64px;">${icons[category] || '📄'}</div>`;
+        }
+
+        async function applyTemplateToCanvas(templateId) {
+            try {
+                // Fetch template details
+                const response = await fetch(`${API_BASE_URL}/templates/creatives/${templateId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load template details');
+                }
+
+                const template = await response.json();
+
+                // Confirm if canvas has content
+                if (elements.length > 0) {
+                    const confirmed = confirm('템플릿을 적용하면 현재 캔버스 내용이 대체됩니다. 계속하시겠습니까?');
+                    if (!confirmed) return;
+                }
+
+                // Clear current elements
+                elements = [];
+                selectedElement = null;
+                selectedElements = [];
+
+                // Apply template dimensions if specified
+                if (template.layout_config && template.layout_config.dimensions) {
+                    const { width, height } = template.layout_config.dimensions;
+                    if (width && height) {
+                        canvas.width = width;
+                        canvas.height = height;
+                    }
+                }
+
+                // Apply template elements from layout_config
+                if (template.layout_config) {
+                    applyTemplateLayout(template);
+                }
+
+                // Increment usage count
+                try {
+                    await fetch(`${API_BASE_URL}/templates/creatives/${templateId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ usage_count: (template.usage_count || 0) + 1 })
+                    });
+                } catch (e) {
+                    console.warn('Failed to increment usage count:', e);
+                }
+
+                // Re-render
+                isDirty = true;
+                render();
+
+                closeTemplateLibraryModal();
+
+                // Show success message
+                showToast(`템플릿 "${template.name}"이 적용되었습니다!`, 'success');
+
+            } catch (error) {
+                console.error('Template application error:', error);
+                alert('템플릿을 적용하는데 실패했습니다: ' + error.message);
+            }
+        }
+
+        function applyTemplateLayout(template) {
+            // Apply text slots
+            if (template.layout_config.text_slots) {
+                template.layout_config.text_slots.forEach(slot => {
+                    const textElement = {
+                        id: Date.now() + Math.random(),
+                        type: 'text',
+                        x: slot.x || 50,
+                        y: slot.y || 50,
+                        width: slot.width || 200,
+                        height: slot.height || 50,
+                        text: slot.text || slot.id || 'Text',
+                        fontSize: template.font_sizes?.[slot.id] || 24,
+                        fontFamily: template.font_family || 'Arial',
+                        fill: template.color_palette?.primary || '#000000',
+                        textAlign: slot.align || 'left',
+                        bold: false,
+                        italic: false,
+                        underline: false,
+                        opacity: 1,
+                        rotation: 0,
+                        zIndex: elements.length
+                    };
+                    textElement.draw = function(context) { drawText(context, this); };
+                    elements.push(textElement);
+                });
+            }
+
+            // Apply image slots
+            if (template.layout_config.image_slots) {
+                template.layout_config.image_slots.forEach(slot => {
+                    const rectElement = {
+                        id: Date.now() + Math.random(),
+                        type: 'rect',
+                        x: slot.x || 50,
+                        y: slot.y || 50,
+                        width: slot.width || 200,
+                        height: slot.height || 200,
+                        fill: template.color_palette?.secondary || '#f0f0f0',
+                        stroke: template.color_palette?.primary || '#000000',
+                        strokeWidth: 2,
+                        opacity: 1,
+                        rotation: 0,
+                        zIndex: elements.length
+                    };
+                    rectElement.draw = function(context) { drawRect(context, this); };
+                    elements.push(rectElement);
+                });
+            }
+
+            // Apply background if specified
+            if (template.layout_config.background) {
+                const bgElement = {
+                    id: Date.now() + Math.random(),
+                    type: 'rect',
+                    x: 0,
+                    y: 0,
+                    width: canvas.width,
+                    height: canvas.height,
+                    fill: template.layout_config.background || template.color_palette?.background || '#ffffff',
+                    stroke: 'transparent',
+                    strokeWidth: 0,
+                    opacity: 1,
+                    rotation: 0,
+                    zIndex: -1
+                };
+                bgElement.draw = function(context) { drawRect(context, this); };
+                elements.unshift(bgElement); // Add as first element (background)
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            // Simple toast notification
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: ${type === 'success' ? '#4caf50' : '#667eea'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // Keyboard Shortcuts Modal Functions
+        function showKeyboardShortcutsModal() {
+            document.getElementById('keyboardShortcutsModal').classList.add('active');
+        }
+
+        function closeKeyboardShortcutsModal() {
+            document.getElementById('keyboardShortcutsModal').classList.remove('active');
         }
 
         // Crop Functions
@@ -5679,71 +7206,7 @@
             render();
         }
 
-        function handleWheel(e) {
-            e.preventDefault();
-
-            const oldZoom = zoom;
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * delta));
-
-            // Zoom toward mouse position
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            panX = mouseX - (mouseX - panX) * (zoom / oldZoom);
-            panY = mouseY - (mouseY - panY) * (zoom / oldZoom);
-
-            updateZoomLevel();
-            render();
-        }
-
-        function handleSpaceKeyDown(e) {
-            if (e.code === 'Space' && !isEditingText && !spacePressed) {
-                e.preventDefault();
-                spacePressed = true;
-                document.getElementById('canvasContainer').classList.add('panning');
-            }
-        }
-
-        function handleSpaceKeyUp(e) {
-            if (e.code === 'Space') {
-                spacePressed = false;
-                isPanning = false;
-                document.getElementById('canvasContainer').classList.remove('panning', 'dragging');
-            }
-        }
-
-        function handlePanStart(e) {
-            if (spacePressed) {
-                isPanning = true;
-                panStart = { x: e.clientX - panX, y: e.clientY - panY };
-                document.getElementById('canvasContainer').classList.add('dragging');
-            }
-        }
-
-        function handlePanMove(e) {
-            if (isPanning && spacePressed) {
-                panX = e.clientX - panStart.x;
-                panY = e.clientY - panStart.y;
-                render();
-            }
-        }
-
-        function handlePanEnd() {
-            if (isPanning) {
-                isPanning = false;
-                document.getElementById('canvasContainer').classList.remove('dragging');
-            }
-        }
-
-        // Convert screen coordinates to canvas coordinates (accounting for zoom/pan)
-        function screenToCanvas(screenX, screenY) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (screenX - rect.left - panX) / zoom;
-            const y = (screenY - rect.top - panY) / zoom;
-            return { x, y };
-        }
+        // Duplicate functions removed - already defined above
 
         // Close modals when clicking outside
         document.addEventListener('click', function(e) {
@@ -5770,5 +7233,20 @@
             }
         });
     </script>
+
+    <!-- Fabric.js CDN for Canvas Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Editor JavaScript -->
+    <!-- editor.html is self-contained and doesn't need external editor scripts -->
+
+    <!-- Authentication Scripts -->
+    <script src="js/ui-kit.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/editor-auth-init.js"></script>
+
 </body>
 </html>

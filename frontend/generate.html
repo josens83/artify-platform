@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 콘텐츠 생성 - Artify</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(180deg, #eef3ff 0%, #ffffff 40%);
+            color: #1f2937;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .main-header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            cursor: pointer;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #4b5563;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #667eea;
+        }
+
+        .btn-back {
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Main Layout */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .page-subtitle {
+            font-size: 18px;
+            color: #6b7280;
+        }
+
+        /* Two Column Layout */
+        .generate-layout {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 32px;
+        }
+
+        /* Left Panel - Options */
+        .options-panel {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .panel-section {
+            margin-bottom: 28px;
+        }
+
+        .panel-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .radio-option, .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .radio-option:hover, .checkbox-option:hover {
+            border-color: #667eea;
+            background: #f9fafb;
+        }
+
+        .radio-option input, .checkbox-option input {
+            cursor: pointer;
+        }
+
+        .btn-generate {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            margin-top: 12px;
+        }
+
+        .btn-generate:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-generate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Right Panel - Results */
+        .results-panel {
+            min-height: 400px;
+        }
+
+        .results-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .result-card:hover {
+            box-shadow: 0 8px 28px rgba(102, 126, 234, 0.15);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .result-model {
+            font-size: 12px;
+            padding: 4px 12px;
+            background: #eef3ff;
+            color: #667eea;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .result-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+
+        .text-content {
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .text-content p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .text-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .image-content {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+
+        .image-content img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .image-placeholder {
+            color: #9ca3af;
+            font-size: 48px;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .empty-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+        }
+
+        .empty-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        .empty-description {
+            font-size: 16px;
+            color: #6b7280;
+        }
+
+        /* Loading */
+        .loading-spinner {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(102, 126, 234, 0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 4000;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.error { border-left: 4px solid #ef4444; }
+
+        .divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 20px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .generate-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .options-panel {
+                position: static;
+            }
+
+            .result-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="logo" onclick="window.location.href='index.html'">Artify</div>
+        <nav class="header-nav">
+            <a href="index.html" class="nav-link">홈</a>
+            <a href="segments.html" class="nav-link">세그먼트</a>
+            <a href="generate.html" class="nav-link active">AI 생성</a>
+            <a href="analytics.html" class="nav-link">분석</a>
+            <a href="editor.html" class="nav-link">에디터</a>
+        </nav>
+        <button class="btn-back" onclick="window.location.href='index.html'">← 홈으로</button>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">AI 콘텐츠 생성</h1>
+            <p class="page-subtitle">
+                AI를 활용하여 마케팅 카피와 이미지를 동시에 생성하세요.
+            </p>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="generate-layout">
+            <!-- Left: Options Panel -->
+            <div class="options-panel">
+                <!-- Segment Selection -->
+                <div class="panel-section">
+                    <div class="section-title">🎯 타겟 세그먼트</div>
+                    <div class="form-group">
+                        <label class="form-label" for="segment-select">세그먼트 선택</label>
+                        <select id="segment-select" class="form-select">
+                            <option value="">전체 (기본)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Text Generation -->
+                <div class="panel-section">
+                    <div class="section-title">✍️ 텍스트 생성</div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="text-model">AI 모델</label>
+                        <select id="text-model" class="form-select">
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo ($$$)</option>
+                            <option value="gemini-pro">Gemini Pro ($$)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="text-prompt">프롬프트 *</label>
+                        <textarea id="text-prompt" class="form-textarea" placeholder="예: 신제품 출시 홍보 문구를 작성해주세요" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="tone">톤앤매너</label>
+                        <select id="tone" class="form-select">
+                            <option value="전문적">전문적</option>
+                            <option value="친근한">친근한</option>
+                            <option value="감성적">감성적</option>
+                            <option value="위트있는">위트있는</option>
+                            <option value="공식적">공식적</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="keywords">키워드 (쉼표로 구분)</label>
+                        <input type="text" id="keywords" class="form-input" placeholder="예: 혁신, 편리함, 가성비" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="max-tokens">최대 길이</label>
+                        <select id="max-tokens" class="form-select">
+                            <option value="200">짧게 (~200 토큰)</option>
+                            <option value="500" selected>중간 (~500 토큰)</option>
+                            <option value="1000">길게 (~1000 토큰)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Image Generation -->
+                <div class="panel-section">
+                    <div class="section-title">🎨 이미지 생성</div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="image-model">AI 모델</label>
+                        <select id="image-model" class="form-select">
+                            <option value="dall-e-3">DALL-E 3 ($$$$)</option>
+                            <option value="stable-diffusion-xl">Stable Diffusion XL ($$$)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="image-prompt">이미지 프롬프트</label>
+                        <textarea id="image-prompt" class="form-textarea" placeholder="예: 현대적인 스마트폰을 들고 있는 젊은 여성"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="image-size">이미지 크기</label>
+                        <select id="image-size" class="form-select">
+                            <option value="1024x1024">정사각형 (1024x1024)</option>
+                            <option value="1024x1792">세로형 (1024x1792)</option>
+                            <option value="1792x1024">가로형 (1792x1024)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="generate-both" checked />
+                            텍스트와 이미지 함께 생성
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn-generate" onclick="GeneratePage.generate()">
+                    ✨ 생성하기
+                </button>
+            </div>
+
+            <!-- Right: Results Panel -->
+            <div class="results-panel" id="resultsPanel">
+                <div class="empty-state">
+                    <div class="empty-icon">✨</div>
+                    <h2 class="empty-title">AI 콘텐츠를 생성해보세요</h2>
+                    <p class="empty-description">
+                        왼쪽 옵션을 설정하고 생성하기 버튼을 눌러주세요.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/config.js"></script>
+    <script type="module" src="js/api.js"></script>
+    <script type="module" src="js/utils.js"></script>
+    <script src="js/ui-kit.js"></script>
+    <script type="module" src="js/generate.js"></script>
+</body>
+</html>

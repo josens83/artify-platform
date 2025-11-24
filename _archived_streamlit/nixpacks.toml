@@ -1,0 +1,15 @@
+# Nixpacks configuration for content-frontend
+[phases.setup]
+nixPkgs = ["python311", "gcc", "g++", "gfortran"]
+aptPkgs = ["build-essential", "libgomp1"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip setuptools wheel",
+  "pip install --no-cache-dir numpy",
+  "pip install --no-cache-dir pandas",
+  "pip install --no-cache-dir -r requirements.txt"
+]
+
+[start]
+cmd = "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true"

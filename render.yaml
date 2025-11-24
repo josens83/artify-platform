@@ -1,0 +1,19 @@
+services:
+  # Content Backend API (FastAPI)
+  - type: web
+    name: artify-content-api
+    env: python
+    region: oregon
+    buildCommand: "./content-backend/build.sh"
+    startCommand: "cd content-backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: "https://artify-ruddy.vercel.app"
+      - key: PYTHON_VERSION
+        value: "3.11.0"

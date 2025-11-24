@@ -1,0 +1,13 @@
+# Nixpacks configuration for content-vector
+[phases.setup]
+nixPkgs = ["python311", "gcc", "g++"]
+aptPkgs = ["build-essential"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip setuptools wheel",
+  "pip install --no-cache-dir -r requirements.txt"
+]
+
+[start]
+cmd = "python client.py"

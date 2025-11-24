@@ -1,0 +1,200 @@
+<!-- Authentication Modals - Include in both index.html and editor.html -->
+
+<!-- Login Modal -->
+<div class="modal-overlay" id="login-modal">
+    <div class="modal auth-modal">
+        <h2 class="modal-title">로그인</h2>
+        <div class="error-message"></div>
+        <form onsubmit="AuthUI.handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label" for="login-email">이메일</label>
+                <input
+                    type="email"
+                    id="login-email"
+                    class="form-input"
+                    placeholder="your@email.com"
+                    required
+                >
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="login-password">비밀번호</label>
+                <input
+                    type="password"
+                    id="login-password"
+                    class="form-input"
+                    placeholder="••••••••"
+                    required
+                >
+            </div>
+            <button type="submit" class="btn-submit">로그인</button>
+            <div class="form-footer">
+                <p style="color: #6b7280; font-size: 14px;">
+                    계정이 없으신가요?
+                    <a href="javascript:void(0)" class="form-link" onclick="AuthUI.showRegisterModal()">
+                        회원가입
+                    </a>
+                </p>
+                <p style="color: #6b7280; font-size: 13px; margin-top: 12px;">
+                    <strong>데모 계정:</strong> user@artify.com / user123
+                </p>
+            </div>
+        </form>
+        <button
+            class="btn-cancel"
+            onclick="AuthUI.hideLoginModal()"
+            style="position: absolute; top: 20px; right: 20px; padding: 8px 12px; border-radius: 6px; background: #f3f4f6; border: none; cursor: pointer;"
+        >
+            ✕
+        </button>
+    </div>
+</div>
+
+<!-- Register Modal -->
+<div class="modal-overlay" id="register-modal">
+    <div class="modal auth-modal">
+        <h2 class="modal-title">회원가입</h2>
+        <div class="error-message"></div>
+        <form onsubmit="AuthUI.handleRegister(event)">
+            <div class="form-group">
+                <label class="form-label" for="register-name">이름</label>
+                <input
+                    type="text"
+                    id="register-name"
+                    class="form-input"
+                    placeholder="홍길동"
+                    required
+                >
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="register-email">이메일</label>
+                <input
+                    type="email"
+                    id="register-email"
+                    class="form-input"
+                    placeholder="your@email.com"
+                    required
+                >
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="register-password">비밀번호</label>
+                <input
+                    type="password"
+                    id="register-password"
+                    class="form-input"
+                    placeholder="••••••••"
+                    required
+                    minlength="6"
+                >
+                <div id="password-strength" class="password-strength"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="register-password-confirm">비밀번호 확인</label>
+                <input
+                    type="password"
+                    id="register-password-confirm"
+                    class="form-input"
+                    placeholder="••••••••"
+                    required
+                    minlength="6"
+                >
+            </div>
+            <button type="submit" class="btn-submit">회원가입</button>
+            <div class="form-footer">
+                <p style="color: #6b7280; font-size: 14px;">
+                    이미 계정이 있으신가요?
+                    <a href="javascript:void(0)" class="form-link" onclick="AuthUI.showLoginModal()">
+                        로그인
+                    </a>
+                </p>
+            </div>
+        </form>
+        <button
+            class="btn-cancel"
+            onclick="AuthUI.hideRegisterModal()"
+            style="position: absolute; top: 20px; right: 20px; padding: 8px 12px; border-radius: 6px; background: #f3f4f6; border: none; cursor: pointer;"
+        >
+            ✕
+        </button>
+    </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal">
+    <div class="modal">
+        <h2 class="modal-title">내 프로필</h2>
+        <div class="error-message"></div>
+
+        <!-- User Info Section -->
+        <div class="profile-info">
+            <div class="profile-info-item">
+                <span class="profile-info-label">이름</span>
+                <span class="profile-info-value" id="profile-user-name">사용자</span>
+            </div>
+            <div class="profile-info-item">
+                <span class="profile-info-label">이메일</span>
+                <span class="profile-info-value" id="profile-user-email">user@example.com</span>
+            </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Change Password Section -->
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">비밀번호 변경</h3>
+        <form onsubmit="AuthUI.handleChangePassword(event)">
+            <div class="form-group">
+                <label class="form-label" for="current-password">현재 비밀번호</label>
+                <input
+                    type="password"
+                    id="current-password"
+                    class="form-input"
+                    placeholder="••••••••"
+                >
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="new-password">새 비밀번호</label>
+                <input
+                    type="password"
+                    id="new-password"
+                    class="form-input"
+                    placeholder="••••••••"
+                    minlength="6"
+                >
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="confirm-new-password">새 비밀번호 확인</label>
+                <input
+                    type="password"
+                    id="confirm-new-password"
+                    class="form-input"
+                    placeholder="••••••••"
+                    minlength="6"
+                >
+            </div>
+            <button type="submit" class="btn-submit">비밀번호 변경</button>
+        </form>
+
+        <!-- Danger Zone -->
+        <div class="danger-zone">
+            <div class="danger-zone-title">위험 영역</div>
+            <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+                계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.
+            </p>
+            <button
+                class="btn-danger"
+                onclick="if(confirm('정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) { alert('계정 삭제 기능은 준비 중입니다.'); }"
+            >
+                계정 삭제
+            </button>
+        </div>
+
+        <button
+            class="btn-cancel"
+            onclick="AuthUI.hideProfileModal()"
+            style="position: absolute; top: 20px; right: 20px; padding: 8px 12px; border-radius: 6px; background: #f3f4f6; border: none; cursor: pointer;"
+        >
+            ✕
+        </button>
+    </div>
+</div>
+
+<!-- APP_CONFIG is now loaded from config.js in the main HTML file -->
