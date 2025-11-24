@@ -453,6 +453,81 @@
             margin: 20px 0;
         }
 
+        /* Prompt Preview Panel */
+        .preview-panel {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .preview-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .preview-toggle {
+            font-size: 11px;
+            color: #667eea;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #4b5563;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .preview-section {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .preview-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .preview-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .preview-value {
+            color: #374151;
+        }
+
+        .preview-empty {
+            color: #9ca3af;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .generate-layout {
@@ -586,6 +661,23 @@
                             <input type="checkbox" id="generate-both" checked />
                             텍스트와 이미지 함께 생성
                         </label>
+                    </div>
+                </div>
+
+                <!-- Prompt Preview -->
+                <div class="preview-panel" id="promptPreview">
+                    <div class="preview-header">
+                        <div class="preview-title">
+                            👁️ 프롬프트 미리보기
+                        </div>
+                        <div class="preview-toggle" onclick="GeneratePage.togglePreviewExpanded()">
+                            <span id="previewToggleText">접기</span>
+                        </div>
+                    </div>
+                    <div class="preview-content" id="previewContent">
+                        <div class="preview-empty">
+                            프롬프트를 입력하면 여기에 미리보기가 표시됩니다
+                        </div>
                     </div>
                 </div>
 

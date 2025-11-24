@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artify - Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+
+        /* Viewer Layout */
+        .viewer-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .viewer-header {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 60px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .project-name {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .read-only-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: #eef3ff;
+            color: #667eea;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .header-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .header-btn.primary {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .header-btn.primary:hover {
+            background: #5568d3;
+        }
+
+        /* Canvas Area */
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            overflow: auto;
+        }
+
+        #viewerCanvas {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            background: white;
+            border-radius: 4px;
+        }
+
+        /* Loading State */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(102, 126, 234, 0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #666;
+        }
+
+        /* Error State */
+        .error-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 64px;
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .error-message {
+            font-size: 16px;
+            color: #6b7280;
+            max-width: 500px;
+        }
+
+        /* Info Banner */
+        .info-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .info-banner a {
+            color: white;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="spinner"></div>
+        <div class="loading-text">프로젝트를 불러오는 중...</div>
+    </div>
+
+    <!-- Error Screen -->
+    <div class="error-screen" id="errorScreen">
+        <div class="error-icon">⚠️</div>
+        <h1 class="error-title">프로젝트를 찾을 수 없습니다</h1>
+        <p class="error-message" id="errorMessage">
+            공유 링크가 만료되었거나 프로젝트가 삭제되었을 수 있습니다.
+        </p>
+        <button class="header-btn primary" onclick="window.location.href='index.html'">
+            홈으로 돌아가기
+        </button>
+    </div>
+
+    <!-- Main Viewer -->
+    <div class="viewer-layout" id="viewerLayout" style="display: none;">
+        <!-- Info Banner -->
+        <div class="info-banner">
+            👁️ 이 프로젝트를 읽기 전용으로 보고 있습니다.
+            <a href="#" onclick="openInEditor(); return false;">내 에디터에서 열어 편집하기 →</a>
+        </div>
+
+        <!-- Header -->
+        <div class="viewer-header">
+            <div class="header-left">
+                <div class="logo">Artify</div>
+                <div class="project-name" id="projectName">Untitled</div>
+                <div class="read-only-badge">
+                    👁️ 읽기 전용
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" onclick="downloadImage()">
+                    📥 다운로드
+                </button>
+                <button class="header-btn primary" onclick="openInEditor()">
+                    ✏️ 에디터에서 열기
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <canvas id="viewerCanvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Get share ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareId = urlParams.get('share');
+
+        let projectData = null;
+        let projectName = 'Untitled';
+
+        // Initialize viewer
+        async function init() {
+            if (!shareId) {
+                showError('공유 링크가 올바르지 않습니다.');
+                return;
+            }
+
+            try {
+                // Load shared project
+                const response = await fetch(`${getBackendUrl()}/api/projects/shared/${shareId}`);
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to load project');
+                }
+
+                // Store project data
+                projectData = data;
+                projectName = data.name || 'Untitled';
+
+                // Update UI
+                document.getElementById('projectName').textContent = projectName;
+
+                // Render canvas
+                renderCanvas(data.data);
+
+                // Hide loading, show viewer
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('viewerLayout').style.display = 'flex';
+
+            } catch (error) {
+                console.error('Error loading shared project:', error);
+                showError(error.message || '프로젝트를 불러오는데 실패했습니다.');
+            }
+        }
+
+        // Render canvas from project data
+        function renderCanvas(data) {
+            const canvas = document.getElementById('viewerCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Parse data if it's a string
+            const canvasData = typeof data === 'string' ? JSON.parse(data) : data;
+
+            // Set canvas size
+            if (canvasData.width && canvasData.height) {
+                canvas.width = canvasData.width;
+                canvas.height = canvasData.height;
+            }
+
+            // Set background
+            if (canvasData.backgroundColor) {
+                ctx.fillStyle = canvasData.backgroundColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Render elements
+            if (canvasData.elements && canvasData.elements.length > 0) {
+                canvasData.elements.forEach(element => {
+                    renderElement(ctx, element);
+                });
+            }
+        }
+
+        // Render individual element
+        function renderElement(ctx, element) {
+            ctx.save();
+
+            // Apply transform
+            if (element.rotation) {
+                ctx.translate(element.x + element.width / 2, element.y + element.height / 2);
+                ctx.rotate(element.rotation * Math.PI / 180);
+                ctx.translate(-(element.x + element.width / 2), -(element.y + element.height / 2));
+            }
+
+            // Apply opacity
+            if (element.opacity !== undefined) {
+                ctx.globalAlpha = element.opacity;
+            }
+
+            // Render based on type
+            switch (element.type) {
+                case 'text':
+                    renderText(ctx, element);
+                    break;
+                case 'shape':
+                    renderShape(ctx, element);
+                    break;
+                case 'image':
+                    renderImage(ctx, element);
+                    break;
+            }
+
+            ctx.restore();
+        }
+
+        // Render text element
+        function renderText(ctx, element) {
+            ctx.font = `${element.fontSize || 16}px ${element.fontFamily || 'Arial'}`;
+            ctx.fillStyle = element.color || '#000000';
+            ctx.textAlign = element.textAlign || 'left';
+
+            if (element.fontWeight === 'bold') ctx.font = `bold ${ctx.font}`;
+            if (element.fontStyle === 'italic') ctx.font = `italic ${ctx.font}`;
+
+            const lines = element.text.split('\n');
+            lines.forEach((line, index) => {
+                ctx.fillText(line, element.x, element.y + (index + 1) * (element.fontSize || 16));
+            });
+        }
+
+        // Render shape element
+        function renderShape(ctx, element) {
+            ctx.fillStyle = element.fill || '#000000';
+            ctx.strokeStyle = element.stroke || '#000000';
+            ctx.lineWidth = element.strokeWidth || 1;
+
+            switch (element.shape) {
+                case 'rectangle':
+                    if (element.fill) ctx.fillRect(element.x, element.y, element.width, element.height);
+                    if (element.stroke) ctx.strokeRect(element.x, element.y, element.width, element.height);
+                    break;
+                case 'circle':
+                    ctx.beginPath();
+                    ctx.arc(element.x + element.width / 2, element.y + element.height / 2,
+                           element.width / 2, 0, 2 * Math.PI);
+                    if (element.fill) ctx.fill();
+                    if (element.stroke) ctx.stroke();
+                    break;
+                case 'triangle':
+                    ctx.beginPath();
+                    ctx.moveTo(element.x + element.width / 2, element.y);
+                    ctx.lineTo(element.x + element.width, element.y + element.height);
+                    ctx.lineTo(element.x, element.y + element.height);
+                    ctx.closePath();
+                    if (element.fill) ctx.fill();
+                    if (element.stroke) ctx.stroke();
+                    break;
+            }
+        }
+
+        // Render image element
+        function renderImage(ctx, element) {
+            if (!element.src) return;
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                // Apply filters if any
+                if (element.filters) {
+                    const filterParts = [];
+                    if (element.filters.grayscale > 0) filterParts.push(`grayscale(${element.filters.grayscale}%)`);
+                    if (element.filters.sepia > 0) filterParts.push(`sepia(${element.filters.sepia}%)`);
+                    if (element.filters.blur > 0) filterParts.push(`blur(${element.filters.blur}px)`);
+                    if (element.filters.brightness !== 100) filterParts.push(`brightness(${element.filters.brightness}%)`);
+                    if (element.filters.contrast !== 100) filterParts.push(`contrast(${element.filters.contrast}%)`);
+                    if (element.filters.saturate !== 100) filterParts.push(`saturate(${element.filters.saturate}%)`);
+                    if (element.filters.hueRotate > 0) filterParts.push(`hue-rotate(${element.filters.hueRotate}deg)`);
+                    if (element.filters.invert > 0) filterParts.push(`invert(${element.filters.invert}%)`);
+
+                    ctx.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
+                }
+
+                ctx.drawImage(img, element.x, element.y, element.width, element.height);
+                ctx.filter = 'none';
+            };
+            img.src = element.src;
+        }
+
+        // Download canvas as image
+        function downloadImage() {
+            const canvas = document.getElementById('viewerCanvas');
+            const link = document.createElement('a');
+            link.download = `${projectName}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Open in editor (creates a copy)
+        function openInEditor() {
+            if (!projectData) return;
+
+            // Store project data in sessionStorage
+            sessionStorage.setItem('artify_shared_project', JSON.stringify({
+                name: projectName + ' (Copy)',
+                data: projectData.data
+            }));
+
+            // Navigate to editor
+            window.location.href = 'editor.html?from=shared';
+        }
+
+        // Show error screen
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('errorScreen').style.display = 'flex';
+        }
+
+        // Get backend URL
+        function getBackendUrl() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            }
+            return 'https://artify-backend.vercel.app';
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

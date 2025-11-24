@@ -101,9 +101,26 @@ Are you sure you want to continue? (yes/no): yes
 ⚠️  Remember to run migrations if needed: alembic upgrade head
 ```
 
-## Automated Backups with Cron
+## Automated Backups
 
-To schedule automatic daily backups at 2 AM:
+### Quick Setup ⭐ NEW
+
+Use the automated setup script:
+
+```bash
+chmod +x setup_auto_backup.sh
+./setup_auto_backup.sh
+```
+
+This will:
+- Configure daily backups at 2:00 AM
+- Setup logging to `backup.log`
+- Verify script permissions
+- Check for existing cron jobs
+
+### Manual Cron Setup
+
+Alternatively, configure manually:
 
 ```bash
 # Edit crontab
@@ -111,6 +128,42 @@ crontab -e
 
 # Add this line (adjust path as needed)
 0 2 * * * cd /home/user/artify-platform/content-backend/scripts && ./backup_db.sh >> /var/log/artify-backup.log 2>&1
+```
+
+### Check Backup Status ⭐ NEW
+
+Monitor your backups easily:
+
+```bash
+chmod +x check_backup_status.sh
+./check_backup_status.sh
+```
+
+This shows:
+- Total number of backups
+- Recent backup list with sizes
+- Latest backup age and status
+- Cron job configuration
+- Recent backup logs
+
+**Example output:**
+```
+🔍 Checking backup status...
+
+📊 Total backups: 15
+
+📋 Recent backups (last 10):
+Nov 24 02:00:00   2.3M  artify_backup_20251124_020000.sql.gz
+Nov 23 02:00:00   2.1M  artify_backup_20251123_020000.sql.gz
+
+📦 Latest backup:
+   File: artify_backup_20251124_020000.sql.gz
+   Size: 2.3M
+   Date: 2025-11-24 02:00:00
+   Status: ✅ Fresh (3 hours old)
+
+⏰ Cron Job Status:
+   ✅ Automatic backup is configured
 ```
 
 ## Supabase Backups

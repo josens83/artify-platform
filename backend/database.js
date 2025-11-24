@@ -57,6 +57,23 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_projects_share_id ON projects(share_id) WHERE share_id IS NOT NULL
     `);
 
+    // Create comments table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create index on project_id for faster comment queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_comments_project_id ON comments(project_id)
+    `);
+
     console.log('✅ Database tables initialized');
   } catch (error) {
     console.error('❌ Error initializing database:', error);
@@ -180,6 +197,58 @@ const db = {
   async revokeShareLink(id) {
     const result = await pool.query(
       'UPDATE projects SET share_id = NULL, is_public = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  },
+
+  // ========== Comment Operations ==========
+
+  // Create comment
+  async createComment(projectId, userId, content) {
+    const result = await pool.query(
+      'INSERT INTO comments (project_id, user_id, content) VALUES ($1, $2, $3) RETURNING *',
+      [projectId, userId, content]
+    );
+    return result.rows[0];
+  },
+
+  // Get comments for a project (with user info)
+  async getCommentsByProjectId(projectId) {
+    const result = await pool.query(
+      `SELECT c.id, c.project_id, c.user_id, c.content, c.created_at, c.updated_at,
+              u.username, u.email
+       FROM comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.project_id = $1
+       ORDER BY c.created_at DESC`,
+      [projectId]
+    );
+    return result.rows;
+  },
+
+  // Get comment by ID
+  async getCommentById(id) {
+    const result = await pool.query(
+      'SELECT * FROM comments WHERE id = $1',
+      [id]
+    );
+    return result.rows[0];
+  },
+
+  // Update comment
+  async updateComment(id, content) {
+    const result = await pool.query(
+      'UPDATE comments SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      [content, id]
+    );
+    return result.rows[0];
+  },
+
+  // Delete comment
+  async deleteComment(id) {
+    const result = await pool.query(
+      'DELETE FROM comments WHERE id = $1 RETURNING id',
       [id]
     );
     return result.rows.length > 0;

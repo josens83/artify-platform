@@ -788,6 +788,105 @@ app.delete('/api/projects/:id/share', projectLimiter, authenticateToken, async (
   }
 });
 
+// ========== Comment Routes ==========
+
+// Get comments for a project
+app.get('/api/projects/:id/comments', async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const comments = await db.getCommentsByProjectId(projectId);
+    res.json({ comments });
+  } catch (error) {
+    console.error('Get comments error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Create a comment
+app.post('/api/projects/:id/comments', projectLimiter, authenticateToken, async (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const { content } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment content is required' });
+    }
+
+    if (content.length > 5000) {
+      return res.status(400).json({ error: 'Comment is too long (max 5000 characters)' });
+    }
+
+    const comment = await db.createComment(projectId, req.user.id, content.trim());
+
+    // Return comment with user info
+    res.json({
+      comment: {
+        ...comment,
+        username: req.user.username,
+        email: req.user.email
+      }
+    });
+  } catch (error) {
+    console.error('Create comment error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update a comment
+app.put('/api/comments/:id', projectLimiter, authenticateToken, async (req, res) => {
+  try {
+    const commentId = parseInt(req.params.id);
+    const { content } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment content is required' });
+    }
+
+    if (content.length > 5000) {
+      return res.status(400).json({ error: 'Comment is too long (max 5000 characters)' });
+    }
+
+    // Check if comment exists and user owns it
+    const existingComment = await db.getCommentById(commentId);
+    if (!existingComment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    if (existingComment.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const comment = await db.updateComment(commentId, content.trim());
+    res.json({ comment });
+  } catch (error) {
+    console.error('Update comment error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete a comment
+app.delete('/api/comments/:id', projectLimiter, authenticateToken, async (req, res) => {
+  try {
+    const commentId = parseInt(req.params.id);
+
+    // Check if comment exists and user owns it
+    const existingComment = await db.getCommentById(commentId);
+    if (!existingComment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    if (existingComment.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await db.deleteComment(commentId);
+    res.json({ message: 'Comment deleted successfully' });
+  } catch (error) {
+    console.error('Delete comment error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Initialize database and start server
 async function startServer() {
   try {

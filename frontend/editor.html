@@ -1114,6 +1114,7 @@
                 <button class="header-btn" onclick="location.href='index.html'" aria-label="프로젝트 목록으로 돌아가기">← 목록</button>
                 <button class="header-btn" onclick="showVersionHistoryModal()" aria-label="버전 히스토리">🕐 버전</button>
                 <button class="header-btn" onclick="showCollaborateModal()" aria-label="협업">👥 협업</button>
+                <button class="header-btn" onclick="showCommentsModal()" aria-label="댓글">💬 댓글</button>
                 <button class="header-btn" onclick="showTemplateModal()" aria-label="캔버스 크기 변경">📐 캔버스 크기</button>
                 <button class="header-btn" onclick="showKeyboardShortcutsModal()" aria-label="키보드 단축키" title="키보드 단축키 (?)">⌨️ 단축키</button>
                 <button class="header-btn" onclick="showExportModal()" aria-label="다운로드">📥 다운로드</button>
@@ -2057,6 +2058,40 @@
 
                 <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
                     💡 클릭하여 버전 복원 | 자동 저장 주기: 5분
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Modal -->
+    <div class="modal-overlay" id="commentsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">💬 댓글</h2>
+                <button class="modal-close" onclick="closeCommentsModal()">×</button>
+            </div>
+
+            <div class="export-options">
+                <!-- Add Comment Form -->
+                <div class="panel-group" style="margin-bottom: 20px;">
+                    <label class="panel-label">새 댓글 작성</label>
+                    <textarea
+                        id="newCommentInput"
+                        class="panel-input"
+                        style="min-height: 80px; resize: vertical; font-family: inherit;"
+                        placeholder="댓글을 입력하세요..."
+                        maxlength="5000"
+                    ></textarea>
+                    <button class="export-btn-primary" onclick="addComment()" style="margin-top: 8px;">
+                        댓글 추가
+                    </button>
+                </div>
+
+                <!-- Comments List -->
+                <div id="commentsList" style="max-height: 400px; overflow-y: auto;"></div>
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8f9ff; border-radius: 8px; font-size: 13px; color: #666;">
+                    💡 댓글을 통해 프로젝트에 대한 피드백을 남기세요
                 </div>
             </div>
         </div>
@@ -3094,7 +3129,59 @@
                 // Check if there's generated content from generate page (stored in sessionStorage)
                 const from = urlParams.get('from');
 
-                if (from === 'generate') {
+                if (from === 'shared') {
+                    // Load shared project (creates a copy)
+                    const sharedProjectStr = sessionStorage.getItem('artify_shared_project');
+                    if (sharedProjectStr) {
+                        try {
+                            const sharedProject = JSON.parse(sharedProjectStr);
+                            console.log('[Editor] Loading shared project:', sharedProject);
+
+                            // Update project name
+                            document.getElementById('projectName').textContent = sharedProject.name;
+
+                            // Load project data
+                            const projectData = typeof sharedProject.data === 'string'
+                                ? JSON.parse(sharedProject.data)
+                                : sharedProject.data;
+
+                            // Set canvas size
+                            if (projectData.width && projectData.height) {
+                                canvas.width = projectData.width;
+                                canvas.height = projectData.height;
+                            }
+
+                            // Set background
+                            if (projectData.backgroundColor) {
+                                canvas.style.backgroundColor = projectData.backgroundColor;
+                            }
+
+                            // Load elements
+                            if (projectData.elements && projectData.elements.length > 0) {
+                                elements = projectData.elements.map(e => {
+                                    const element = new Element(e.type, e.x, e.y, e.width, e.height);
+                                    Object.assign(element, e);
+                                    return element;
+                                });
+                            }
+
+                            // Clear sessionStorage
+                            sessionStorage.removeItem('artify_shared_project');
+
+                            // Update UI
+                            saveHistory();
+                            updateLayersList();
+                            isDirty = true;
+                            render();
+
+                            alert('공유된 프로젝트의 복사본이 생성되었습니다.\n저장하여 내 프로젝트로 만드세요.');
+
+                        } catch (e) {
+                            console.error('[Editor] Failed to load shared project:', e);
+                            alert('공유 프로젝트 로드에 실패했습니다.');
+                        }
+                    }
+                } else if (from === 'generate') {
                     // Load content from sessionStorage
                     const editorContentStr = sessionStorage.getItem('artify_editor_content');
                     if (editorContentStr) {
@@ -6742,36 +6829,325 @@
         // P11: Collaboration Functions
         function showCollaborateModal() {
             document.getElementById('collaborateModal').classList.add('active');
-            // Auto-generate link on open
-            if (currentProjectId) {
-                const baseUrl = window.location.origin;
-                document.getElementById('shareLink').value = `${baseUrl}/editor-canva.html?id=${currentProjectId}&share=true`;
-            }
+            // Reset to placeholder
+            document.getElementById('shareLink').value = '링크를 생성하려면 "공유 링크 생성" 버튼을 클릭하세요';
+        }
+
+        // Alias for share modal (same as collaborate modal)
+        function showShareModal() {
+            showCollaborateModal();
         }
 
         function closeCollaborateModal() {
             document.getElementById('collaborateModal').classList.remove('active');
         }
 
-        function generateShareLink() {
+        async function generateShareLink() {
             if (!currentProjectId) {
                 alert('프로젝트를 먼저 저장해주세요.');
                 return;
             }
 
-            const permission = document.getElementById('sharePermission').value;
-            const baseUrl = window.location.origin;
-            const shareUrl = `${baseUrl}/editor-canva.html?id=${currentProjectId}&share=true&permission=${permission}`;
+            // Get auth token
+            const token = localStorage.getItem('artify_auth_token');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
 
-            document.getElementById('shareLink').value = shareUrl;
-            alert('공유 링크가 생성되었습니다!');
+            try {
+                // Show loading
+                const shareInput = document.getElementById('shareLink');
+                shareInput.value = '링크 생성 중...';
+
+                // Call backend API to generate share link
+                const response = await fetch(`${BACKEND_URL}/api/projects/${currentProjectId}/share`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to generate share link');
+                }
+
+                // Update share link with viewer URL
+                const viewerUrl = `${window.location.origin}/viewer.html?share=${data.shareId}`;
+                shareInput.value = viewerUrl;
+
+                alert('공유 링크가 생성되었습니다!\n\n이 링크를 통해 다른 사람들이 읽기 전용으로 프로젝트를 볼 수 있습니다.');
+
+            } catch (error) {
+                console.error('Error generating share link:', error);
+                alert('공유 링크 생성에 실패했습니다: ' + error.message);
+                document.getElementById('shareLink').value = '링크 생성 실패';
+            }
         }
 
         function copyShareLink() {
-            const shareLink = document.getElementById('shareLink');
-            shareLink.select();
-            document.execCommand('copy');
-            alert('링크가 복사되었습니다!');
+            const shareInput = document.getElementById('shareLink');
+            const value = shareInput.value;
+
+            // Check if there's a valid link
+            if (!value || value.includes('생성') || value.includes('실패')) {
+                alert('먼저 공유 링크를 생성해주세요.');
+                return;
+            }
+
+            // Copy to clipboard
+            shareInput.select();
+            shareInput.setSelectionRange(0, 99999); // For mobile devices
+
+            try {
+                // Try modern clipboard API first
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(value).then(() => {
+                        alert('링크가 클립보드에 복사되었습니다!');
+                    }).catch(() => {
+                        // Fallback to old method
+                        document.execCommand('copy');
+                        alert('링크가 클립보드에 복사되었습니다!');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    document.execCommand('copy');
+                    alert('링크가 클립보드에 복사되었습니다!');
+                }
+            } catch (error) {
+                console.error('Copy failed:', error);
+                alert('복사에 실패했습니다. 수동으로 복사해주세요.');
+            }
+        }
+
+        // Comments Functions
+        async function showCommentsModal() {
+            if (!currentProjectId) {
+                alert('프로젝트를 먼저 저장해주세요.');
+                return;
+            }
+
+            document.getElementById('commentsModal').classList.add('active');
+            await loadComments();
+        }
+
+        function closeCommentsModal() {
+            document.getElementById('commentsModal').classList.remove('active');
+        }
+
+        async function loadComments() {
+            if (!currentProjectId) return;
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/projects/${currentProjectId}/comments`);
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to load comments');
+                }
+
+                const commentsList = document.getElementById('commentsList');
+
+                if (!data.comments || data.comments.length === 0) {
+                    commentsList.innerHTML = `
+                        <div style="padding: 40px 20px; text-align: center; color: #999;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                            <div>아직 댓글이 없습니다</div>
+                            <div style="font-size: 13px; margin-top: 8px;">첫 댓글을 작성해보세요!</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Render comments
+                commentsList.innerHTML = data.comments.map(comment => `
+                    <div class="comment-item" data-comment-id="${comment.id}" style="padding: 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                            <div>
+                                <strong style="color: #667eea;">${escapeHtml(comment.username)}</strong>
+                                <div style="font-size: 11px; color: #999; margin-top: 2px;">
+                                    ${formatCommentDate(comment.created_at)}
+                                    ${comment.updated_at !== comment.created_at ? ' (수정됨)' : ''}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button
+                                    class="btn-icon"
+                                    onclick="editComment(${comment.id})"
+                                    style="padding: 4px 8px; font-size: 12px;"
+                                    data-user-id="${comment.user_id}">
+                                    ✏️
+                                </button>
+                                <button
+                                    class="btn-icon"
+                                    onclick="deleteComment(${comment.id})"
+                                    style="padding: 4px 8px; font-size: 12px;"
+                                    data-user-id="${comment.user_id}">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        <div class="comment-content" style="color: #333; white-space: pre-wrap; word-break: break-word;">
+                            ${escapeHtml(comment.content)}
+                        </div>
+                    </div>
+                `).join('');
+
+                // Hide edit/delete buttons for comments not owned by current user
+                const currentUser = getVerifiedUser();
+                if (currentUser) {
+                    document.querySelectorAll('.comment-item').forEach(item => {
+                        const editBtn = item.querySelector('button[onclick^="editComment"]');
+                        const deleteBtn = item.querySelector('button[onclick^="deleteComment"]');
+                        const commentUserId = parseInt(editBtn.dataset.userId);
+
+                        if (commentUserId !== currentUser.id) {
+                            editBtn.style.display = 'none';
+                            deleteBtn.style.display = 'none';
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                document.getElementById('commentsList').innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #ef4444;">
+                        댓글을 불러오는데 실패했습니다
+                    </div>
+                `;
+            }
+        }
+
+        async function addComment() {
+            if (!currentProjectId) {
+                alert('프로젝트를 먼저 저장해주세요.');
+                return;
+            }
+
+            const token = localStorage.getItem('artify_auth_token');
+            if (!token) {
+                alert('댓글을 작성하려면 로그인이 필요합니다.');
+                return;
+            }
+
+            const content = document.getElementById('newCommentInput').value.trim();
+            if (!content) {
+                alert('댓글 내용을 입력해주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/projects/${currentProjectId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to add comment');
+                }
+
+                // Clear input and reload comments
+                document.getElementById('newCommentInput').value = '';
+                await loadComments();
+
+            } catch (error) {
+                console.error('Error adding comment:', error);
+                alert('댓글 추가에 실패했습니다: ' + error.message);
+            }
+        }
+
+        async function editComment(commentId) {
+            const newContent = prompt('댓글을 수정하세요:');
+            if (!newContent || !newContent.trim()) return;
+
+            const token = localStorage.getItem('artify_auth_token');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/comments/${commentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content: newContent.trim() })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to update comment');
+                }
+
+                await loadComments();
+
+            } catch (error) {
+                console.error('Error updating comment:', error);
+                alert('댓글 수정에 실패했습니다: ' + error.message);
+            }
+        }
+
+        async function deleteComment(commentId) {
+            if (!confirm('이 댓글을 삭제하시겠습니까?')) return;
+
+            const token = localStorage.getItem('artify_auth_token');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/comments/${commentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to delete comment');
+                }
+
+                await loadComments();
+
+            } catch (error) {
+                console.error('Error deleting comment:', error);
+                alert('댓글 삭제에 실패했습니다: ' + error.message);
+            }
+        }
+
+        function formatCommentDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            if (diffMins < 1) return '방금 전';
+            if (diffMins < 60) return `${diffMins}분 전`;
+            if (diffMins < 1440) return `${Math.floor(diffMins / 60)}시간 전`;
+            if (diffMins < 10080) return `${Math.floor(diffMins / 1440)}일 전`;
+
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // P12: Animation Functions
