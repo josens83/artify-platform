@@ -37,8 +37,26 @@ const GeneratePage = {
                 this.currentSegmentId = e.target.value;
                 this.updateSegmentInfo();
                 this.suggestKeywords();
+                this.updatePromptPreview();
             });
         }
+
+        // Add preview update listeners to all form inputs
+        const previewInputs = [
+            'text-prompt', 'text-model', 'tone', 'keywords', 'max-tokens',
+            'image-prompt', 'image-model', 'image-size', 'generate-both'
+        ];
+
+        previewInputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', () => this.updatePromptPreview());
+                element.addEventListener('change', () => this.updatePromptPreview());
+            }
+        });
+
+        // Initialize preview
+        this.updatePromptPreview();
     },
 
     /**
@@ -712,6 +730,111 @@ const GeneratePage = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    /**
+     * Toggle prompt preview expanded/collapsed
+     */
+    togglePreviewExpanded() {
+        const previewContent = document.getElementById('previewContent');
+        const toggleText = document.getElementById('previewToggleText');
+
+        if (previewContent.style.display === 'none') {
+            previewContent.style.display = 'block';
+            toggleText.textContent = '접기';
+        } else {
+            previewContent.style.display = 'none';
+            toggleText.textContent = '펼치기';
+        }
+    },
+
+    /**
+     * Update prompt preview in real-time
+     */
+    updatePromptPreview() {
+        const previewContent = document.getElementById('previewContent');
+        if (!previewContent) return;
+
+        const textPrompt = document.getElementById('text-prompt').value.trim();
+        const imagePrompt = document.getElementById('image-prompt').value.trim();
+        const generateBoth = document.getElementById('generate-both').checked;
+
+        // If no prompts, show empty state
+        if (!textPrompt && !imagePrompt) {
+            previewContent.innerHTML = `
+                <div class="preview-empty">
+                    프롬프트를 입력하면 여기에 미리보기가 표시됩니다
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+
+        // Text generation preview
+        if (textPrompt) {
+            html += this.buildTextPromptPreview(textPrompt);
+        }
+
+        // Image generation preview
+        if (imagePrompt || (generateBoth && textPrompt)) {
+            html += this.buildImagePromptPreview(imagePrompt || textPrompt);
+        }
+
+        previewContent.innerHTML = html;
+    },
+
+    /**
+     * Build text prompt preview
+     */
+    buildTextPromptPreview(prompt) {
+        const textModel = document.getElementById('text-model').value;
+        const tone = document.getElementById('tone').value;
+        const keywords = document.getElementById('keywords').value.trim();
+        const maxTokens = document.getElementById('max-tokens').value;
+
+        // Build enhanced prompt with segment context
+        let enhancedPrompt = prompt;
+        if (this.currentSegment) {
+            const segmentContext = this.buildSegmentContext();
+            enhancedPrompt = `${segmentContext}\n\n${prompt}`;
+        }
+
+        return `
+            <div class="preview-section">
+                <div class="preview-label">📝 텍스트 생성 프롬프트</div>
+                <div class="preview-value" style="margin-top: 8px; padding: 8px; background: #f3f4f6; border-radius: 6px;">
+${this.escapeHtml(enhancedPrompt)}
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; color: #6b7280;">
+                    <strong>모델:</strong> ${this.escapeHtml(textModel)} &nbsp;|&nbsp;
+                    <strong>톤:</strong> ${this.escapeHtml(tone)} &nbsp;|&nbsp;
+                    <strong>최대 길이:</strong> ${this.escapeHtml(maxTokens)} 토큰
+                    ${keywords ? `<br/><strong>키워드:</strong> ${this.escapeHtml(keywords)}` : ''}
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Build image prompt preview
+     */
+    buildImagePromptPreview(prompt) {
+        const imageModel = document.getElementById('image-model').value;
+        const imageSize = document.getElementById('image-size').value;
+
+        return `
+            <div class="preview-section">
+                <div class="preview-label">🎨 이미지 생성 프롬프트</div>
+                <div class="preview-value" style="margin-top: 8px; padding: 8px; background: #f3f4f6; border-radius: 6px;">
+${this.escapeHtml(prompt)}
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; color: #6b7280;">
+                    <strong>모델:</strong> ${this.escapeHtml(imageModel)} &nbsp;|&nbsp;
+                    <strong>크기:</strong> ${this.escapeHtml(imageSize)}
+                </div>
+            </div>
+        `;
     }
 };
 
