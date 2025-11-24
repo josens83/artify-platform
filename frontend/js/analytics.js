@@ -11,6 +11,8 @@ const AnalyticsPage = {
     currentTab: 'top',
     chartJsLoaded: false,
     cache: new CacheManager(300000), // 5 minutes cache
+    autoRefreshInterval: null,
+    autoRefreshEnabled: false,
 
     /**
      * Initialize analytics page
@@ -18,6 +20,7 @@ const AnalyticsPage = {
     async init() {
         console.log('[AnalyticsPage] Initializing...');
         await this.loadData();
+        this.setupAutoRefresh();
     },
 
     /**
@@ -105,6 +108,9 @@ const AnalyticsPage = {
 
             <!-- Charts -->
             ${this.renderCharts()}
+
+            <!-- A/B Testing Section -->
+            ${this.renderABTesting()}
 
             <!-- Content Performance Table -->
             ${this.renderContentTable()}
@@ -339,6 +345,7 @@ const AnalyticsPage = {
         this.updateTrendChart();
         this.updateModelChart();
         this.updateSegmentChart();
+        this.updateABComparisonChart();
     },
 
     /**
@@ -467,6 +474,104 @@ const AnalyticsPage = {
     },
 
     /**
+     * Setup auto-refresh functionality
+     */
+    setupAutoRefresh() {
+        // Add auto-refresh toggle to page header
+        const dateRangeSelector = document.querySelector('.date-range-selector');
+        if (dateRangeSelector) {
+            const toggleHtml = `
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: #6b7280; user-select: none;">
+                    <input type="checkbox" id="auto-refresh-toggle" onchange="AnalyticsPage.toggleAutoRefresh()" style="cursor: pointer;">
+                    <span>🔄 자동 새로고침 (30초)</span>
+                </label>
+            `;
+            dateRangeSelector.insertAdjacentHTML('beforeend', toggleHtml);
+        }
+    },
+
+    /**
+     * Toggle auto-refresh on/off
+     */
+    toggleAutoRefresh() {
+        const checkbox = document.getElementById('auto-refresh-toggle');
+        this.autoRefreshEnabled = checkbox?.checked || false;
+
+        if (this.autoRefreshEnabled) {
+            console.log('[AnalyticsPage] Auto-refresh enabled');
+            UI.toast('자동 새로고침이 활성화되었습니다 (30초마다)', 'success');
+
+            // Start auto-refresh (every 30 seconds)
+            this.autoRefreshInterval = setInterval(() => {
+                this.refreshData();
+            }, 30000);
+        } else {
+            console.log('[AnalyticsPage] Auto-refresh disabled');
+            UI.toast('자동 새로고침이 비활성화되었습니다', 'info');
+
+            // Stop auto-refresh
+            if (this.autoRefreshInterval) {
+                clearInterval(this.autoRefreshInterval);
+                this.autoRefreshInterval = null;
+            }
+        }
+    },
+
+    /**
+     * Refresh data without full page reload
+     */
+    async refreshData() {
+        console.log('[AnalyticsPage] Auto-refreshing data...');
+
+        try {
+            // Clear cache for fresh data
+            const dateRange = document.getElementById('date-range').value;
+            const cacheKey = `analytics_${dateRange}`;
+            this.cache.delete(cacheKey);
+
+            // Reload data
+            await this.loadData();
+
+            // Show subtle notification
+            const indicator = document.createElement('div');
+            indicator.textContent = '✓ 업데이트됨';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 80px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(16, 185, 129, 0.9);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                z-index: 5000;
+                animation: fadeInOut 2s ease-in-out;
+            `;
+
+            // Add animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0%, 100% { opacity: 0; }
+                    10%, 90% { opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            document.body.appendChild(indicator);
+
+            setTimeout(() => {
+                document.body.removeChild(indicator);
+                document.head.removeChild(style);
+            }, 2000);
+
+        } catch (error) {
+            console.error('[AnalyticsPage] Auto-refresh error:', error);
+        }
+    },
+
+    /**
      * Destroy all charts (cleanup)
      */
     destroyCharts() {
@@ -474,6 +579,11 @@ const AnalyticsPage = {
             if (chart) chart.destroy();
         });
         this.charts = {};
+
+        // Clean up auto-refresh on page unload
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+        }
     },
 
     /**
@@ -491,6 +601,257 @@ const AnalyticsPage = {
             btn.classList.remove('active');
         });
         event.target.classList.add('active');
+    },
+
+    /**
+     * Render A/B Testing comparison section
+     */
+    renderABTesting() {
+        const abData = this.data.ab_testing || this.getMockABData();
+
+        return `
+            <div class="content-table-section" style="margin-bottom: 32px;">
+                <div class="table-header" style="margin-bottom: 24px;">
+                    <h3 class="table-title">🔬 A/B 테스팅 결과</h3>
+                    <div style="display: flex; gap: 12px;">
+                        <select id="ab-campaign-select" onchange="AnalyticsPage.loadABTest()" style="padding: 10px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
+                            <option value="1">캠페인 #1 - 신제품 런칭</option>
+                            <option value="2">캠페인 #2 - 할인 프로모션</option>
+                            <option value="3">캠페인 #3 - 브랜드 스토리</option>
+                        </select>
+                        <button class="tab active" style="padding: 10px 20px; border: none; cursor: pointer;" onclick="AnalyticsPage.refreshABTest()">
+                            🔄 새로고침
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Variant Comparison -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                    <!-- Variant A -->
+                    <div class="ab-variant-card" style="background: white; padding: 24px; border-radius: 12px; border: 3px solid ${abData.winner === 'A' ? '#10b981' : '#e5e7eb'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="font-size: 18px; font-weight: 700; color: #1f2937;">Variant A</h4>
+                            ${abData.winner === 'A' ? '<span style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600;">🏆 Winner</span>' : ''}
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">노출수</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${this.formatNumber(abData.variant_a.impressions)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">클릭수</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${this.formatNumber(abData.variant_a.clicks)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">CTR</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #667eea;">${abData.variant_a.ctr.toFixed(2)}%</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">전환수</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${this.formatNumber(abData.variant_a.conversions)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Variant B -->
+                    <div class="ab-variant-card" style="background: white; padding: 24px; border-radius: 12px; border: 3px solid ${abData.winner === 'B' ? '#10b981' : '#e5e7eb'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="font-size: 18px; font-weight: 700; color: #1f2937;">Variant B</h4>
+                            ${abData.winner === 'B' ? '<span style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600;">🏆 Winner</span>' : ''}
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">노출수</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${this.formatNumber(abData.variant_b.impressions)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">클릭수</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${this.formatNumber(abData.variant_b.clicks)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">CTR</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #667eea;">${abData.variant_b.ctr.toFixed(2)}%</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">전환수</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${this.formatNumber(abData.variant_b.conversions)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistical Confidence -->
+                ${abData.confidence !== null ? `
+                    <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">통계적 신뢰도</div>
+                            <div style="font-size: 28px; font-weight: 700; color: #1f2937;">${abData.confidence.toFixed(1)}%</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">결과 해석</div>
+                            <div style="font-size: 16px; font-weight: 600; color: ${abData.confidence >= 95 ? '#10b981' : abData.confidence >= 80 ? '#f59e0b' : '#6b7280'};">
+                                ${abData.confidence >= 95 ? '✅ 통계적으로 유의미함' : abData.confidence >= 80 ? '⚠️ 추가 데이터 필요' : '⏳ 데이터 수집 중'}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Comparison Chart -->
+                <div style="margin-top: 24px;">
+                    <div style="height: 250px;">
+                        <canvas id="abComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Load A/B test data for selected campaign
+     */
+    async loadABTest() {
+        const campaignId = document.getElementById('ab-campaign-select')?.value || 1;
+
+        try {
+            const { default: api } = await import('./api.js');
+
+            const response = await api.request(
+                `${api.config.CONTENT_BACKEND_URL}/campaigns/${campaignId}/analytics/compare`
+            );
+
+            if (response.campaign_id) {
+                this.data.ab_testing = response;
+
+                // Re-render A/B testing section
+                const abSection = document.querySelector('.content-table-section');
+                if (abSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.renderABTesting();
+                    abSection.replaceWith(tempDiv.firstElementChild);
+                }
+
+                // Update comparison chart
+                await this.ensureChartJsLoaded();
+                this.updateABComparisonChart();
+            }
+        } catch (error) {
+            console.error('[AnalyticsPage] A/B Test error:', error);
+            // Use mock data on error
+            this.data.ab_testing = this.getMockABData();
+        }
+    },
+
+    /**
+     * Refresh A/B test data
+     */
+    async refreshABTest() {
+        UI.toast('A/B 테스트 데이터를 새로고침하는 중...', 'info');
+        await this.loadABTest();
+        UI.toast('데이터가 업데이트되었습니다', 'success');
+    },
+
+    /**
+     * Update A/B comparison chart
+     */
+    updateABComparisonChart() {
+        const canvas = document.getElementById('abComparisonChart');
+        if (!canvas || !this.data.ab_testing) return;
+
+        const abData = this.data.ab_testing;
+
+        if (this.charts.abComparison) {
+            this.charts.abComparison.destroy();
+        }
+
+        this.charts.abComparison = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: ['노출수', '클릭수', '전환수'],
+                datasets: [
+                    {
+                        label: 'Variant A',
+                        data: [
+                            abData.variant_a.impressions,
+                            abData.variant_a.clicks,
+                            abData.variant_a.conversions
+                        ],
+                        backgroundColor: abData.winner === 'A' ? 'rgba(16, 185, 129, 0.8)' : 'rgba(102, 126, 234, 0.8)',
+                        borderColor: abData.winner === 'A' ? '#10b981' : '#667eea',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Variant B',
+                        data: [
+                            abData.variant_b.impressions,
+                            abData.variant_b.clicks,
+                            abData.variant_b.conversions
+                        ],
+                        backgroundColor: abData.winner === 'B' ? 'rgba(16, 185, 129, 0.8)' : 'rgba(139, 92, 246, 0.8)',
+                        borderColor: abData.winner === 'B' ? '#10b981' : '#8b5cf6',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 500 },
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += new Intl.NumberFormat('ko-KR').format(context.parsed.y);
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return new Intl.NumberFormat('ko-KR').format(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    /**
+     * Get mock A/B testing data
+     */
+    getMockABData() {
+        return {
+            campaign_id: 1,
+            variant_a: {
+                variant: 'A',
+                impressions: 12500,
+                clicks: 487,
+                conversions: 73,
+                ctr: 3.90,
+                cvr: 15.00
+            },
+            variant_b: {
+                variant: 'B',
+                impressions: 12300,
+                clicks: 562,
+                conversions: 89,
+                ctr: 4.57,
+                cvr: 15.84
+            },
+            winner: 'B',
+            confidence: 87.3
+        };
     },
 
     /**
