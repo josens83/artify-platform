@@ -3,7 +3,7 @@
  * Text + Image generation with multi-model support
  */
 
-import { lazyLoadImages, paginate, CacheManager } from './utils.js';
+import { lazyLoadImages, paginate, CacheManager, debounce } from './utils.js';
 
 const GeneratePage = {
     segments: [],
@@ -41,6 +41,9 @@ const GeneratePage = {
             });
         }
 
+        // Debounced preview update function (300ms delay for performance)
+        const debouncedPreviewUpdate = debounce(() => this.updatePromptPreview(), 300);
+
         // Add preview update listeners to all form inputs
         const previewInputs = [
             'text-prompt', 'text-model', 'tone', 'keywords', 'max-tokens',
@@ -50,7 +53,9 @@ const GeneratePage = {
         previewInputs.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
-                element.addEventListener('input', () => this.updatePromptPreview());
+                // Use debounced version for input (rapid typing)
+                element.addEventListener('input', debouncedPreviewUpdate);
+                // Use immediate update for change (selection/checkbox)
                 element.addEventListener('change', () => this.updatePromptPreview());
             }
         });

@@ -295,7 +295,7 @@
         }
 
         // Render canvas from project data
-        function renderCanvas(data) {
+        async function renderCanvas(data) {
             const canvas = document.getElementById('viewerCanvas');
             const ctx = canvas.getContext('2d');
 
@@ -314,16 +314,46 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
-            // Render elements
+            // Preload all images first
             if (canvasData.elements && canvasData.elements.length > 0) {
-                canvasData.elements.forEach(element => {
-                    renderElement(ctx, element);
-                });
+                const imageElements = canvasData.elements.filter(el => el.type === 'image' && el.src);
+                const imagePromises = imageElements.map(el => preloadImage(el.src));
+
+                try {
+                    const loadedImages = await Promise.all(imagePromises);
+                    // Store loaded images in a map for quick access
+                    const imageMap = new Map();
+                    imageElements.forEach((el, index) => {
+                        imageMap.set(el.src, loadedImages[index]);
+                    });
+
+                    // Render all elements in order
+                    canvasData.elements.forEach(element => {
+                        renderElement(ctx, element, imageMap);
+                    });
+                } catch (error) {
+                    console.error('Some images failed to load:', error);
+                    // Still render elements, images will be rendered when loaded
+                    canvasData.elements.forEach(element => {
+                        renderElement(ctx, element, new Map());
+                    });
+                }
             }
         }
 
+        // Preload image and return promise
+        function preloadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+                img.src = src;
+            });
+        }
+
         // Render individual element
-        function renderElement(ctx, element) {
+        function renderElement(ctx, element, imageMap = new Map()) {
             ctx.save();
 
             // Apply transform
@@ -347,7 +377,7 @@
                     renderShape(ctx, element);
                     break;
                 case 'image':
-                    renderImage(ctx, element);
+                    renderImage(ctx, element, imageMap);
                     break;
             }
 
@@ -399,32 +429,34 @@
             }
         }
 
-        // Render image element
-        function renderImage(ctx, element) {
+        // Render image element (uses preloaded images from imageMap)
+        function renderImage(ctx, element, imageMap = new Map()) {
             if (!element.src) return;
 
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = function() {
-                // Apply filters if any
-                if (element.filters) {
-                    const filterParts = [];
-                    if (element.filters.grayscale > 0) filterParts.push(`grayscale(${element.filters.grayscale}%)`);
-                    if (element.filters.sepia > 0) filterParts.push(`sepia(${element.filters.sepia}%)`);
-                    if (element.filters.blur > 0) filterParts.push(`blur(${element.filters.blur}px)`);
-                    if (element.filters.brightness !== 100) filterParts.push(`brightness(${element.filters.brightness}%)`);
-                    if (element.filters.contrast !== 100) filterParts.push(`contrast(${element.filters.contrast}%)`);
-                    if (element.filters.saturate !== 100) filterParts.push(`saturate(${element.filters.saturate}%)`);
-                    if (element.filters.hueRotate > 0) filterParts.push(`hue-rotate(${element.filters.hueRotate}deg)`);
-                    if (element.filters.invert > 0) filterParts.push(`invert(${element.filters.invert}%)`);
+            // Get preloaded image from map
+            const img = imageMap.get(element.src);
+            if (!img) {
+                console.warn('Image not found in preloaded map:', element.src);
+                return;
+            }
 
-                    ctx.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
-                }
+            // Apply filters if any
+            if (element.filters) {
+                const filterParts = [];
+                if (element.filters.grayscale > 0) filterParts.push(`grayscale(${element.filters.grayscale}%)`);
+                if (element.filters.sepia > 0) filterParts.push(`sepia(${element.filters.sepia}%)`);
+                if (element.filters.blur > 0) filterParts.push(`blur(${element.filters.blur}px)`);
+                if (element.filters.brightness !== 100) filterParts.push(`brightness(${element.filters.brightness}%)`);
+                if (element.filters.contrast !== 100) filterParts.push(`contrast(${element.filters.contrast}%)`);
+                if (element.filters.saturate !== 100) filterParts.push(`saturate(${element.filters.saturate}%)`);
+                if (element.filters.hueRotate > 0) filterParts.push(`hue-rotate(${element.filters.hueRotate}deg)`);
+                if (element.filters.invert > 0) filterParts.push(`invert(${element.filters.invert}%)`);
 
-                ctx.drawImage(img, element.x, element.y, element.width, element.height);
-                ctx.filter = 'none';
-            };
-            img.src = element.src;
+                ctx.filter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
+            }
+
+            ctx.drawImage(img, element.x, element.y, element.width, element.height);
+            ctx.filter = 'none';
         }
 
         // Download canvas as image
@@ -457,13 +489,13 @@
             document.getElementById('errorScreen').style.display = 'flex';
         }
 
-        // Get backend URL
+        // Get backend URL (unified with js/config.js)
         function getBackendUrl() {
             const hostname = window.location.hostname;
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://localhost:3000';
+                return 'http://localhost:3001';
             }
-            return 'https://artify-backend.vercel.app';
+            return 'https://artify-backend-3y4r.onrender.com';
         }
 
         // Initialize on load
