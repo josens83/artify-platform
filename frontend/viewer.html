@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Artify - Viewer</title>
+    <script src="js/toast.js"></script>
+    <script type="module" src="js/config.js"></script>
     <style>
         * {
             margin: 0;
@@ -489,8 +491,13 @@
             document.getElementById('errorScreen').style.display = 'flex';
         }
 
-        // Get backend URL (unified with js/config.js)
+        // Get backend URL (uses js/config.js - window.APP_CONFIG)
         function getBackendUrl() {
+            // Use centralized config if available
+            if (window.APP_CONFIG && window.APP_CONFIG.BACKEND_URL) {
+                return window.APP_CONFIG.BACKEND_URL;
+            }
+            // Fallback for backwards compatibility
             const hostname = window.location.hostname;
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
                 return 'http://localhost:3001';
